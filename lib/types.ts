@@ -15,6 +15,14 @@ export type StaffDTO = {
   email: string;
   role: StaffRole;
   storeId: string;
+  memberships?: StoreMembershipDTO[];
+};
+
+export type StoreMembershipDTO = {
+  storeId: string;
+  storeSlug?: string;
+  storeName?: string;
+  role: StaffRole;
 };
 
 export type CategoryDTO = {
@@ -123,4 +131,15 @@ export type CartDTO = {
   items: CartItemDTO[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type AuditEventInput = {
+  interactionId: string;
+  actorId: string;
+  tenantId: string;
+  action: string;
+  targetType: string;
+  targetId?: string;
+  result: "success" | "denied" | "validation_error" | "failure";
+  metadata?: Record<string, unknown>;
 };

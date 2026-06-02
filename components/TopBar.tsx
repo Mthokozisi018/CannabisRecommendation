@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Search, Sprout, UserRound } from "lucide-react";
+import { switchStoreAction } from "@/app/actions";
 import { getCurrentStaff, getCurrentStore } from "@/lib/dal/auth";
 
 export async function TopBar() {
@@ -16,7 +17,17 @@ export async function TopBar() {
           <input name="q" placeholder="Search product, brand, strain, flavor" className="h-11 w-full rounded-lg border border-white/10 bg-white/[0.06] pl-10 pr-24 text-sm text-white placeholder:text-white/40" />
           <kbd className="absolute right-3 rounded border border-white/10 px-2 py-1 text-xs text-white/45">Ctrl K</kbd>
         </label>
-        <div className="hidden rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/70 md:block">{store.name}</div>
+        <form action={switchStoreAction} className="hidden items-center gap-2 rounded-lg border border-mint/25 bg-mint/10 px-3 py-2 text-sm text-mint md:flex">
+          <span className="font-semibold">Active store</span>
+          {staff?.memberships && staff.memberships.length > 1 ? (
+            <select name="storeId" defaultValue={store.id} className="rounded border border-white/10 bg-ink px-2 py-1 text-white focus:outline focus:outline-2 focus:outline-mint" aria-label="Switch active store">
+              {staff.memberships.map((membership) => <option key={membership.storeId} value={membership.storeId}>{membership.storeName ?? membership.storeId}</option>)}
+            </select>
+          ) : (
+            <span>{store.name}</span>
+          )}
+          {staff?.memberships && staff.memberships.length > 1 ? <button className="rounded bg-mint px-2 py-1 text-xs font-semibold text-ink">Switch</button> : null}
+        </form>
         <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm">
           <UserRound size={17} className="text-mint" />
           <span className="hidden lg:inline">{staff?.displayName ?? "Local staff"}</span>

@@ -24,6 +24,7 @@ export function signCsrfToken(token: string) {
 export function verifyCsrfToken(token: string | null, signature: string | null) {
   if (!token || !signature) return false;
   const expected = signCsrfToken(token);
+  if (signature.length !== expected.length) return false;
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 

@@ -1,7 +1,6 @@
-"use client";
-
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { addToCartAction } from "@/app/actions";
 import { money } from "@/lib/services/format";
 import type { ProductMatchDTO } from "@/lib/types";
 import { ProductBadges } from "./Badges";
@@ -22,13 +21,13 @@ export function ProductCard({ product, effect }: { product: ProductMatchDTO; eff
         <p className="line-clamp-2 text-sm text-white/65">{product.description}</p>
         <div className="flex items-center justify-between gap-3">
           <span className="font-semibold">{money(product.priceCents)}</span>
-          <button
-            className="inline-flex size-10 items-center justify-center rounded-lg bg-mint text-ink"
-            aria-label={`Add ${product.name} to draft cart`}
-            onClick={() => window.dispatchEvent(new CustomEvent("greenchoice:add-to-cart", { detail: product }))}
-          >
-            <Plus size={18} />
-          </button>
+          <form action={addToCartAction}>
+            <input type="hidden" name="productId" value={product.id} />
+            <input type="hidden" name="quantity" value="1" />
+            <button className="inline-flex size-10 items-center justify-center rounded-lg bg-mint text-ink focus:outline focus:outline-2 focus:outline-white" aria-label={`Add ${product.name} to draft cart`}>
+              <Plus size={18} />
+            </button>
+          </form>
         </div>
       </div>
     </article>
