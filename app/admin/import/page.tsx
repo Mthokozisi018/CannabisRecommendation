@@ -1,6 +1,10 @@
 import { importProductsAction } from "@/app/actions";
+import { requirePermission } from "@/lib/dal/auth";
 
-export default function ImportPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ImportPage() {
+  await requirePermission("inventory.manage.store");
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="text-2xl font-semibold">Import seed/catalog JSON</h1>

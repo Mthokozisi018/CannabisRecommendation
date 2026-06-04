@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { addItemToCart, saveDraftCart, updateCartItem } from "@/lib/dal/carts";
-import { requireStaff, switchActiveStore } from "@/lib/dal/auth";
+import { requirePermission, requireStaff, switchActiveStore } from "@/lib/dal/auth";
 import { validateProductImport } from "@/lib/dal/imports";
 import { writeAuditEvent } from "@/lib/logger";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
 import { addToCartSchema, importPayloadSchema, saveCartSchema, updateCartItemSchema } from "@/lib/schemas/cart";
 import { startRecommendationSchema, storeSwitchSchema } from "@/lib/schemas/shared";
+import { customerContext } from "@/lib/account-data";
+import { assertPermission } from "@/lib/authorization";
 
 function formValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -118,4 +120,57 @@ export async function importProductsAction(formData: FormData) {
     metadata: { validRows: result.validRows, errorCount: result.errors.length }
   });
   revalidatePath("/admin/products");
+}
+
+export async function registerCustomerAction(formData: FormData) {
+  await verifyOrigin();
+  assertRateLimit("account:register:customer", 8, 60_000);
+  const email = formValue(formData, "email") ?? "";
+  const firstName = formValue(formData, "firstName") ?? "";
+  const location = formValue(formData, "location") ?? "South Africa";
+  assertPermission({ ...customerContext, assignments: [{ role: "guest", scope: "self" }] }, "account.register");
+  await writeAuditEvent({
+    interactionId: crypto.randomUUID(),
+    actorId: customerContext.userId ?? "self-service",
+    tenantId: customerContext.tenantId ?? "self-service",
+    action: "customer.register.pending_verification",
+    targetType: "user",
+    targetId: customerContext.userId,
+    result: email && firstName ? "success" : "validation_error",
+    metadata: { location, marketingOptIn: formData.get("marketingOptIn") === "on" }
+  });
+  redirect("/account/privacy" as never);
+}
+
+export async function submitPrivacyRequestAction(formData: FormData) {
+  await verifyOrigin();
+  assertPermission(customerContext, "privacy.manage_self", { ownerUserId: customerContext.userId });
+  const requestType = formValue(formData, "requestType") ?? "download";
+  await writeAuditEvent({
+    interactionId: crypto.randomUUID(),
+    actorId: customerContext.userId ?? "self-service",
+    tenantId: customerContext.tenantId ?? "self-service",
+    action: "privacy_request.created",
+    targetType: "privacy_request",
+    result: "success",
+    metadata: { requestType }
+  });
+  revalidatePath("/account/privacy");
+}
+
+export async function requestRoleChangeAction(formData: FormData) {
+  await verifyOrigin();
+  const { staff, context } = await requirePermission("roles.manage.tenant");
+  const targetRole = formValue(formData, "role") ?? "employee_receptionist";
+  await writeAuditEvent({
+    interactionId: crypto.randomUUID(),
+    actorId: staff.id,
+    tenantId: staff.storeId,
+    action: "role.assignment.requested",
+    targetType: "role_assignment",
+    result: "success",
+    metadata: { targetRole, reason: "step-up required before commit" }
+  });
+  assertPermission(context, "audit.view.tenant", { tenantId: staff.storeId });
+  revalidatePath("/account/roles");
 }

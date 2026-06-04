@@ -2,19 +2,19 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Minus, Plus, Save, Trash2 } from "lucide-react";
 import { saveCartAction, updateCartItemAction } from "@/app/actions";
-import { getActiveCart } from "@/lib/dal/carts";
+import { getActiveDraftCart } from "@/lib/dal/carts";
 import { money } from "@/lib/services/format";
 
 export async function DraftCart({ currencyCode = "ZAR" }: { currencyCode?: string }) {
-  const cart = await getActiveCart().catch((error) => {
+  const cart = await getActiveDraftCart().catch((error) => {
     if (error instanceof Error && error.message.includes("Persistent database configuration")) return null;
     throw error;
   });
   if (!cart) {
     return (
-      <aside className="sticky top-20 rounded-lg border border-amber-300/25 bg-amber-300/10 p-4 text-sm text-amber-100 shadow-glow" role="status">
-        <h2 className="font-semibold">Draft cart unavailable</h2>
-        <p className="mt-2">Persistent database configuration is required before production cart, import, or order workflows are enabled.</p>
+      <aside className="sticky top-20 rounded-lg border border-white/10 bg-panel/95 p-4 text-sm text-white/60 shadow-glow" role="status">
+        <h2 className="font-semibold text-white">Draft cart</h2>
+        <p className="mt-2 rounded-lg border border-dashed border-white/10 p-4">Add recommendations from the grid.</p>
       </aside>
     );
   }

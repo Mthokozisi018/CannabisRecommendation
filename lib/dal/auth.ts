@@ -2,7 +2,8 @@ import "server-only";
 import { LOCAL_STAFF, STORE } from "@/lib/data";
 import type { StaffRole, StoreMembershipDTO } from "@/lib/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { assertRole } from "@/lib/authorization";
+import { assertPermission, assertRole, staffToAccountContext } from "@/lib/authorization";
+import type { Permission } from "@/lib/types";
 import { getSessionState, updateSessionState } from "@/lib/session";
 
 export async function getCurrentStaff() {
@@ -45,6 +46,13 @@ export async function requireStaff(roles?: StaffRole[]) {
   if (!staff) throw new Error("Staff authentication required.");
   assertRole(staff, roles);
   return staff;
+}
+
+export async function requirePermission(permission: Permission, resource?: { tenantId?: string; storeId?: string; ownerUserId?: string; requiresAdultAccess?: boolean }) {
+  const staff = await requireStaff();
+  const context = staffToAccountContext(staff);
+  assertPermission(context, permission, resource ?? { tenantId: staff.storeId, storeId: staff.storeId });
+  return { staff, context };
 }
 
 export async function getCurrentStore() {

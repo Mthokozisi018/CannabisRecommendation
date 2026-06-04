@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { listRecommendedProducts } from "@/lib/dal/catalog";
 import { money } from "@/lib/services/format";
+import { requirePermission } from "@/lib/dal/auth";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminProductsPage() {
+  await requirePermission("inventory.manage.store");
   const products = await listRecommendedProducts("relaxed");
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">

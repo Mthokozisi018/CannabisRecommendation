@@ -1,4 +1,69 @@
-export type StaffRole = "admin" | "receptionist" | "catalog_manager";
+export type AccountRole =
+  | "guest"
+  | "customer"
+  | "employee_receptionist"
+  | "employee_budtender"
+  | "manager"
+  | "compliance_officer"
+  | "tenant_admin"
+  | "owner"
+  | "platform_super_admin";
+export type StaffRole = "admin" | "receptionist" | "catalog_manager" | AccountRole;
+export type ScopeType = "self" | "store" | "tenant" | "platform";
+export type AccountState = "invited" | "pending_verification" | "active" | "suspended" | "locked" | "offboarded" | "erasure_requested" | "erased";
+export type AgeVerificationStatus = "not_started" | "pending" | "verified_adult" | "failed" | "expired";
+export type ProductRestrictionClass = "public_low_risk" | "adult_customer" | "staff_internal" | "compliance_internal" | "prescription_or_medical_review_required" | "hidden_until_enabled";
+export type JurisdictionCode = "ZA";
+export type Permission =
+  | "brand.view"
+  | "age_gate.complete"
+  | "account.register"
+  | "account.login"
+  | "account.self.read"
+  | "account.self.update"
+  | "account.security.manage"
+  | "privacy.manage_self"
+  | "customer.history.self"
+  | "customer.intake.store"
+  | "customer.view.store"
+  | "recommendation.start"
+  | "appointments.manage.store"
+  | "orders.support.store"
+  | "catalog.view.store"
+  | "inventory.view.store"
+  | "inventory.manage.store"
+  | "reports.view.store"
+  | "reports.view.tenant"
+  | "team.manage.frontline"
+  | "team.manage.tenant"
+  | "roles.manage.tenant"
+  | "policy.manage.tenant"
+  | "audit.view.tenant"
+  | "consent.view.tenant"
+  | "privacy.requests.manage"
+  | "finance.view.tenant"
+  | "settings.manage.tenant"
+  | "exports.customer_data"
+  | "platform.admin";
+
+export type RoleAssignmentDTO = {
+  role: AccountRole;
+  scope: ScopeType;
+  tenantId?: string;
+  storeId?: string;
+};
+
+export type AccountContextDTO = {
+  userId?: string;
+  tenantId?: string;
+  storeId?: string;
+  jurisdiction: JurisdictionCode;
+  ageVerificationStatus: AgeVerificationStatus;
+  accountState: AccountState;
+  consentVersionAccepted?: string;
+  mfaEnabled?: boolean;
+  assignments: RoleAssignmentDTO[];
+};
 export type StockStatus = "in_stock" | "low_stock" | "out_of_stock";
 
 export type StoreDTO = {

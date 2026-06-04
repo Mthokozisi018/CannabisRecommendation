@@ -8,6 +8,25 @@ import { getSessionState, updateSessionState } from "@/lib/session";
 
 const localCarts = new Map<string, CartDTO>();
 
+type CartRow = {
+  id: string;
+  store_id: string;
+  recommendation_session_id?: string | null;
+  status: CartDTO["status"];
+  note?: string | null;
+  created_at: string;
+  updated_at: string;
+  cart_items?: CartItemRow[];
+};
+
+type CartItemRow = {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price_cents: number;
+  note?: string | null;
+};
+
 function assertLocalPreviewOnly() {
   if (process.env.NODE_ENV === "production") throw new Error("Persistent database configuration is required for cart mutations.");
 }
@@ -16,9 +35,9 @@ function id() {
   return crypto.randomUUID();
 }
 
-async function mapCart(cart: any): Promise<CartDTO> {
+async function mapCart(cart: CartRow): Promise<CartDTO> {
   const items = await Promise.all(
-    (cart.cart_items ?? []).map(async (item: any) => {
+    (cart.cart_items ?? []).map(async (item) => {
       const product = await getProductById(item.product_id);
       if (!product) return null;
       return {
@@ -88,6 +107,15 @@ export async function getActiveCart(cartId?: string): Promise<CartDTO> {
     if (existing && existing.status === "draft") return existing;
   }
   return createCart(staff.storeId, staff.id);
+}
+
+export async function getActiveDraftCart(cartId?: string): Promise<CartDTO | null> {
+  const staff = await requireStaff();
+  const session = await getSessionState();
+  const candidateId = cartId ?? session.activeCartId;
+  if (!candidateId) return null;
+  const existing = await fetchCart(candidateId, staff.storeId);
+  return existing?.status === "draft" ? existing : null;
 }
 
 export async function getSavedCart(cartId: string): Promise<CartDTO | null> {
