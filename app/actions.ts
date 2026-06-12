@@ -43,12 +43,17 @@ export async function loginGreenChoiceStaffAction(formData: FormData) {
   const email = formValue(formData, "email")?.toLowerCase().trim() ?? "";
   const password = formValue(formData, "password") ?? "";
 
-  const response = await fetch(`${greenChoiceApiBaseUrl()}/auth/login/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-    cache: "no-store"
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${greenChoiceApiBaseUrl()}/auth/login/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      cache: "no-store"
+    });
+  } catch {
+    redirect("/login?error=unavailable");
+  }
 
   if (!response.ok) {
     redirect("/login?error=invalid");

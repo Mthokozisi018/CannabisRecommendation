@@ -67,7 +67,13 @@ function Divider() {
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
-  const errorMessage = error === "staff" ? "This login is only for GreenChoice staff accounts." : error ? "Invalid GreenChoice staff email or password." : "";
+  const errorMessage = error === "staff"
+    ? "This login is only for GreenChoice staff accounts."
+    : error === "unavailable"
+      ? "GreenChoice authentication is not reachable. Check the backend API configuration."
+      : error
+        ? "Invalid GreenChoice staff email or password."
+        : "";
 
   return (
     <main className="relative isolate grid min-h-screen place-items-center overflow-hidden px-5 py-10 text-white sm:px-8">
