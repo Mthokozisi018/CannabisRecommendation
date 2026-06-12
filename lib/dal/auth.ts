@@ -5,8 +5,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { assertPermission, assertRole, staffToAccountContext } from "@/lib/authorization";
 import type { Permission } from "@/lib/types";
 import { getSessionState, updateSessionState } from "@/lib/session";
+import { getStaffSession } from "@/lib/staff-session";
 
 export async function getCurrentStaff() {
+  const staffSession = await getStaffSession();
+  if (staffSession) return staffSession;
+
   const supabase = await createSupabaseServerClient();
   if (!supabase) return { ...LOCAL_STAFF, memberships: [{ storeId: STORE.id, storeSlug: STORE.slug, storeName: STORE.name, role: LOCAL_STAFF.role }] };
 

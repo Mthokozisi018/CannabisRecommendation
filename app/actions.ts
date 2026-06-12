@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { addItemToCart, saveDraftCart, updateCartItem } from "@/lib/dal/carts";
 import { requirePermission, requireStaff, switchActiveStore } from "@/lib/dal/auth";
@@ -11,10 +12,86 @@ import { addToCartSchema, importPayloadSchema, saveCartSchema, updateCartItemSch
 import { startRecommendationSchema, storeSwitchSchema } from "@/lib/schemas/shared";
 import { customerContext } from "@/lib/account-data";
 import { assertPermission } from "@/lib/authorization";
+import { djangoRoleToStaffRole, setStaffSession } from "@/lib/staff-session";
 
 function formValue(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : undefined;
+}
+
+function greenChoiceApiBaseUrl() {
+  return (process.env.GREENCHOICE_API_BASE_URL || "http://127.0.0.1:8000/api/v2").replace(/\/$/, "");
+}
+
+function cookieValue(setCookies: string[], name: string) {
+  for (const setCookie of setCookies) {
+    const match = setCookie.match(new RegExp(`${name}=([^;,\r\n]+)`));
+    if (match?.[1]) return match[1];
+  }
+  return undefined;
+}
+
+function responseSetCookies(headers: Headers) {
+  const withGetSetCookie = headers as Headers & { getSetCookie?: () => string[] };
+  const cookies = withGetSetCookie.getSetCookie?.();
+  if (cookies?.length) return cookies;
+  const combined = headers.get("set-cookie");
+  return combined ? [combined] : [];
+}
+
+export async function loginGreenChoiceStaffAction(formData: FormData) {
+  const email = formValue(formData, "email")?.toLowerCase().trim() ?? "";
+  const password = formValue(formData, "password") ?? "";
+
+  const response = await fetch(`${greenChoiceApiBaseUrl()}/auth/login/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    redirect("/login?error=invalid");
+  }
+
+  const setCookies = responseSetCookies(response.headers);
+  const djangoSessionId = cookieValue(setCookies, "sessionid");
+  const djangoCsrfToken = cookieValue(setCookies, "csrftoken");
+  const store = await cookies();
+  if (djangoSessionId) {
+    store.set("sessionid", djangoSessionId, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 14
+    });
+  }
+  if (djangoCsrfToken) {
+    store.set("csrftoken", djangoCsrfToken, {
+      httpOnly: false,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 14
+    });
+  }
+
+  const payload = await response.json();
+  const user = payload?.data?.user;
+  const role = djangoRoleToStaffRole(user?.role);
+  if (!user?.id || !user?.email || !role) {
+    redirect("/login?error=staff");
+  }
+
+  await setStaffSession({
+    id: String(user.id),
+    email: user.email,
+    displayName: user.fullName || user.email,
+    role
+  });
+
+  redirect(role === "manager" ? "/dashboard/manager" : "/dashboard/receptionist");
 }
 
 export async function startRecommendationSession(formData: FormData) {

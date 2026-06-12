@@ -20,10 +20,47 @@ npm run dev
 
 Open `http://127.0.0.1:3001`.
 
-Local preview mode works without Supabase credentials and uses:
+For the Django-backed GreenChoice MVP manager login, run the backend seed first from the repository root:
 
-- Email: `admin@greenchoice.local`
-- Password: `GreenChoiceLocal123!`
+```bash
+python manage.py migrate
+python manage.py seed_greenchoice_staff
+python manage.py seed_greenchoice_demo
+python manage.py runserver
+```
+
+Then log in at `/login` with:
+
+- Email: `manager@greenchoice.local`
+- Password: `ChangeMe123!`
+- Role: `MANAGER`
+
+Receptionist test login:
+
+- Email: `receptionist@greenchoice.local`
+- Password: `ChangeMe123!`
+- Role: `RECEPTIONIST`
+
+These credentials are only for development/testing. Change the password before using the system in production.
+
+The frontend posts staff credentials to `GREENCHOICE_API_BASE_URL`, defaulting to `http://127.0.0.1:8000/api/v2`.
+
+Dashboard routes:
+
+- `/dashboard/manager`
+- `/dashboard/manager/products`
+- `/dashboard/manager/products/new`
+- `/dashboard/manager/products/category/[slug]`
+- `/dashboard/manager/inventory`
+- `/dashboard/manager/sales`
+- `/dashboard/manager/staff`
+- `/dashboard/manager/low-stock`
+- `/dashboard/manager/promotions`
+- `/dashboard/manager/categories`
+- `/dashboard/receptionist`
+- `/dashboard/receptionist/products`
+- `/dashboard/receptionist/customers/register`
+- `/dashboard/receptionist/checkout`
 
 ## Supabase Setup
 
