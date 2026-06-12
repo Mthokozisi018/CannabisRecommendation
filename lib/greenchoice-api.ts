@@ -96,7 +96,12 @@ export type PromotionRecord = {
 };
 
 function apiBaseUrl() {
-  return (process.env.GREENCHOICE_API_BASE_URL || "http://127.0.0.1:8000/api/v2").replace(/\/$/, "");
+  const configuredUrl = process.env.GREENCHOICE_API_BASE_URL?.trim();
+  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("GREENCHOICE_API_BASE_URL must be configured in production.");
+  }
+  return "http://127.0.0.1:8000/api/v2";
 }
 
 async function djangoCookieHeader() {
