@@ -65,4 +65,18 @@ describe("Pre-Rolls product card artwork", () => {
       expect(markup).toContain("object-contain p-2");
     }
   });
+
+  it("shows the grams price unit only on Flower receptionist cards", () => {
+    const flowerMarkup = renderCard({
+      ...baseProduct,
+      categoryName: "Flower",
+      categorySlug: "flower",
+      sizeLabel: null
+    });
+    const preRollMarkup = renderCard(baseProduct);
+
+    expect(flowerMarkup).toContain("/grams");
+    expect(preRollMarkup).not.toContain("/grams");
+    expect(preRollMarkup).toContain("/ 1 unit");
+  });
 });

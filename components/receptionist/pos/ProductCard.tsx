@@ -6,7 +6,7 @@ import { Money } from "@/components/GreenChoiceDashboard";
 import type { ReceptionistProduct } from "@/lib/receptionist/products";
 import { ProductBadges } from "@/components/receptionist/pos/ProductBadges";
 import { getPOSProductImage } from "@/components/receptionist/pos/product-display";
-import { canAddProduct, isFlowerOrPreRollCategory, stockLabel } from "@/components/receptionist/pos/pos-helpers";
+import { canAddProduct, isFlowerCategory, isFlowerOrPreRollCategory, stockLabel } from "@/components/receptionist/pos/pos-helpers";
 
 function edibleThcLabel(value?: number | null) {
   if (value === null || value === undefined || !Number.isFinite(value)) return null;
@@ -63,6 +63,7 @@ export const ProductCard = memo(function ProductCard({
 }) {
   const disabled = !canAddProduct(product);
   const compactStrainCard = isFlowerOrPreRollCategory(product);
+  const flowerCard = isFlowerCategory(product);
   const edibleCard = product.categorySlug === "edibles" || product.categoryName === "Edibles";
   const regularCard = !compactStrainCard && !edibleCard;
   const productImage = getPOSProductImage(product);
@@ -114,7 +115,7 @@ export const ProductCard = memo(function ProductCard({
       <div className={stockPriceRowClass}>
         <span>{stockLabel(product.quantityAvailable)}</span>
         <p className={priceClass}>
-          <Money value={product.sellingPrice} /> {product.sizeLabel ? <span className="text-sm font-medium text-white/78">/ {product.sizeLabel}</span> : null}
+          <Money value={product.sellingPrice} /> {flowerCard ? <span className="text-sm font-extrabold text-emerald-200">/grams</span> : product.sizeLabel ? <span className="text-sm font-medium text-white/78">/ {product.sizeLabel}</span> : null}
         </p>
       </div>
       {edibleCard ? (

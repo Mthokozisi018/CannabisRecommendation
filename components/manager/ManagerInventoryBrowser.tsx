@@ -139,13 +139,13 @@ function StockSquare({ product }: { product: BrowserProduct }) {
   const lowStock = needsLowStockAttention(product);
   const flower = isFlowerProduct(product);
   return (
-    <div className={`grid h-24 w-24 shrink-0 place-items-center rounded-lg border text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ${lowStock ? "border-amber-200/50 bg-[linear-gradient(160deg,rgba(180,83,9,0.34),rgba(7,16,12,0.96))]" : "border-emerald-300/35 bg-[linear-gradient(160deg,rgba(16,185,129,0.24),rgba(7,16,12,0.96))]"}`}>
+    <div className={`grid shrink-0 place-items-center rounded-lg border text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ${flower ? "h-28 w-28" : "h-24 w-24"} ${lowStock ? "border-amber-200/50 bg-[linear-gradient(160deg,rgba(180,83,9,0.34),rgba(7,16,12,0.96))]" : "border-emerald-300/35 bg-[linear-gradient(160deg,rgba(16,185,129,0.24),rgba(7,16,12,0.96))]"}`}>
       <span className="px-2">
         <span className="block text-[0.62rem] font-black uppercase leading-tight tracking-[0.08em] text-white/64">Stock Available</span>
         {flower ? (
-          <span className="mt-1 flex max-w-[5.25rem] items-end justify-center gap-1 text-white">
-            <span className="truncate text-[clamp(1.35rem,6vw,1.8rem)] font-black leading-none tabular-nums">{quantity}</span>
-            <span className="pb-0.5 text-[0.56rem] font-extrabold uppercase leading-none text-emerald-200">estimated grams</span>
+          <span className="mt-1 block text-white">
+            <span className="block max-w-24 truncate text-[clamp(2rem,7vw,2.55rem)] font-black leading-none tabular-nums">{quantity}</span>
+            <span className="mt-1 block text-[0.63rem] font-black uppercase leading-[0.95rem] text-emerald-200">Estimated grams</span>
           </span>
         ) : (
           <>
@@ -547,7 +547,10 @@ export function ManagerInventoryBrowser({
   const strainPanelRef = useRef<HTMLDivElement>(null);
 
   const browserProducts = useMemo(() => localProducts.map(toBrowserProduct), [localProducts]);
+  const lowStockProducts = useMemo(() => browserProducts.filter(needsLowStockAttention).sort((a, b) => a.name.localeCompare(b.name)), [browserProducts]);
+  const filterCountProducts = inventoryView === "low-stock" ? lowStockProducts : browserProducts;
   const categories = useMemo(() => deriveCategories(browserProducts), [browserProducts]);
+  const visibleFilterCategories = useMemo(() => deriveCategories(filterCountProducts), [filterCountProducts]);
   const resolvedSelection = useMemo(() => resolveProductSelection({
     products: browserProducts,
     categories,
@@ -558,10 +561,11 @@ export function ManagerInventoryBrowser({
   const effectiveCultivationType = resolvedSelection?.cultivationType ?? cultivationType;
   const selectedCategory = useMemo(() => effectiveCategory ? categories.find((item) => item.slug === effectiveCategory || normalize(item.name) === normalize(effectiveCategory)) ?? null : null, [categories, effectiveCategory]);
   const showCultivationFilter = categoryUsesSecondaryFilter(selectedCategory);
-  const subcategoryFilters = useMemo(() => subcategoryOptions(browserProducts, selectedCategory), [browserProducts, selectedCategory]);
-  const cultivationFilters = useMemo(() => getCultivationOptions(browserProducts, selectedCategory, effectiveSubcategory), [browserProducts, effectiveSubcategory, selectedCategory]);
+  const subcategoryFilters = useMemo(() => subcategoryOptions(filterCountProducts, selectedCategory), [filterCountProducts, selectedCategory]);
+  const cultivationFilters = useMemo(() => getCultivationOptions(filterCountProducts, selectedCategory, effectiveSubcategory), [filterCountProducts, effectiveSubcategory, selectedCategory]);
+  const visibleSubcategoryFilters = useMemo(() => inventoryView === "low-stock" ? subcategoryFilters.filter((item) => item.count > 0) : subcategoryFilters, [inventoryView, subcategoryFilters]);
+  const visibleCultivationFilters = useMemo(() => inventoryView === "low-stock" ? cultivationFilters.filter((item) => item.count > 0) : cultivationFilters, [cultivationFilters, inventoryView]);
   const categoryFilteredProducts = useMemo(() => filteredProducts({ products: browserProducts, selectedCategory, subcategory: effectiveSubcategory, showCultivationFilter, cultivationType: effectiveCultivationType }), [browserProducts, effectiveCultivationType, effectiveSubcategory, selectedCategory, showCultivationFilter]);
-  const lowStockProducts = useMemo(() => browserProducts.filter(needsLowStockAttention).sort((a, b) => a.name.localeCompare(b.name)), [browserProducts]);
   const visibleProducts = useMemo(() => {
     if (inventoryView === "manage") return categoryFilteredProducts;
     return lowStockProducts;
@@ -646,13 +650,13 @@ export function ManagerInventoryBrowser({
 
         <FilterPanel
           message={message}
-          visibleCategories={categories}
+          visibleCategories={visibleFilterCategories}
           category={effectiveCategory}
           showCultivationFilter={showCultivationFilter}
           cultivationType={effectiveCultivationType}
           subcategory={effectiveSubcategory}
-          subcategoryOptions={selectedCategory ? subcategoryFilters : []}
-          cultivationOptions={cultivationFilters}
+          subcategoryOptions={selectedCategory ? visibleSubcategoryFilters : []}
+          cultivationOptions={visibleCultivationFilters}
           strainPanelRef={strainPanelRef}
           visualStyle="receptionist"
           onSelectCategory={selectCategory}
