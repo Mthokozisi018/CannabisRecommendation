@@ -30,7 +30,9 @@ describe("ManagerInventoryBrowser", () => {
     expect(browser).toContain("/gram");
     expect(browser).toContain("Estimated grams");
     expect(browser).toContain('src="/images/greenchoice-logo.png"');
-    expect(browser).toContain('alt="GreenChoice Dispensary"');
+    expect(browser).toContain('alt={`${storeName} GreenChoice logo`}');
+    expect(browser).toContain("h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28");
+    expect(browser).toContain("sm:grid-cols-[1fr_auto_1fr]");
     expect(browser).toContain("ProductBadges");
     expect(browser).toContain("min-h-[372px]");
     expect(browser).toContain("aspect-[16/9]");

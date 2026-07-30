@@ -612,24 +612,25 @@ export function ManagerInventoryBrowser({
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-[1920px] flex-col px-4 py-5 text-white sm:px-6">
-      <header className="flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <a href={backHref} className="inline-flex h-11 w-fit items-center gap-2 rounded-xl border border-white/12 bg-white/[0.055] px-4 text-sm font-bold text-white/80 transition hover:border-emerald-300/70 hover:text-emerald-300">
-          <ArrowLeft size={17} />
-          Back to Dashboard
-        </a>
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="relative h-14 w-[250px] max-w-[58vw] overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
-            {/* Brand-provided logo asset for the manager inventory header. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/greenchoice-logo.png" alt="GreenChoice Dispensary" className="size-full object-contain object-center" />
-          </div>
-          <p className="min-w-0 truncate text-xs font-bold tracking-[0.26em] text-white/78">{storeName}</p>
+    <main className="mx-auto flex min-h-screen max-w-[1920px] flex-col px-4 py-3 text-white sm:px-6">
+      <header className="grid gap-0 border-b border-white/10 pb-1 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+        <div className="flex justify-start">
+          <a href={backHref} className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-[#050b08] px-4 text-sm font-bold text-white shadow-[0_0_20px_rgba(34,197,94,0.14),0_10px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-emerald-300/75 hover:bg-[#07130d] hover:text-lime-200 hover:shadow-[0_0_26px_rgba(34,197,94,0.25),0_10px_28px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.07)] focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503]">
+            <ArrowLeft size={17} />
+            Back to Dashboard
+          </a>
         </div>
-        <p className="text-sm font-semibold text-white/64 sm:text-right">Inventory browsing only</p>
+        <div className="flex justify-center">
+          {/* Brand-provided logo asset for the manager inventory header. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/greenchoice-logo.png" alt={`${storeName} GreenChoice logo`} className="h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28" />
+        </div>
+        <div className="flex justify-start sm:justify-end">
+          <p className="text-sm font-semibold text-white/64 sm:text-right">Inventory browsing only</p>
+        </div>
       </header>
 
-      <section className="py-5">
+      <section className="py-3">
         <div className="mb-3 flex w-fit max-w-full gap-2 overflow-x-auto rounded-xl bg-[linear-gradient(145deg,#102117,#070c09)] p-2 shadow-[0_0_18px_rgba(34,197,94,0.12),inset_0_1px_0_rgba(255,255,255,0.09)]">
           {([
             { value: "manage" as const, label: "Manage Inventory", count: browserProducts.length },
