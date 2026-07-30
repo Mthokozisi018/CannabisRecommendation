@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { checkoutReceptionistSaleAction } from "@/app/dashboard/receptionist/actions";
 import { Money } from "@/components/GreenChoiceDashboard";
 import { isProductCategory, PRODUCT_SUBCATEGORIES } from "@/lib/manager/options";
@@ -35,6 +35,34 @@ function EmptyState({ title, body, detail }: { title: string; body: string; deta
       <p className="mt-2 text-white/62">{body}</p>
       {detail ? <p className="mx-auto mt-4 max-w-2xl rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/45">{detail}</p> : null}
     </div>
+  );
+}
+
+function FloatingCheckoutButton({
+  visible,
+  cartCount,
+  onClick
+}: {
+  visible: boolean;
+  cartCount: number;
+  onClick: () => void;
+}) {
+  if (!visible) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-[calc(env(safe-area-inset-right)+1rem)] z-50 grid size-12 place-items-center rounded-full border border-emerald-300/55 bg-[#04100a]/95 text-emerald-100 shadow-[0_14px_34px_rgba(0,0,0,0.44),0_0_22px_rgba(16,185,129,0.22),inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:border-emerald-100 hover:bg-[#082016] hover:text-white active:scale-95 focus-visible:ring-2 focus-visible:ring-emerald-100 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503] motion-reduce:transition-none sm:bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:right-[calc(env(safe-area-inset-right)+1.25rem)]"
+      aria-label="Go to checkout"
+    >
+      <ShoppingCart size={21} strokeWidth={2.35} aria-hidden="true" />
+      {cartCount > 0 ? (
+        <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full border border-[#04100a] bg-emerald-400 px-1 text-[11px] font-black leading-5 text-[#031008]">
+          {cartCount > 99 ? "99+" : cartCount}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -120,7 +148,9 @@ export function ReceptionistPOS({
   const contentGridRef = useRef<HTMLDivElement>(null);
   const strainPanelRef = useRef<HTMLDivElement>(null);
   const productResultsRef = useRef<HTMLDivElement>(null);
+  const checkoutSectionRef = useRef<HTMLDivElement>(null);
   const [cartOffset, setCartOffset] = useState(0);
+  const [checkoutShortcutVisible, setCheckoutShortcutVisible] = useState(false);
 
   const selectedProduct = useMemo(() => products.find((product) => product.id === selectedProductId) ?? null, [products, selectedProductId]);
   const visibleCategories = useMemo(() => categories.filter((item) => allowedCategorySlugs.has(item.slug)), [categories]);
@@ -165,6 +195,30 @@ export function ReceptionistPOS({
     window.addEventListener("resize", updateCartOffset);
     return () => window.removeEventListener("resize", updateCartOffset);
   }, [category, cultivationOptions.length, message, showCultivationFilter, subcategory, subcategoryOptions.length]);
+
+  useEffect(() => {
+    const checkoutSection = checkoutSectionRef.current;
+    if (!checkoutSection) return;
+
+    if (!("IntersectionObserver" in window)) {
+      const fallbackTimer = globalThis.setTimeout(() => setCheckoutShortcutVisible(true), 0);
+      return () => globalThis.clearTimeout(fallbackTimer);
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const nextVisible = !entry.isIntersecting;
+        setCheckoutShortcutVisible((current) => (current === nextVisible ? current : nextVisible));
+      },
+      {
+        threshold: 0.16,
+        rootMargin: "-10% 0px -16% 0px"
+      }
+    );
+
+    observer.observe(checkoutSection);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || filteredProducts.length === 0 || !hasRequiredFilters) return;
@@ -294,6 +348,19 @@ export function ReceptionistPOS({
     });
   }, [cart, checkoutAction, checkoutId, isDemo, isPending, startTransition]);
 
+  const goToCheckoutSection = useCallback(() => {
+    const checkoutSection = checkoutSectionRef.current;
+    if (!checkoutSection) return;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    checkoutSection.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "nearest",
+      inline: "nearest"
+    });
+    checkoutSection.focus({ preventScroll: true });
+  }, []);
+
   return (
     <main className="mx-auto flex min-h-screen max-w-[1920px] flex-col px-4 py-3 text-white sm:px-6">
       <header className="grid gap-0 border-b border-white/10 pb-1 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
@@ -347,7 +414,14 @@ export function ReceptionistPOS({
           </div>
         </section>
 
-        <div className="self-start xl:pt-[var(--pos-cart-offset)]" style={cartPanelStyle}>
+        <div
+          id="current-sale"
+          ref={checkoutSectionRef}
+          tabIndex={-1}
+          aria-label="Current Sale checkout section"
+          className="scroll-mt-4 self-start outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503] xl:pt-[var(--pos-cart-offset)]"
+          style={cartPanelStyle}
+        >
           <CartPanel
             cart={cart}
             subtotal={subtotal}
@@ -367,6 +441,7 @@ export function ReceptionistPOS({
       </footer>
 
       <ProductDescriptionModal product={selectedProduct} onClose={() => setSelectedProductId(null)} />
+      <FloatingCheckoutButton visible={checkoutShortcutVisible} cartCount={cartCount} onClick={goToCheckoutSection} />
     </main>
   );
 }
