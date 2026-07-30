@@ -2,23 +2,39 @@
   "name": "greenchoice-workstation",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.9.0",
+  "engines": {
+    "node": "24.x",
+    "npm": "11.x"
+  },
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1 --port 3001",
+    "dev": "next dev --hostname 0.0.0.0 --port 3001",
     "build": "next build",
-    "start": "next start --hostname 127.0.0.1 --port 3001",
+    "start": "next start --hostname 0.0.0.0 --port 3001",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit --incremental false",
     "test": "vitest run",
+    "test:security": "vitest run tests/security",
     "test:e2e": "playwright test",
-    "seed:preview": "tsx scripts/seed-preview.ts"
+    "validate:migrations": "node scripts/validate-migrations.mjs",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
+    "audit:production": "npm audit --omit=dev --audit-level=high",
+    "check": "npm run lint && npm run typecheck && npm run validate:migrations && npm run scan:secrets && npm run test && npm run audit:production",
+    "seed:preview": "tsx scripts/seed-preview.ts",
+    "seed:admin": "node scripts/seed-admin-user.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.77.0",
+    "@upstash/redis": "^1.38.0",
+    "@vercel/analytics": "2.0.1",
+    "@vercel/speed-insights": "2.0.0",
     "lucide-react": "^0.468.0",
-    "next": "^16.2.5",
+    "next": "16.2.12",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "server-only": "^0.0.1",
+    "sharp": "0.35.3",
     "zod": "^3.25.0"
   },
   "devDependencies": {
@@ -29,11 +45,15 @@
     "@types/react-dom": "^19.1.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.31.0",
-    "eslint-config-next": "^16.2.5",
-    "postcss": "^8.5.6",
+    "eslint-config-next": "16.2.12",
+    "postcss": "8.5.24",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.0"
+  },
+  "overrides": {
+    "postcss": "8.5.24",
+    "sharp": "0.35.3"
   }
 }

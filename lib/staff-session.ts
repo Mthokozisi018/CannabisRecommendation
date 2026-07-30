@@ -15,7 +15,12 @@ type StaffSession = {
 };
 
 function secret() {
-  return process.env.STAFF_SESSION_SIGNING_SECRET || process.env.SESSION_SIGNING_SECRET || process.env.CSRF_SECRET || "local-dev-staff-session-secret";
+  const configured = process.env.STAFF_SESSION_SIGNING_SECRET || process.env.SESSION_SIGNING_SECRET || process.env.CSRF_SECRET;
+  if (configured && configured.length >= 32) return configured;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("STAFF_SESSION_SIGNING_SECRET must be configured with at least 32 characters.");
+  }
+  return "local-development-staff-session-secret-only";
 }
 
 function sign(payload: string) {

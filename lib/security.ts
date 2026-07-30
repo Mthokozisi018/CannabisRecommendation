@@ -1,24 +1,22 @@
 import crypto from "crypto";
 import { headers } from "next/headers";
+import { requireRateLimit } from "@/lib/rate-limit";
 
-const windows = new Map<string, { count: number; resetAt: number }>();
-
-export function assertRateLimit(key: string, limit = 20, windowMs = 60_000) {
-  const now = Date.now();
-  const current = windows.get(key);
-  if (!current || current.resetAt < now) {
-    windows.set(key, { count: 1, resetAt: now + windowMs });
-    return;
-  }
-  current.count += 1;
-  if (current.count > limit) {
-    throw new Error("Rate limit exceeded. Please wait before trying again.");
-  }
+export async function assertRateLimit(key: string, limit = 20, windowMs = 60_000) {
+  return requireRateLimit({
+    namespace: "legacy",
+    identifiers: [key],
+    limit,
+    windowMs
+  });
 }
 
 export function signCsrfToken(token: string) {
-  const secret = process.env.CSRF_SECRET ?? "local-dev-csrf-secret";
-  return crypto.createHmac("sha256", secret).update(token).digest("hex");
+  const secret = process.env.CSRF_SECRET;
+  if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
+    throw new Error("CSRF protection is not configured.");
+  }
+  return crypto.createHmac("sha256", secret || "local-dev-csrf-secret").update(token).digest("hex");
 }
 
 export function verifyCsrfToken(token: string | null, signature: string | null) {
@@ -31,11 +29,34 @@ export function verifyCsrfToken(token: string | null, signature: string | null) 
 export async function verifyOrigin() {
   const headerStore = await headers();
   const origin = headerStore.get("origin");
-  const host = headerStore.get("host");
-  if (!origin || !host) return true;
-  const appUrl = process.env.APP_URL ? new URL(process.env.APP_URL) : null;
-  const originHost = new URL(origin).host;
-  if (originHost === host) return true;
-  if (appUrl && originHost === appUrl.host) return true;
-  throw new Error("Invalid request origin.");
+  if (!origin) throw new Error("Request origin is required.");
+
+  const configured = [
+    process.env.APP_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    ...(process.env.ALLOWED_ORIGINS?.split(",") ?? [])
+  ]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .map((value) => {
+      try {
+        return new URL(value).origin;
+      } catch {
+        throw new Error("Application origin configuration is invalid.");
+      }
+    });
+
+  if (process.env.NODE_ENV !== "production") {
+    configured.push("http://127.0.0.1:3001", "http://localhost:3001");
+  }
+  if (configured.length === 0) throw new Error("Application origins are not configured.");
+
+  let normalizedOrigin = "";
+  try {
+    normalizedOrigin = new URL(origin).origin;
+  } catch {
+    throw new Error("Invalid request origin.");
+  }
+  if (!new Set(configured).has(normalizedOrigin)) throw new Error("Invalid request origin.");
+  return true;
 }

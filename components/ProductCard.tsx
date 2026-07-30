@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { addToCartAction } from "@/app/actions";
+import { getProductImage } from "@/lib/product-images";
 import { money } from "@/lib/services/format";
 import type { ProductMatchDTO } from "@/lib/types";
 import { ProductBadges } from "./Badges";
@@ -10,7 +11,7 @@ export function ProductCard({ product, effect }: { product: ProductMatchDTO; eff
   return (
     <article className="rounded-lg border border-white/10 bg-white/[0.045] p-3 shadow-glow">
       <Link href={`/products/${product.slug}?effect=${effect}`} className="block">
-        <ProductImage slug={product.slug} name={product.name} />
+        <ProductImage slug={product.slug} name={product.name} src={getProductImage(product)} />
       </Link>
       <div className="mt-4 space-y-3">
         <ProductBadges product={product} matchPct={product.matchPct} />

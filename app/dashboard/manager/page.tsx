@@ -1,34 +1,50 @@
-import { Boxes, ChartNoAxesColumn, CircleAlert, FolderTree, PackagePlus, Percent, ShoppingCart, UsersRound } from "lucide-react";
-import { DashboardCard, DashboardHeader, GlassPanel, Money } from "@/components/GreenChoiceDashboard";
-import { getManagerSummary } from "@/lib/greenchoice-api";
+import { Suspense } from "react";
+import { ManagerDashboardActions } from "@/components/manager/ManagerDashboardActions";
+import { ManagerWelcomePanel } from "@/components/manager/ManagerWelcomePanel";
+import { getManagerDashboardSummary } from "@/lib/manager/dashboard-summary";
+import type { DashboardSession } from "@/lib/dashboard-session";
+import { requireCompletedManagerDashboardSession } from "@/lib/manager/onboarding";
 
 export const dynamic = "force-dynamic";
 
-const cards = [
-  { title: "Products", text: "Add, edit and manage all products.", href: "/dashboard/manager/products", icon: PackagePlus },
-  { title: "Inventory", text: "Track stock levels and manage inventory.", href: "/dashboard/manager/inventory", icon: Boxes },
-  { title: "Sales & Transactions", text: "View sales, transactions and order history.", href: "/dashboard/manager/sales", icon: ShoppingCart },
-  { title: "Staff / Receptionists", text: "Add, edit and manage staff accounts.", href: "/dashboard/manager/staff", icon: UsersRound },
-  { title: "Low Stock Alerts", text: "View low stock, out of stock and expiring items.", href: "/dashboard/manager/low-stock", icon: CircleAlert },
-  { title: "Promotions & Discounts", text: "Create and manage promotions and discounts.", href: "/dashboard/manager/promotions", icon: Percent },
-  { title: "Categories", text: "Manage product categories.", href: "/dashboard/manager/categories", icon: FolderTree }
-];
+function managerGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning,";
+  if (hour < 18) return "Good afternoon,";
+  return "Good evening,";
+}
+
+function firstName(displayName: string) {
+  return displayName.trim().split(/\s+/)[0] || "Manager";
+}
+
+function roleLabel(role: string) {
+  if (role === "manager") return "Store Manager";
+  return role
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 export default async function ManagerDashboardPage() {
-  const summary = (await getManagerSummary()).data;
+  const session = await requireCompletedManagerDashboardSession();
+  const managerName = firstName(session.displayName || "Manager");
+  const greeting = managerGreeting();
 
   return (
-    <main className="mx-auto max-w-[1500px] px-4 py-8">
-      <DashboardHeader title="Welcome, Manager" subtitle="Manage your dispensary with ease." profileLabel="Manager profile" />
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
-        <GlassPanel><ChartNoAxesColumn className="text-lime-300" /><p className="mt-3 text-sm text-white/55">Total stock units</p><p className="text-2xl font-bold">{summary.totalStockUnits}</p></GlassPanel>
-        <GlassPanel><Boxes className="text-lime-300" /><p className="mt-3 text-sm text-white/55">Estimated stock value</p><p className="text-2xl font-bold"><Money value={summary.totalEstimatedStockValue} /></p></GlassPanel>
-        <GlassPanel><CircleAlert className="text-lime-300" /><p className="mt-3 text-sm text-white/55">Low stock</p><p className="text-2xl font-bold">{summary.lowStockCount}</p></GlassPanel>
-        <GlassPanel><UsersRound className="text-lime-300" /><p className="mt-3 text-sm text-white/55">Staff accounts</p><p className="text-2xl font-bold">{summary.staffCount ?? 0}</p></GlassPanel>
-      </div>
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card) => <DashboardCard key={card.href} {...card} />)}
-      </div>
+    <main className="relative isolate flex min-h-screen items-start px-4 pb-8 pt-8 sm:px-6 sm:pt-10 lg:px-[clamp(2rem,8vw,8.5rem)] lg:pt-[clamp(3rem,10vh,7rem)]">
+      <section className="mx-auto flex w-full max-w-[1180px] flex-col items-center">
+        <Suspense fallback={<ManagerWelcomePanel greeting={greeting} managerName={managerName} roleLabel={roleLabel(session.role)} summaryLoading />}>
+          <ManagerWelcomeWithSummary session={session} greeting={greeting} managerName={managerName} />
+        </Suspense>
+        <ManagerDashboardActions />
+      </section>
     </main>
   );
+}
+
+async function ManagerWelcomeWithSummary({ session, greeting, managerName }: { session: DashboardSession; greeting: string; managerName: string }) {
+  const summary = await getManagerDashboardSummary(session);
+  return <ManagerWelcomePanel greeting={greeting} managerName={managerName} roleLabel={roleLabel(session.role)} totalSalesToday={summary.totalSalesToday} loggedInToday={summary.loggedInToday} />;
 }

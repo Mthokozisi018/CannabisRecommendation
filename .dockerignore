@@ -1,0 +1,15 @@
+.git
+node_modules
+.next
+.vercel
+dist
+build
+coverage
+playwright-report
+test-results
+*.log
+.env
+.env.*
+!.env.example
+!.env.production.example
+supabase/.temp

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+import { NavigationLoadingOverlay } from "@/components/NavigationLoadingOverlay";
 import { TopBar } from "@/components/TopBar";
-import { TopBarVisibility } from "@/components/TopBarVisibility";
 
 export const metadata: Metadata = {
   title: "GreenChoice Dispensary Workstation",
@@ -12,10 +15,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <TopBarVisibility>
-          <TopBar />
-        </TopBarVisibility>
+        <TopBar />
         {children}
+        <Suspense fallback={null}>
+          <NavigationLoadingOverlay />
+        </Suspense>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

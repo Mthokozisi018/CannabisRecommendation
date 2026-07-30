@@ -2,6 +2,7 @@ import "server-only";
 import { CATEGORIES, EFFECTS, PRODUCTS } from "@/lib/data";
 import type { CategoryWithCountDTO, EffectDTO, ProductDTO, ProductFilters, ProductMatchDTO } from "@/lib/types";
 import { categoryCounts, rankProducts } from "@/lib/services/recommendation";
+import { categoryButtonOrder } from "@/lib/manager/options";
 import { requireStaff } from "./auth";
 
 export async function listEffects(): Promise<EffectDTO[]> {
@@ -12,7 +13,8 @@ export async function listEffects(): Promise<EffectDTO[]> {
 export async function listCategories(selectedEffectSlug = "relaxed", filters: ProductFilters = {}): Promise<CategoryWithCountDTO[]> {
   await requireStaff();
   const counts = categoryCounts(PRODUCTS, selectedEffectSlug, filters);
-  return CATEGORIES.map((category) => ({ ...category, count: counts.get(category.slug) ?? 0 })).sort((a, b) => a.sortOrder - b.sortOrder);
+  return CATEGORIES.map((category) => ({ ...category, count: counts.get(category.slug) ?? 0 }))
+    .sort((a, b) => categoryButtonOrder(a.name) - categoryButtonOrder(b.name) || a.sortOrder - b.sortOrder);
 }
 
 export async function listRecommendedProducts(selectedEffectSlug: string, filters: ProductFilters = {}): Promise<ProductMatchDTO[]> {

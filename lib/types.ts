@@ -8,6 +8,7 @@ export type AccountRole =
   | "tenant_admin"
   | "owner"
   | "platform_super_admin";
+export type StoreAccessStatus = "active" | "restricted";
 export type StaffRole = "admin" | "receptionist" | "catalog_manager" | AccountRole;
 export type ScopeType = "self" | "store" | "tenant" | "platform";
 export type AccountState = "invited" | "pending_verification" | "active" | "suspended" | "locked" | "offboarded" | "erasure_requested" | "erased";
@@ -27,7 +28,6 @@ export type Permission =
   | "customer.intake.store"
   | "customer.view.store"
   | "recommendation.start"
-  | "appointments.manage.store"
   | "orders.support.store"
   | "catalog.view.store"
   | "inventory.view.store"
@@ -72,6 +72,8 @@ export type StoreDTO = {
   name: string;
   currencyCode: string;
   timezone: string;
+  address?: string | null;
+  accessStatus?: StoreAccessStatus;
 };
 
 export type StaffDTO = {
@@ -80,6 +82,7 @@ export type StaffDTO = {
   email: string;
   role: StaffRole;
   storeId: string;
+  storeAccessStatus?: StoreAccessStatus;
   memberships?: StoreMembershipDTO[];
 };
 
@@ -87,6 +90,7 @@ export type StoreMembershipDTO = {
   storeId: string;
   storeSlug?: string;
   storeName?: string;
+  storeAccessStatus?: StoreAccessStatus;
   role: StaffRole;
 };
 

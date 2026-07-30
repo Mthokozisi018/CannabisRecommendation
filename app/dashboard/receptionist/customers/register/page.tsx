@@ -1,10 +1,15 @@
-import { BackLink, DashboardHeader, GlassPanel } from "@/components/GreenChoiceDashboard";
+import { BackLink, DashboardHeader, GlassPanel, VisualHeroPanel } from "@/components/GreenChoiceDashboard";
+import { dashboardVisuals } from "@/lib/dashboard-visuals";
 
 export default function RegisterCustomerRecordPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <BackLink href="/dashboard/receptionist/products" />
+      <BackLink href="/dashboard/receptionist/products" visualStyle="receptionist" />
       <DashboardHeader title="Register Customer Record" subtitle="Create a customer record for sale history. Customers do not log in." profileLabel="Receptionist profile" />
+      <VisualHeroPanel imageSrc={dashboardVisuals.receptionist.customerSignIn} alt="GreenChoice customer registration visual" className="mb-6 min-h-[260px]">
+        <p className="max-w-xl text-3xl font-extrabold text-white">Customer Details</p>
+        <p className="mt-3 max-w-xl text-lg leading-7 text-white/72">Capture sale history details for in-store staff workflows.</p>
+      </VisualHeroPanel>
       <GlassPanel>
         <form className="grid gap-4 md:grid-cols-2">
           {["First name", "Surname", "Mobile number", "Email, optional", "Location, optional"].map((label) => (

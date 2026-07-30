@@ -10,7 +10,12 @@ type SessionState = {
 };
 
 function secret() {
-  return process.env.SESSION_SIGNING_SECRET || process.env.CSRF_SECRET || "local-dev-session-secret";
+  const configured = process.env.SESSION_SIGNING_SECRET || process.env.CSRF_SECRET;
+  if (configured && configured.length >= 32) return configured;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SIGNING_SECRET must be configured with at least 32 characters.");
+  }
+  return "local-development-session-secret-only";
 }
 
 function sign(payload: string) {

@@ -52,7 +52,7 @@ export default function RegisterPage() {
                 <UsersRound className="mt-1 text-lime-400" />
                 <div>
                   <h2 className="font-semibold text-lime-400">Registering as a Customer</h2>
-                  <p className="mt-1 text-white/68">This account is for preference profiles, recommendation history, bookings, privacy requests and security settings.</p>
+                  <p className="mt-1 text-white/68">This account is for preference profiles, recommendation history, purchases, privacy requests and security settings.</p>
                 </div>
               </div>
             </div>

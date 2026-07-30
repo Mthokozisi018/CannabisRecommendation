@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+
 import { addToCartSchema, importPayloadSchema } from "@/lib/schemas/cart";
 import { productImportRowSchema, storeSwitchSchema } from "@/lib/schemas/shared";
 import { verifyCsrfToken, signCsrfToken } from "@/lib/security";

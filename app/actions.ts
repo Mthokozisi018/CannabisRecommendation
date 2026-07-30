@@ -12,99 +12,26 @@ import { addToCartSchema, importPayloadSchema, saveCartSchema, updateCartItemSch
 import { startRecommendationSchema, storeSwitchSchema } from "@/lib/schemas/shared";
 import { customerContext } from "@/lib/account-data";
 import { assertPermission } from "@/lib/authorization";
-import { djangoRoleToStaffRole, setStaffSession } from "@/lib/staff-session";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function formValue(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : undefined;
 }
 
-function greenChoiceApiBaseUrl() {
-  const configuredUrl = process.env.GREENCHOICE_API_BASE_URL?.trim();
-  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("GREENCHOICE_API_BASE_URL must be configured in production.");
-  }
-  return "http://127.0.0.1:8000/api/v2";
-}
-
-function cookieValue(setCookies: string[], name: string) {
-  for (const setCookie of setCookies) {
-    const match = setCookie.match(new RegExp(`${name}=([^;,\r\n]+)`));
-    if (match?.[1]) return match[1];
-  }
-  return undefined;
-}
-
-function responseSetCookies(headers: Headers) {
-  const withGetSetCookie = headers as Headers & { getSetCookie?: () => string[] };
-  const cookies = withGetSetCookie.getSetCookie?.();
-  if (cookies?.length) return cookies;
-  const combined = headers.get("set-cookie");
-  return combined ? [combined] : [];
-}
-
-export async function loginGreenChoiceStaffAction(formData: FormData) {
-  const email = formValue(formData, "email")?.toLowerCase().trim() ?? "";
-  const password = formValue(formData, "password") ?? "";
-
-  let response: Response;
-  try {
-    response = await fetch(`${greenChoiceApiBaseUrl()}/auth/login/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      cache: "no-store"
-    });
-  } catch {
-    redirect("/login?error=unavailable");
-  }
-
-  if (!response.ok) {
-    redirect("/login?error=invalid");
-  }
-
-  const setCookies = responseSetCookies(response.headers);
-  const djangoSessionId = cookieValue(setCookies, "sessionid");
-  const djangoCsrfToken = cookieValue(setCookies, "csrftoken");
+export async function logoutGreenChoiceStaffAction() {
+  await verifyOrigin();
+  const supabase = await createSupabaseServerClient();
+  await supabase?.auth.signOut();
   const store = await cookies();
-  if (djangoSessionId) {
-    store.set("sessionid", djangoSessionId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 14
-    });
-  }
-  if (djangoCsrfToken) {
-    store.set("csrftoken", djangoCsrfToken, {
-      httpOnly: false,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 14
-    });
-  }
-
-  const payload = await response.json();
-  const user = payload?.data?.user;
-  const role = djangoRoleToStaffRole(user?.role);
-  if (!user?.id || !user?.email || !role) {
-    redirect("/login?error=staff");
-  }
-
-  await setStaffSession({
-    id: String(user.id),
-    email: user.email,
-    displayName: user.fullName || user.email,
-    role
-  });
-
-  redirect(role === "manager" ? "/dashboard/manager" : "/dashboard/receptionist");
+  store.delete("greenchoice_staff");
+  store.delete("sessionid");
+  store.delete("csrftoken");
+  redirect("/login");
 }
 
 export async function startRecommendationSession(formData: FormData) {
+  await verifyOrigin();
   const staff = await requireStaff();
   const parsed = startRecommendationSchema.parse({ effect: formValue(formData, "effect") ?? "relaxed" });
   await writeAuditEvent({
@@ -141,7 +68,7 @@ export async function addToCartAction(formData: FormData) {
   const interactionId = crypto.randomUUID();
   await verifyOrigin();
   const staff = await requireStaff(["admin", "receptionist", "catalog_manager"]);
-  assertRateLimit(`cart:add:${staff.id}`, 60);
+  await assertRateLimit(`cart:add:${staff.id}`, 60);
   const parsed = addToCartSchema.parse({
     cartId: formValue(formData, "cartId") || undefined,
     productId: formValue(formData, "productId"),
@@ -159,7 +86,7 @@ export async function updateCartItemAction(formData: FormData) {
   const interactionId = crypto.randomUUID();
   await verifyOrigin();
   const staff = await requireStaff(["admin", "receptionist", "catalog_manager"]);
-  assertRateLimit(`cart:update:${staff.id}`, 90);
+  await assertRateLimit(`cart:update:${staff.id}`, 90);
   const parsed = updateCartItemSchema.parse({
     cartId: formValue(formData, "cartId"),
     itemId: formValue(formData, "itemId"),
@@ -177,7 +104,7 @@ export async function saveCartAction(formData: FormData) {
   const interactionId = crypto.randomUUID();
   await verifyOrigin();
   const staff = await requireStaff(["admin", "receptionist", "catalog_manager"]);
-  assertRateLimit(`cart:save:${staff.id}`, 30);
+  await assertRateLimit(`cart:save:${staff.id}`, 30);
   const parsed = saveCartSchema.parse({
     cartId: formValue(formData, "cartId"),
     note: formValue(formData, "note")
@@ -193,7 +120,7 @@ export async function importProductsAction(formData: FormData) {
   const interactionId = crypto.randomUUID();
   await verifyOrigin();
   const staff = await requireStaff(["admin", "catalog_manager"]);
-  assertRateLimit(`admin:import:${staff.id}`, 6, 60_000);
+  await assertRateLimit(`admin:import:${staff.id}`, 6, 60_000);
   const parsed = importPayloadSchema.parse({ mode: formValue(formData, "mode") ?? "dry_run", json: formValue(formData, "json") });
   const result = await validateProductImport(parsed);
   await writeAuditEvent({
@@ -211,7 +138,7 @@ export async function importProductsAction(formData: FormData) {
 
 export async function registerCustomerAction(formData: FormData) {
   await verifyOrigin();
-  assertRateLimit("account:register:customer", 8, 60_000);
+  await assertRateLimit("account:register:customer", 8, 60_000);
   const email = formValue(formData, "email") ?? "";
   const firstName = formValue(formData, "firstName") ?? "";
   const location = formValue(formData, "location") ?? "South Africa";

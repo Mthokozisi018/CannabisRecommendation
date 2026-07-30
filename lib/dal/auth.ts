@@ -1,54 +1,43 @@
 import "server-only";
-import { LOCAL_STAFF, STORE } from "@/lib/data";
-import type { StaffRole, StoreMembershipDTO } from "@/lib/types";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cache } from "react";
+import { STORE } from "@/lib/data";
 import { assertPermission, assertRole, staffToAccountContext } from "@/lib/authorization";
-import type { Permission } from "@/lib/types";
-import { getSessionState, updateSessionState } from "@/lib/session";
-import { getStaffSession } from "@/lib/staff-session";
+import { auditAccessDenied, decideDashboardAccess, getDashboardSession } from "@/lib/dashboard-session";
+import { updateSessionState } from "@/lib/session";
+import type { CurrentStaffUser } from "@/lib/staff-profile";
+import type { Permission, StaffRole } from "@/lib/types";
 
 export async function getCurrentStaff() {
-  const staffSession = await getStaffSession();
-  if (staffSession) return staffSession;
+  const session = await getDashboardSession();
+  return session?.staff ?? null;
+}
 
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) return { ...LOCAL_STAFF, memberships: [{ storeId: STORE.id, storeSlug: STORE.slug, storeName: STORE.name, role: LOCAL_STAFF.role }] };
-
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
-  if (!user) return null;
-
-  const { data } = await supabase
-    .from("store_memberships")
-    .select("store_id, role, stores(slug,name), profiles(display_name)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: true });
-
-  if (!data?.length) return null;
-  const memberships: StoreMembershipDTO[] = data.map((item) => ({
-    storeId: item.store_id,
-    role: item.role as StaffRole,
-    storeSlug: (item.stores as { slug?: string } | null)?.slug,
-    storeName: (item.stores as { name?: string } | null)?.name
-  }));
-  const session = await getSessionState();
-  const activeMembership = memberships.find((item) => item.storeId === session.activeStoreId) ?? memberships[0];
-  if (activeMembership.storeId !== session.activeStoreId) await updateSessionState({ activeStoreId: activeMembership.storeId });
+export async function getCurrentStaffUser(): Promise<CurrentStaffUser | null> {
+  const session = await getDashboardSession();
+  if (!session) return null;
 
   return {
-    id: user.id,
-    email: user.email ?? "",
-    displayName: (data[0].profiles as { display_name?: string } | null)?.display_name ?? user.email ?? "Staff",
-    role: activeMembership.role,
-    storeId: activeMembership.storeId,
-    memberships
+    authUserId: session.profile.user_id ?? session.authUserId,
+    email: session.email,
+    fullName: session.displayName,
+    role: session.profile.role,
+    isActive: session.accountStatus === "active"
   };
 }
 
 export async function requireStaff(roles?: StaffRole[]) {
-  const staff = await getCurrentStaff();
-  if (!staff) throw new Error("Staff authentication required.");
+  const session = await getDashboardSession();
+  if (!session) throw new Error("Staff authentication required.");
+  const decision = decideDashboardAccess(session.profile);
+  if (!decision.allowed) {
+    await auditAccessDenied(session, "restricted_server_action_attempt", decision.reason);
+    throw new Error(decision.message);
+  }
+  const staff = session.staff;
   assertRole(staff, roles);
+  if (staff.role !== "admin" && !staff.storeId) {
+    throw new Error("Staff store assignment is required before accessing store data.");
+  }
   return staff;
 }
 
@@ -59,10 +48,23 @@ export async function requirePermission(permission: Permission, resource?: { ten
   return { staff, context };
 }
 
-export async function getCurrentStore() {
+const getCurrentStoreCached = cache(async () => {
   const staff = await getCurrentStaff();
   const membership = staff?.memberships?.find((item) => item.storeId === staff.storeId);
-  return { ...STORE, id: staff?.storeId ?? STORE.id, slug: membership?.storeSlug ?? STORE.slug, name: membership?.storeName ?? STORE.name };
+  if (staff && staff.role !== "admin" && !staff.storeId) {
+    return { ...STORE, id: "", slug: "unassigned", name: "Store setup required", accessStatus: "restricted" as const };
+  }
+  return {
+    ...STORE,
+    id: staff?.storeId ?? STORE.id,
+    slug: membership?.storeSlug ?? STORE.slug,
+    name: membership?.storeName ?? STORE.name,
+    accessStatus: membership?.storeAccessStatus ?? (staff?.role === "admin" ? "active" : "restricted")
+  };
+});
+
+export async function getCurrentStore() {
+  return getCurrentStoreCached();
 }
 
 export async function switchActiveStore(storeId: string) {

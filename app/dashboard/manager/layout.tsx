@@ -1,13 +1,13 @@
 import { DashboardBackdrop } from "@/components/GreenChoiceDashboard";
-import { requireDashboardRole } from "@/lib/dashboard-auth";
+import { requireCompletedManagerDashboardSession } from "@/lib/manager/onboarding";
 
 export const dynamic = "force-dynamic";
 
 export default async function ManagerDashboardLayout({ children }: { children: React.ReactNode }) {
-  await requireDashboardRole(["manager"]);
+  await requireCompletedManagerDashboardSession();
   return (
     <>
-      <DashboardBackdrop />
+      <DashboardBackdrop variant="manager" />
       {children}
     </>
   );

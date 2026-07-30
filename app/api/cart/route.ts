@@ -9,6 +9,9 @@ export async function POST(request: NextRequest) {
   const interactionId = crypto.randomUUID();
   let staff: Awaited<ReturnType<typeof requireStaff>> | null = null;
   try {
+    if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+      return NextResponse.json({ error: "Invalid request." }, { status: 415 });
+    }
     await verifyOrigin();
     const csrfToken = request.cookies.get("csrf_token")?.value ?? null;
     const csrfSignature = request.headers.get("x-csrf-signature");
@@ -16,7 +19,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid CSRF token." }, { status: 403 });
     }
     staff = await requireStaff(["admin", "receptionist", "catalog_manager"]);
-    assertRateLimit(`api:cart:${staff.id}`, 40);
+    await assertRateLimit(`api:cart:${staff.id}`, 40);
     const payload = addToCartSchema.parse(await request.json());
     const cart = await addItemToCart(payload);
     if (!cart) throw new Error("Unable to create draft cart.");

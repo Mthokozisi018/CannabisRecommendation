@@ -25,9 +25,9 @@ export const roleLabels: Record<AccountRole, string> = {
 const rolePermissions: Record<AccountRole, Permission[]> = {
   guest: ["brand.view", "age_gate.complete", "account.register", "account.login"],
   customer: ["brand.view", "account.self.read", "account.self.update", "account.security.manage", "privacy.manage_self", "customer.history.self"],
-  employee_receptionist: ["brand.view", "customer.intake.store", "customer.view.store", "recommendation.start", "appointments.manage.store", "orders.support.store", "catalog.view.store"],
+  employee_receptionist: ["brand.view", "customer.intake.store", "customer.view.store", "recommendation.start", "orders.support.store", "catalog.view.store"],
   employee_budtender: ["brand.view", "customer.intake.store", "customer.view.store", "recommendation.start", "orders.support.store", "catalog.view.store", "inventory.view.store"],
-  manager: ["brand.view", "customer.view.store", "appointments.manage.store", "orders.support.store", "catalog.view.store", "inventory.view.store", "inventory.manage.store", "reports.view.store", "team.manage.frontline"],
+  manager: ["brand.view", "customer.view.store", "orders.support.store", "catalog.view.store", "inventory.view.store", "inventory.manage.store", "reports.view.store", "team.manage.frontline"],
   compliance_officer: ["brand.view", "policy.manage.tenant", "audit.view.tenant", "consent.view.tenant", "privacy.requests.manage", "catalog.view.store"],
   tenant_admin: ["brand.view", "recommendation.start", "catalog.view.store", "inventory.view.store", "inventory.manage.store", "team.manage.tenant", "roles.manage.tenant", "settings.manage.tenant", "audit.view.tenant", "consent.view.tenant", "privacy.requests.manage", "exports.customer_data"],
   owner: ["brand.view", "reports.view.tenant", "finance.view.tenant", "settings.manage.tenant", "team.manage.tenant", "audit.view.tenant"],
@@ -35,7 +35,7 @@ const rolePermissions: Record<AccountRole, Permission[]> = {
 };
 
 const legacyRoleMap: Record<"admin" | "receptionist" | "catalog_manager", AccountRole> = {
-  admin: "tenant_admin",
+  admin: "platform_super_admin",
   receptionist: "employee_receptionist",
   catalog_manager: "manager"
 };
@@ -121,7 +121,7 @@ export function staffToAccountContext(staff: StaffDTO): AccountContextDTO {
       const role = normalizeRole(membership.role);
       return {
       role,
-      scope: (role === "tenant_admin" || role === "owner" || role === "compliance_officer" ? "tenant" : "store") as ScopeType,
+      scope: (role === "platform_super_admin" ? "platform" : role === "tenant_admin" || role === "owner" || role === "compliance_officer" ? "tenant" : "store") as ScopeType,
       tenantId: staff.storeId,
       storeId: membership.storeId
     };

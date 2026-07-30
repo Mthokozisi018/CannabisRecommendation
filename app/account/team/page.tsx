@@ -30,7 +30,7 @@ export default async function TeamPage() {
       </GlassPanel>
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         <GlassPanel id="stores"><Store className="text-lime-400" /><h2 className="mt-3 text-xl font-semibold">Store scope</h2><p className="mt-2 text-white/65">Frontline staff are restricted to assigned stores. Cross-store customer and inventory access is denied by default.</p></GlassPanel>
-        <GlassPanel id="appointments"><ShieldAlert className="text-lime-400" /><h2 className="mt-3 text-xl font-semibold">Sensitive actions</h2><p className="mt-2 text-white/65">Role changes, unlocks, exports and policy changes require step-up checks and audit notes.</p></GlassPanel>
+        <GlassPanel id="sensitive-actions"><ShieldAlert className="text-lime-400" /><h2 className="mt-3 text-xl font-semibold">Sensitive actions</h2><p className="mt-2 text-white/65">Role changes, unlocks, exports and policy changes require step-up checks and audit notes.</p></GlassPanel>
       </div>
     </main>
   );

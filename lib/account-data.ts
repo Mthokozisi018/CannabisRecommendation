@@ -83,7 +83,7 @@ export const navItems: NavItem[] = [
   { label: "Inventory", href: "/admin/products", permission: "inventory.manage.store", icon: Package },
   { label: "Reports", href: "/account/reports", permission: "reports.view.tenant", icon: BarChart3 },
   { label: "Backups", href: "/account/audit#backups", permission: "settings.manage.tenant", icon: DatabaseBackup },
-  { label: "Appointments", href: "/account/team#appointments", permission: "appointments.manage.store", icon: CalendarDays },
+  { label: "Sensitive Actions", href: "/account/team#sensitive-actions", permission: "team.manage.tenant", icon: CalendarDays },
   { label: "Stores", href: "/account/team#stores", permission: "settings.manage.tenant", icon: Store }
 ];
 
