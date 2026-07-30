@@ -10,16 +10,41 @@ describe("critical repository security contracts", () => {
   it("requires the exact authenticated invitation identity and transactional completion", () => {
     const action = source("app/staff/invitation/actions.ts");
     const gate = source("components/staff/StaffInvitationSessionGate.tsx");
+    const page = source("app/staff/invitation/onboarding/page.tsx");
     const migration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");
 
     expect(action).toContain("supabase.auth.getUser()");
     expect(action).toContain("invitation.auth_user_id !== user.id");
     expect(action).toContain("metadataInvitationId !== parsed.invitationId");
     expect(gate).toContain("staff_invitation_id !== invitationId");
+    expect(page).toContain("invitation.auth_user_id === userId");
+    expect(page).toContain("invitation.email.toLowerCase() === userEmail.toLowerCase()");
+    expect(page).toContain("manager.store_id !== invitation.store_id");
     expect(migration).toContain("invitation_row.auth_user_id is distinct from caller_id");
     expect(migration).toContain("invitation_row.completed_at is not null");
+    expect(migration).toContain("invitation_row.store_id");
+    expect(migration).toContain("invitation_row.invited_by");
     expect(migration).toContain("where id = p_invitation_id");
     expect(migration).toContain("for update");
+  });
+
+  it("keeps manager invitations bound to the invited auth user and manager setup scope", () => {
+    const adminActions = source("app/dashboard/admin/actions.ts");
+    const statusRoute = source("app/api/manager/invitation/status/route.ts");
+    const completionRoute = source("app/api/manager/invitation/create-password/route.ts");
+    const migration = source("supabase/migrations/20260729123000_secure_manager_invitation_completion.sql");
+
+    expect(adminActions).toContain('data: { invited_role: "manager", invitation_id: invitationId }');
+    expect(adminActions).toContain(".eq(\"status\", \"pending\")");
+    expect(statusRoute).toContain('user.user_metadata?.invited_role !== "manager"');
+    expect(statusRoute).toContain("user.user_metadata?.invitation_id !== invitationId.data");
+    expect(statusRoute).toContain(".eq(\"auth_user_id\", user.id)");
+    expect(completionRoute).toContain("metadataInvitationId !== parsed.data.invitationId");
+    expect(completionRoute).toContain('user.user_metadata?.invited_role !== "manager"');
+    expect(migration).toContain("v_invitation.auth_user_id is distinct from v_user_id");
+    expect(migration).toContain("lower(v_invitation.email) <> v_user_email");
+    expect(migration).toContain("auth.jwt() -> 'user_metadata' ->> 'invitation_id'");
+    expect(migration).toContain("on conflict (auth_user_id) do update");
   });
 
   it("binds checkout to trusted server identity and revokes the obsolete RPC", () => {
