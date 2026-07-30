@@ -18,10 +18,16 @@ describe("ManagerInventoryBrowser", () => {
     expect(browser).toContain("brandTitle(product)");
     expect(browser).toContain("needsLowStockAttention");
     expect(browser).toContain("lowStockThreshold");
+    expect(browser).toContain("const lowStockProducts = useMemo(() => browserProducts.filter(needsLowStockAttention)");
+    expect(browser).toContain('inventoryView === "manage" && !hasRequiredFilters');
     expect(browser).toContain("Stock Available");
+    expect(browser).toContain("/grams");
+    expect(browser).toContain("estimated grams");
     expect(browser).toContain("sm:grid-cols-[repeat(2,minmax(240px,300px))]");
     expect(browser).toContain("lg:grid-cols-[repeat(3,minmax(240px,300px))]");
     expect(browser).toContain('visualStyle="receptionist"');
+    expect(browser).not.toContain("border-2 border-white/45");
+    expect(browser).not.toContain("border-2 border-emerald-300");
     expect(browser).toContain("Edit Product");
     expect(browser).toContain("Remove from POS");
     expect(browser).toContain("Put Back on POS");
