@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       await logServerEvent("warn", "login_failed", { reason: "invalid_credentials" });
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401, headers: privateHeaders });
     }
+    await logServerEvent("info", "login_supabase_session_created", { authUserId: data.user.id });
 
     const session = await getDashboardSessionForVerifiedUser(data.user);
     if (!session) {
@@ -87,6 +88,13 @@ export async function POST(request: Request) {
               ? "/manager/setup/complete"
               : "/dashboard/manager"
         : "/dashboard/receptionist";
+
+    await logServerEvent("info", "login_ready_for_redirect", {
+      authUserId: session.authUserId,
+      staffProfileId: session.staffProfileId,
+      role: session.profile.role,
+      redirectTo
+    });
 
     return NextResponse.json({ authenticated: true, redirectTo }, { headers: privateHeaders });
   } catch (error) {

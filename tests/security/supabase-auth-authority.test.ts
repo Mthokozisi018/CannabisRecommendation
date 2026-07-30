@@ -98,6 +98,15 @@ describe("Supabase Auth ownership contracts", () => {
     expect(recovery).toContain("submissionInFlightRef");
   });
 
+  it("confirms the cookie-backed server session before leaving login", () => {
+    const loginForm = source("app/login/LoginForm.tsx");
+    expect(loginForm).toContain('fetch("/api/auth/access-decision"');
+    expect(loginForm).toContain('cache: "no-store"');
+    expect(loginForm).toContain('credentials: "same-origin"');
+    expect(loginForm).toContain("confirmServerSession");
+    expect(loginForm).toContain("window.location.replace");
+  });
+
   it("exchanges each recovery or invitation code only once per mounted flow", () => {
     expect(source("app/update-password/page.tsx")).toContain("exchangedCodeRef");
     expect(source("components/staff/StaffInvitationSessionGate.tsx")).toContain("preparedInvitationRef");

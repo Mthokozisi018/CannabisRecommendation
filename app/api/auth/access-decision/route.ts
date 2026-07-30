@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { decideDashboardAccess, getDashboardSession, restrictedPathForSession } from "@/lib/dashboard-session";
+import { logServerEvent } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export async function GET() {
   const session = await getDashboardSession();
   if (!session) {
     await auditAccess("access_denied_missing_session", { reason: "missing_session" });
+    await logServerEvent("warn", "auth_access_decision_missing_session", { reason: "missing_session" });
     return NextResponse.json({ allowed: false, reason: "missing_session", redirectTo: "/login" }, { status: 401, headers: privateHeaders });
   }
 
@@ -41,6 +43,14 @@ export async function GET() {
       },
       session.staffProfileId
     );
+    await logServerEvent("warn", "auth_access_decision_denied", {
+      reason: decision.reason,
+      authUserId: session.authUserId,
+      staffProfileId: session.staffProfileId,
+      role: session.profile.role,
+      storeId: session.assignedStoreId,
+      storeAccessStatus: session.storeAccessStatus
+    });
     return NextResponse.json(
       { allowed: false, reason: decision.reason, message: decision.message, redirectTo: restrictedPathForSession(session) },
       { status: 403, headers: privateHeaders }
