@@ -93,8 +93,18 @@ function productImageFrameStyle(position: OverlayPosition): CSSProperties {
   return {
     ...position,
     width: `min(${position.width}, calc(100cqw - 16px))`,
-    height: `min(${position.height}, calc(100cqw - 16px))`
-  };
+    height: `min(${position.height}, calc(100cqw - 16px))`,
+    "--mobile-product-image-width": "clamp(48px, 15.7cqw, 72px)",
+    "--mobile-product-image-height": "clamp(56px, 18.6cqw, 84px)"
+  } as CSSProperties;
+}
+
+function modularDialogWidthStyle(modular: ModularConfig): CSSProperties {
+  return {
+    aspectRatio: modular.aspectRatio,
+    width: `min(calc(100vw - 32px), 1050px, ${modular.heightConstrainedWidth})`,
+    "--mobile-modular-width": "min(calc(100vw - 16px), calc((100dvh - 32px) * 1.78))"
+  } as CSSProperties;
 }
 
 function normalizedKey(value: string | null | undefined) {
@@ -273,10 +283,10 @@ export function ProductDescriptionModal({ product, onClose }: { product: Recepti
   const modular = productModulars[staticProfile.key];
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center overflow-hidden bg-black/75 p-4 text-white backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+    <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/75 p-2 text-white backdrop-blur-md sm:overflow-hidden sm:p-4" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div
-        className="relative max-w-full overflow-hidden rounded-[clamp(8px,1.1vw,18px)] shadow-2xl [container-type:inline-size]"
-        style={{ aspectRatio: modular.aspectRatio, width: `min(calc(100vw - 32px), 1050px, ${modular.heightConstrainedWidth})` }}
+        className="gc-strain-modular-dialog relative max-h-[calc(100dvh-16px)] max-w-full overflow-hidden rounded-[clamp(8px,1.1vw,18px)] shadow-2xl [container-type:inline-size] sm:max-h-none max-sm:!w-[var(--mobile-modular-width)]"
+        style={modularDialogWidthStyle(modular)}
       >
           {/* The supplied modular is decorative; all live data and controls are rendered separately. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -292,12 +302,13 @@ export function ProductDescriptionModal({ product, onClose }: { product: Recepti
           </h2>
 
           {imageVisible ? (
-            <div className="absolute grid aspect-square place-items-center overflow-hidden rounded-[10%] bg-black/45" style={productImageFrameStyle(modular.productImage)}>
+            <div className="gc-strain-modular-product-frame absolute grid aspect-square place-items-center overflow-hidden rounded-[10%] bg-black/45 max-sm:!h-[var(--mobile-product-image-height)] max-sm:!w-[var(--mobile-product-image-width)]" style={productImageFrameStyle(modular.productImage)}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={productImage}
                 alt={`${product.name} product image`}
                 className={flowerModal || preRollModal ? "block size-full object-cover object-center" : "block size-full object-contain object-center p-[2%]"}
+                data-modal-fit={flowerModal || preRollModal ? "cover" : "contain"}
                 style={flowerModal ? flowerImageFitStyle(product) : undefined}
                 onError={() => setFailedImageUrl(productImage)}
               />

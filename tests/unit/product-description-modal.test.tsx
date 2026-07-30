@@ -154,6 +154,20 @@ describe("ProductDescriptionModal", () => {
     expect(productModulars.hybrid.aspectRatio).toBe("1672 / 941");
   });
 
+  it("adds mobile-only modal and product image constraints for strain modulars", () => {
+    const markup = renderToStaticMarkup(<ProductDescriptionModal product={baseProduct} onClose={() => undefined} />);
+
+    expect(markup).toContain("max-sm:!w-[var(--mobile-modular-width)]");
+    expect(markup).toContain("gc-strain-modular-dialog");
+    expect(markup).toContain("--mobile-modular-width:min(calc(100vw - 16px), calc((100dvh - 32px) * 1.78))");
+    expect(markup).toContain("gc-strain-modular-product-frame");
+    expect(markup).toContain("max-sm:!h-[var(--mobile-product-image-height)]");
+    expect(markup).toContain("max-sm:!w-[var(--mobile-product-image-width)]");
+    expect(markup).toContain("--mobile-product-image-width:clamp(48px, 15.7cqw, 72px)");
+    expect(markup).toContain("--mobile-product-image-height:clamp(56px, 18.6cqw, 84px)");
+    expect(markup).toContain('data-modal-fit="cover"');
+  });
+
   it("uses the approved fit inside the same image frame for cultivation placeholders and uploaded images", () => {
     const flowerMarkup = renderToStaticMarkup(<ProductDescriptionModal product={baseProduct} onClose={() => undefined} />);
     const uploadedMarkup = renderToStaticMarkup(
