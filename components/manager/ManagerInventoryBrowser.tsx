@@ -6,6 +6,7 @@ import { archiveProductAction, updateProductCardAction, updateProductPosVisibili
 import { Money } from "@/components/GreenChoiceDashboard";
 import { Field, formatStockQuantity, initialState, ManualNumberInput, Message, PendingNotice, PendingSpinner, type ManagerFormAction } from "@/components/manager/forms/shared";
 import { FilterPanel } from "@/components/receptionist/pos/FilterPanel";
+import { ProductBadges } from "@/components/receptionist/pos/ProductBadges";
 import { categoryUsesSecondaryFilter, cultivationKey, displaySubcategory, getCultivationOptions, normalize, resolveProductSelection, subcategoryKey } from "@/components/receptionist/pos/pos-helpers";
 import { categoryAllowsCultivationType, categoryButtonOrder, categorySlug, CULTIVATION_TYPES, isProductCategory, PRODUCT_SUBCATEGORIES } from "@/lib/manager/options";
 import { getPreRollCultivationCardImage, getProductImage } from "@/lib/product-images";
@@ -216,8 +217,8 @@ function ManagerInventoryCard({
   }, [archiveState, onProductArchived, product.id]);
 
   return (
-    <article className="group flex h-full min-h-[420px] w-full flex-col rounded-xl border-2 border-white/58 bg-[linear-gradient(145deg,#101714_0%,#07100c_48%,#030806_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-      <button type="button" onClick={() => onEdit(product.id)} className="relative mb-2 grid aspect-[16/11] place-items-center overflow-hidden rounded-lg bg-black/20 text-left" aria-label={`Edit ${product.name}`}>
+    <article className="group flex h-full min-h-[372px] w-full flex-col rounded-xl border-2 border-white/58 bg-[linear-gradient(145deg,#101714_0%,#07100c_48%,#030806_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <button type="button" onClick={() => onEdit(product.id)} className="relative mb-2 grid aspect-[16/9] place-items-center overflow-hidden rounded-lg bg-black/20 text-left" aria-label={`Edit ${product.name}`}>
         {/* Product images can be Supabase URLs or local placeholders. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={productImage} alt={`${product.name} product image`} className={`absolute inset-0 size-full drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105 ${preRollCultivationImage ? "object-cover" : "object-contain p-2"}`} />
@@ -227,29 +228,30 @@ function ManagerInventoryCard({
         <span className="absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
         {!isVisibleOnPos ? <span className="absolute bottom-2 right-2 rounded-md border border-amber-200/35 bg-amber-500/20 px-2 py-1 text-[0.62rem] font-extrabold leading-5 text-amber-100">Hidden from POS</span> : null}
       </button>
-      <div className="min-h-[86px] min-w-0">
+      <div className="min-h-[76px] min-w-0">
         <p className="line-clamp-2 text-base font-extrabold leading-snug">{product.name}</p>
         <p className="mt-1 line-clamp-1 min-h-4 text-xs font-bold text-emerald-200/86" title={brandTitle(product)}>{brandTitle(product)}</p>
         <p className="mt-1 line-clamp-1 min-h-4 text-xs text-white/68">{[displaySubcategory(product.subcategory), product.cultivationType].filter(Boolean).join(" / ")}</p>
+        <ProductBadges product={product} className="mt-2 grid min-h-7 grid-cols-2 gap-2" />
       </div>
       <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 p-2">
         <div className="min-w-0">
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-white/46">Price</p>
           <p className="mt-1 flex flex-wrap items-end gap-1 text-xl font-extrabold leading-none text-emerald-400">
             <Money value={product.sellingPrice} />
-            {flower ? <span className="text-sm font-black leading-none text-emerald-200">/grams</span> : null}
+            {flower ? <span className="text-sm font-black leading-none text-emerald-200">/gram</span> : null}
           </p>
           {!isVisibleOnPos ? <p className="mt-2 text-[0.7rem] font-bold text-amber-100">Hidden from POS</p> : null}
         </div>
         <StockSquare product={product} />
       </div>
-      <button type="button" onClick={() => onEdit(product.id)} className="mt-auto rounded-lg bg-emerald-500 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-400">
+      <button type="button" onClick={() => onEdit(product.id)} className="mt-auto rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-400">
         Edit Product
       </button>
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className={`mt-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition ${
+        className={`mt-1.5 inline-flex min-h-8 items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
           isVisibleOnPos
             ? "border-amber-200/30 bg-amber-500/12 text-amber-100 hover:border-amber-200/55"
             : "border-emerald-300/35 bg-emerald-500/15 text-emerald-100 hover:border-emerald-300/65"
@@ -259,7 +261,7 @@ function ManagerInventoryCard({
         {isVisibleOnPos ? "Remove from POS" : "Put Back on POS"}
       </button>
       {!state.ok && state.message ? <p className="mt-2 rounded-lg border border-red-300/25 bg-red-500/10 px-2 py-1.5 text-[0.7rem] font-semibold text-red-100">{state.message}</p> : null}
-      <button type="button" onClick={() => setConfirmingDelete(true)} className="mt-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-300/35 bg-red-500/15 px-3 py-2 text-sm font-bold text-red-100 transition hover:border-red-200/65">
+      <button type="button" onClick={() => setConfirmingDelete(true)} className="mt-1.5 inline-flex min-h-8 items-center justify-center gap-2 rounded-lg border border-red-300/35 bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:border-red-200/65">
         <Trash2 size={15} />
         Delete Product
       </button>
@@ -616,12 +618,13 @@ export function ManagerInventoryBrowser({
           <ArrowLeft size={17} />
           Back to Dashboard
         </a>
-        <div className="flex items-center gap-3">
-          <div className="grid size-14 place-items-center rounded-full bg-lime-500/15 text-4xl text-lime-300">{"\u2733"}</div>
-          <div>
-            <p className="text-2xl font-extrabold leading-none">GreenChoice</p>
-            <p className="mt-1 text-xs font-bold tracking-[0.34em] text-white/78">{storeName}</p>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative h-14 w-[250px] max-w-[58vw] overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
+            {/* Brand-provided logo asset for the manager inventory header. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/greenchoice-logo.png" alt="GreenChoice Dispensary" className="size-full object-contain object-center" />
           </div>
+          <p className="min-w-0 truncate text-xs font-bold tracking-[0.26em] text-white/78">{storeName}</p>
         </div>
         <p className="text-sm font-semibold text-white/64 sm:text-right">Inventory browsing only</p>
       </header>

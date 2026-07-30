@@ -115,7 +115,7 @@ export const ProductCard = memo(function ProductCard({
       <div className={stockPriceRowClass}>
         <span>{stockLabel(product.quantityAvailable)}</span>
         <p className={priceClass}>
-          <Money value={product.sellingPrice} /> {flowerCard ? <span className="text-sm font-extrabold text-emerald-200">/grams</span> : product.sizeLabel ? <span className="text-sm font-medium text-white/78">/ {product.sizeLabel}</span> : null}
+          <Money value={product.sellingPrice} /> {flowerCard ? <span className="text-sm font-extrabold text-emerald-200">/gram</span> : product.sizeLabel ? <span className="text-sm font-medium text-white/78">/ {product.sizeLabel}</span> : null}
         </p>
       </div>
       {edibleCard ? (
