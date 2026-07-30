@@ -6,7 +6,7 @@ import { archiveProductAction, updateProductCardAction, updateProductPosVisibili
 import { Money } from "@/components/GreenChoiceDashboard";
 import { Field, formatStockQuantity, initialState, ManualNumberInput, Message, PendingNotice, PendingSpinner, type ManagerFormAction } from "@/components/manager/forms/shared";
 import { FilterPanel } from "@/components/receptionist/pos/FilterPanel";
-import { categoryUsesSecondaryFilter, cultivationKey, displaySubcategory, getCultivationOptions, normalize, resolveProductSelection, stockLabel, stockQuantityLabel, subcategoryKey } from "@/components/receptionist/pos/pos-helpers";
+import { categoryUsesSecondaryFilter, cultivationKey, displaySubcategory, getCultivationOptions, normalize, resolveProductSelection, subcategoryKey } from "@/components/receptionist/pos/pos-helpers";
 import { categoryAllowsCultivationType, categoryButtonOrder, categorySlug, CULTIVATION_TYPES, isProductCategory, PRODUCT_SUBCATEGORIES } from "@/lib/manager/options";
 import { getPreRollCultivationCardImage, getProductImage } from "@/lib/product-images";
 import type { ManagerInventoryProduct } from "@/lib/manager/data";
@@ -16,6 +16,8 @@ import type { POSMessage, SubcategoryOption } from "@/components/receptionist/po
 type BrowserProduct = ReceptionistProduct & {
   managerProduct: ManagerInventoryProduct;
 };
+
+type InventoryView = "manage" | "low-stock";
 
 function packageCount(product: ManagerInventoryProduct) {
   const value = product.facet_values?.packageCount;
@@ -112,6 +114,36 @@ function filteredProducts(input: {
   }).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function stockUnit(product: Pick<BrowserProduct, "categoryName" | "categorySlug">) {
+  return product.categorySlug === "flower" || normalize(product.categoryName) === "flower" ? "g" : "units";
+}
+
+function brandTitle(product: BrowserProduct) {
+  const brand = product.managerProduct.brand?.trim();
+  return brand || "Brand not set";
+}
+
+function needsLowStockAttention(product: BrowserProduct) {
+  const quantity = Number(product.quantityAvailable ?? 0);
+  const threshold = Number(product.lowStockThreshold ?? 0);
+  if (quantity <= 0) return true;
+  return threshold > 0 && quantity <= threshold;
+}
+
+function StockSquare({ product }: { product: BrowserProduct }) {
+  const quantity = Number.isFinite(product.quantityAvailable) ? product.quantityAvailable : 0;
+  const lowStock = needsLowStockAttention(product);
+  return (
+    <div className={`grid h-24 w-24 shrink-0 place-items-center rounded-lg border text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ${lowStock ? "border-amber-200/50 bg-[linear-gradient(160deg,rgba(180,83,9,0.34),rgba(7,16,12,0.96))]" : "border-emerald-300/35 bg-[linear-gradient(160deg,rgba(16,185,129,0.24),rgba(7,16,12,0.96))]"}`}>
+      <span className="px-2">
+        <span className="block text-[0.62rem] font-black uppercase leading-tight tracking-[0.08em] text-white/64">Stock Available</span>
+        <span className="mt-1 block max-w-[5.25rem] truncate text-[clamp(1.55rem,7vw,2.05rem)] font-black leading-none text-white tabular-nums">{quantity}</span>
+        <span className="mt-1 block text-xs font-extrabold leading-none text-emerald-200">{stockUnit(product)}</span>
+      </span>
+    </div>
+  );
+}
+
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-white/14 bg-white/[0.04] p-8 text-center">
@@ -169,34 +201,37 @@ function ManagerInventoryCard({
   }, [archiveState, onProductArchived, product.id]);
 
   return (
-    <article className="group flex w-full max-w-[230px] flex-col rounded-xl border border-white/12 bg-[linear-gradient(145deg,rgba(12,45,31,0.72),rgba(5,12,10,0.88))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-      <button type="button" onClick={() => onEdit(product.id)} className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-lg bg-black/20 text-left" aria-label={`Edit ${product.name}`}>
+    <article className="group flex h-full min-h-[420px] w-full flex-col rounded-xl border-2 border-white/58 bg-[linear-gradient(145deg,#101714_0%,#07100c_48%,#030806_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <button type="button" onClick={() => onEdit(product.id)} className="relative mb-2 grid aspect-[16/11] place-items-center overflow-hidden rounded-lg bg-black/20 text-left" aria-label={`Edit ${product.name}`}>
         {/* Product images can be Supabase URLs or local placeholders. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={productImage} alt={`${product.name} product image`} className={`absolute inset-0 size-full drop-shadow-[0_10px_18px_rgba(0,0,0,0.5)] transition group-hover:scale-105 ${preRollCultivationImage ? "object-cover" : "object-contain p-1.5"}`} />
-        <span className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full border border-white/70 bg-black/35 text-white">
+        <img src={productImage} alt={`${product.name} product image`} className={`absolute inset-0 size-full drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105 ${preRollCultivationImage ? "object-cover" : "object-contain p-2"}`} />
+        <span className="absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/80 bg-black/35 text-white">
           <SquarePen size={15} />
         </span>
-        <span className="absolute bottom-1.5 left-1.5 rounded-md bg-emerald-500/75 px-2 py-0.5 text-[0.68rem] font-bold leading-5">{product.categoryName}</span>
-        {!isVisibleOnPos ? <span className="absolute bottom-1.5 right-1.5 rounded-md border border-amber-200/35 bg-amber-500/20 px-2 py-0.5 text-[0.62rem] font-extrabold leading-5 text-amber-100">Hidden from POS</span> : null}
+        <span className="absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
+        {!isVisibleOnPos ? <span className="absolute bottom-2 right-2 rounded-md border border-amber-200/35 bg-amber-500/20 px-2 py-1 text-[0.62rem] font-extrabold leading-5 text-amber-100">Hidden from POS</span> : null}
       </button>
-      <div className="mt-3 min-h-[88px]">
-        <p className="line-clamp-2 text-[0.95rem] font-extrabold leading-tight">{product.name}</p>
+      <div className="min-h-[86px] min-w-0">
+        <p className="line-clamp-2 text-base font-extrabold leading-snug">{product.name}</p>
+        <p className="mt-1 line-clamp-1 min-h-4 text-xs font-bold text-emerald-200/86" title={brandTitle(product)}>{brandTitle(product)}</p>
         <p className="mt-1 line-clamp-1 min-h-4 text-xs text-white/68">{[displaySubcategory(product.subcategory), product.cultivationType].filter(Boolean).join(" / ")}</p>
-        <p className="mt-3 text-lg font-extrabold text-emerald-400"><Money value={product.sellingPrice} /></p>
-        {!isVisibleOnPos ? <p className="mt-1 text-[0.7rem] font-bold text-amber-100">Hidden from POS</p> : null}
       </div>
-      <div className="mt-2 flex items-center justify-between gap-2 text-xs text-white/80">
-        <span>{stockLabel(product.quantityAvailable)}</span>
-        <span>{stockQuantityLabel(product)}</span>
+      <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 p-2">
+        <div className="min-w-0">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-white/46">Price</p>
+          <p className="mt-1 text-xl font-extrabold leading-none text-emerald-400"><Money value={product.sellingPrice} /></p>
+          {!isVisibleOnPos ? <p className="mt-2 text-[0.7rem] font-bold text-amber-100">Hidden from POS</p> : null}
+        </div>
+        <StockSquare product={product} />
       </div>
-      <button type="button" onClick={() => onEdit(product.id)} className="mt-2 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-400">
+      <button type="button" onClick={() => onEdit(product.id)} className="mt-auto rounded-lg bg-emerald-500 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-400">
         Edit Product
       </button>
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className={`mt-2 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition ${
+        className={`mt-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition ${
           isVisibleOnPos
             ? "border-amber-200/30 bg-amber-500/12 text-amber-100 hover:border-amber-200/55"
             : "border-emerald-300/35 bg-emerald-500/15 text-emerald-100 hover:border-emerald-300/65"
@@ -206,7 +241,7 @@ function ManagerInventoryCard({
         {isVisibleOnPos ? "Remove from POS" : "Put Back on POS"}
       </button>
       {!state.ok && state.message ? <p className="mt-2 rounded-lg border border-red-300/25 bg-red-500/10 px-2 py-1.5 text-[0.7rem] font-semibold text-red-100">{state.message}</p> : null}
-      <button type="button" onClick={() => setConfirmingDelete(true)} className="mt-2 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-red-300/35 bg-red-500/15 px-3 py-2 text-xs font-bold text-red-100 transition hover:border-red-200/65">
+      <button type="button" onClick={() => setConfirmingDelete(true)} className="mt-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-300/35 bg-red-500/15 px-3 py-2 text-sm font-bold text-red-100 transition hover:border-red-200/65">
         <Trash2 size={15} />
         Delete Product
       </button>
@@ -333,6 +368,7 @@ function EditProductModal({
       onSaved({
         ...product.managerProduct,
         product_name: name.trim(),
+        brand: name.trim(),
         subcategory,
         cultivation_type: categoryAllowsCultivationType(product.managerProduct.category) ? cultivationType : null,
         thc_per_unit_mg: product.managerProduct.category === "Edibles" ? Number(thcPerUnitMg) : null,
@@ -487,6 +523,7 @@ export function ManagerInventoryBrowser({
   const [category, setCategory] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [cultivationType, setCultivationType] = useState("");
+  const [inventoryView, setInventoryView] = useState<InventoryView>("manage");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [message, setMessage] = useState<POSMessage | null>(null);
   const strainPanelRef = useRef<HTMLDivElement>(null);
@@ -505,7 +542,12 @@ export function ManagerInventoryBrowser({
   const showCultivationFilter = categoryUsesSecondaryFilter(selectedCategory);
   const subcategoryFilters = useMemo(() => subcategoryOptions(browserProducts, selectedCategory), [browserProducts, selectedCategory]);
   const cultivationFilters = useMemo(() => getCultivationOptions(browserProducts, selectedCategory, effectiveSubcategory), [browserProducts, effectiveSubcategory, selectedCategory]);
-  const visibleProducts = useMemo(() => filteredProducts({ products: browserProducts, selectedCategory, subcategory: effectiveSubcategory, showCultivationFilter, cultivationType: effectiveCultivationType }), [browserProducts, effectiveCultivationType, effectiveSubcategory, selectedCategory, showCultivationFilter]);
+  const categoryFilteredProducts = useMemo(() => filteredProducts({ products: browserProducts, selectedCategory, subcategory: effectiveSubcategory, showCultivationFilter, cultivationType: effectiveCultivationType }), [browserProducts, effectiveCultivationType, effectiveSubcategory, selectedCategory, showCultivationFilter]);
+  const visibleProducts = useMemo(() => {
+    if (inventoryView === "manage") return categoryFilteredProducts;
+    return categoryFilteredProducts.filter(needsLowStockAttention);
+  }, [categoryFilteredProducts, inventoryView]);
+  const lowStockProductCount = useMemo(() => browserProducts.filter(needsLowStockAttention).length, [browserProducts]);
   const selectedProduct = useMemo(() => browserProducts.find((product) => product.id === selectedProductId) ?? null, [browserProducts, selectedProductId]);
   const hasRequiredFilters = Boolean(selectedCategory && effectiveSubcategory && (!showCultivationFilter || effectiveCultivationType));
 
@@ -562,6 +604,27 @@ export function ManagerInventoryBrowser({
       </header>
 
       <section className="py-5">
+        <div className="mb-3 flex w-fit max-w-full gap-2 overflow-x-auto rounded-xl border-2 border-white/45 bg-[linear-gradient(145deg,#102117,#070c09)] p-2 shadow-[0_0_18px_rgba(34,197,94,0.12),inset_0_1px_0_rgba(255,255,255,0.09)]">
+          {([
+            { value: "manage" as const, label: "Manage Inventory", count: browserProducts.length },
+            { value: "low-stock" as const, label: "Low Stock Alert", count: lowStockProductCount }
+          ]).map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setInventoryView(item.value)}
+              className={`min-w-fit rounded-lg border px-4 py-2 text-sm font-bold transition focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503] ${
+                inventoryView === item.value
+                  ? "border-2 border-emerald-300 bg-[linear-gradient(180deg,#0b5b35,#07351f)] text-white shadow-[0_0_17px_rgba(34,197,94,0.3),inset_0_1px_0_rgba(255,255,255,0.14)]"
+                  : "border-2 border-white/45 bg-[linear-gradient(180deg,#111714,#070c09)] text-white/78 hover:border-emerald-300/80 hover:text-white"
+              }`}
+            >
+              {item.label}
+              <span className="ml-2 text-xs text-white/52">{item.count}</span>
+            </button>
+          ))}
+        </div>
+
         <FilterPanel
           message={message}
           visibleCategories={categories}
@@ -572,6 +635,7 @@ export function ManagerInventoryBrowser({
           subcategoryOptions={selectedCategory ? subcategoryFilters : []}
           cultivationOptions={cultivationFilters}
           strainPanelRef={strainPanelRef}
+          visualStyle="receptionist"
           onSelectCategory={selectCategory}
           onSelectCultivationType={selectCultivationType}
           onSelectSubcategory={selectSubcategory}
@@ -582,9 +646,12 @@ export function ManagerInventoryBrowser({
         ) : !hasRequiredFilters ? (
           <EmptyState title="Select a category and filters to view products." body="Choose a category, then select the required filter buttons." />
         ) : visibleProducts.length === 0 ? (
-          <EmptyState title="No matching products found." body="Try a different category or filter combination." />
+          <EmptyState
+            title={inventoryView === "low-stock" ? "No low-stock products found." : "No matching products found."}
+            body={inventoryView === "low-stock" ? "This filter only shows products at zero stock or at/below their existing low-stock threshold." : "Try a different category or filter combination."}
+          />
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,230px))] gap-3">
+          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-[repeat(2,minmax(240px,300px))] lg:grid-cols-[repeat(3,minmax(240px,300px))]">
             {visibleProducts.map((product) => (
               <ManagerInventoryCard
                 key={product.id}

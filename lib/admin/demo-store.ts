@@ -182,8 +182,8 @@ function missingPosVisibilityColumn(error: { message: string }) {
   return error.message.toLowerCase().includes("is_visible_on_pos");
 }
 
-const managerProductSelect = "id, product_name, category, subcategory, cultivation_type, description, thc_per_unit_mg, thc_per_packet_mg, facet_values, price, product_status, is_visible_on_pos, image_bucket, image_path, image_url, created_at, updated_at, inventory_stock(current_quantity, low_stock_threshold, updated_at)";
-const managerProductSelectWithoutPosVisibility = "id, product_name, category, subcategory, cultivation_type, description, thc_per_unit_mg, thc_per_packet_mg, facet_values, price, product_status, image_bucket, image_path, image_url, created_at, updated_at, inventory_stock(current_quantity, low_stock_threshold, updated_at)";
+const managerProductSelect = "id, product_name, brand, category, subcategory, cultivation_type, description, thc_per_unit_mg, thc_per_packet_mg, facet_values, price, product_status, is_visible_on_pos, image_bucket, image_path, image_url, created_at, updated_at, inventory_stock(current_quantity, low_stock_threshold, updated_at)";
+const managerProductSelectWithoutPosVisibility = "id, product_name, brand, category, subcategory, cultivation_type, description, thc_per_unit_mg, thc_per_packet_mg, facet_values, price, product_status, image_bucket, image_path, image_url, created_at, updated_at, inventory_stock(current_quantity, low_stock_threshold, updated_at)";
 
 export async function listAdminDemoManagerProducts(): Promise<ManagerInventoryProduct[]> {
   const context = await requireAdminDemoStoreContext();

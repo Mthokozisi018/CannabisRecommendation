@@ -276,6 +276,7 @@ export async function createProductAction(_prev: ManagerActionState, formData: F
       createdProduct: {
         id: product.product_id,
         product_name: parsed.productName,
+        brand: parsed.productName,
         category: parsed.category,
         subcategory: parsed.subcategory,
         cultivation_type: cultivationType,

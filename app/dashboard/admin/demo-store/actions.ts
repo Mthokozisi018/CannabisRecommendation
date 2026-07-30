@@ -225,6 +225,7 @@ export async function createAdminDemoProductAction(_prev: ManagerActionState, fo
       createdProduct: {
         id: product.product_id,
         product_name: parsed.productName,
+        brand: parsed.productName,
         category: parsed.category,
         subcategory: parsed.subcategory,
         cultivation_type: cultivationType,

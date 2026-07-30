@@ -6,8 +6,8 @@ import { requireAssignedStoreId } from "@/lib/store-scope";
 import type { ProductCategory } from "@/lib/manager/options";
 
 const missingProductDatabaseMessage = "Product database tables are not set up yet. Please apply Supabase migrations.";
-const managerProductSelect = "id, product_name, category, subcategory, cultivation_type, description, thc_per_unit_mg, thc_per_packet_mg, facet_values, price, product_status, is_visible_on_pos, image_bucket, image_path, image_url, created_at, updated_at, inventory_stock(current_quantity, low_stock_threshold, updated_at)";
-const managerProductSelectWithoutPosVisibility = "id, product_name, category, subcategory, cultivation_type, description, thc_per_unit_mg, thc_per_packet_mg, facet_values, price, product_status, image_bucket, image_path, image_url, created_at, updated_at, inventory_stock(current_quantity, low_stock_threshold, updated_at)";
+const managerProductSelect = "id, product_name, brand, category, subcategory, cultivation_type, description, thc_per_unit_mg, thc_per_packet_mg, facet_values, price, product_status, is_visible_on_pos, image_bucket, image_path, image_url, created_at, updated_at, inventory_stock(current_quantity, low_stock_threshold, updated_at)";
+const managerProductSelectWithoutPosVisibility = "id, product_name, brand, category, subcategory, cultivation_type, description, thc_per_unit_mg, thc_per_packet_mg, facet_values, price, product_status, image_bucket, image_path, image_url, created_at, updated_at, inventory_stock(current_quantity, low_stock_threshold, updated_at)";
 
 function managerDataError(error: { message: string }) {
   const lower = error.message.toLowerCase();
@@ -24,6 +24,7 @@ function missingPosVisibilityColumn(error: { message: string }) {
 export type ManagerInventoryProduct = {
   id: string;
   product_name: string;
+  brand: string | null;
   category: ProductCategory;
   subcategory: string;
   cultivation_type: string | null;
