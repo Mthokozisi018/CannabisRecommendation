@@ -623,7 +623,7 @@ export function ManagerInventoryBrowser({
         <div className="flex justify-center">
           {/* Brand-provided logo asset for the manager inventory header. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/greenchoice-logo.png" alt={`${storeName} GreenChoice logo`} className="h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28" />
+          <img src="/branding/greenchoice-logo.png" alt={`${storeName} GreenChoice logo`} className="h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28" />
         </div>
         <div className="flex justify-start sm:justify-end">
           <p className="text-sm font-semibold text-white/64 sm:text-right">Inventory browsing only</p>

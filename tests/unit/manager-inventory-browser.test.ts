@@ -29,7 +29,7 @@ describe("ManagerInventoryBrowser", () => {
     expect(browser).toContain("Stock Available");
     expect(browser).toContain("/gram");
     expect(browser).toContain("Estimated grams");
-    expect(browser).toContain('src="/images/greenchoice-logo.png"');
+    expect(browser).toContain('src="/branding/greenchoice-logo.png"');
     expect(browser).toContain('alt={`${storeName} GreenChoice logo`}');
     expect(browser).toContain("h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28");
     expect(browser).toContain("sm:grid-cols-[1fr_auto_1fr]");
@@ -47,6 +47,6 @@ describe("ManagerInventoryBrowser", () => {
     expect(browser).toContain("Put Back on POS");
     expect(browser).not.toContain("Add to cart");
     expect(browser).not.toContain("Current Sale");
-    expect(existsSync(resolve(process.cwd(), "public/images/greenchoice-logo.png"))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), "public/branding/greenchoice-logo.png"))).toBe(true);
   });
 });

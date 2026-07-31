@@ -84,6 +84,7 @@ input[type="number"]::-webkit-inner-spin-button {
 .greenchoice-loader-ring {
   position: absolute;
   inset: 0;
+  display: block;
   border-radius: inherit;
   border: 2px solid rgba(210, 255, 34, 0.16);
   border-top-color: rgba(229, 255, 30, 0.98);
@@ -92,6 +93,8 @@ input[type="number"]::-webkit-inner-spin-button {
     0 0 16px rgba(213, 255, 42, 0.2),
     inset 0 0 12px rgba(105, 232, 61, 0.08);
   animation: greenchoice-loader-spin 1s linear infinite;
+  transform-origin: center;
+  will-change: transform;
 }
 
 .greenchoice-loader-ring-soft {
@@ -158,6 +161,10 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 @keyframes greenchoice-loader-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
   to {
     transform: rotate(360deg);
   }
@@ -165,6 +172,6 @@ input[type="number"]::-webkit-inner-spin-button {
 
 @media (prefers-reduced-motion: reduce) {
   .greenchoice-loader-ring {
-    animation: none;
+    animation-duration: 2.4s;
   }
 }
