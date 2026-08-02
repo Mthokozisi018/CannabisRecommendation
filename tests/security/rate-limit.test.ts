@@ -120,4 +120,23 @@ describe("application rate limiter", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, "https://rate-limit-redis.example.invalid/pipeline", expect.any(Object));
     expect(fetchMock).toHaveBeenNthCalledWith(2, "https://shared-redis.example.invalid/pipeline", expect.any(Object));
   });
+
+  it("can use a local fallback for authenticated business actions when configured providers are unavailable", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_KEY_SECRET", "a-production-test-secret-that-is-long-enough");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_URL", "https://rate-limit-redis.example.invalid");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_TOKEN", "a-rate-limit-token-that-is-long-enough-for-production");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+
+    const input = {
+      namespace: "checkout-business-action",
+      identifiers: ["staff-user"],
+      limit: 1,
+      windowMs: 60_000,
+      localFallbackWhenConfiguredProviderFails: true
+    };
+
+    expect((await consumeRateLimit(input)).allowed).toBe(true);
+    expect((await consumeRateLimit(input)).allowed).toBe(false);
+  });
 });

@@ -6,6 +6,7 @@ type RateLimitInput = {
   identifiers: Array<string | null | undefined>;
   limit: number;
   windowMs: number;
+  localFallbackWhenConfiguredProviderFails?: boolean;
 };
 
 export type RateLimitResult = {
@@ -140,6 +141,9 @@ async function distributedRateLimit(key: string, input: RateLimitInput): Promise
     } catch {
       // Try the shared Upstash cache credentials before failing closed.
     }
+  }
+  if (input.localFallbackWhenConfiguredProviderFails) {
+    return localRateLimit(key, input);
   }
   throw new RateLimitUnavailableError();
 }
