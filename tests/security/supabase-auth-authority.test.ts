@@ -86,6 +86,7 @@ describe("Supabase Auth ownership contracts", () => {
     const managerSummary = source("lib/manager/dashboard-summary.ts");
     const managerLayout = source("app/dashboard/manager/layout.tsx");
     const managerActions = source("components/manager/ManagerDashboardActions.tsx");
+    const managerPage = source("app/dashboard/manager/page.tsx");
     const loginForm = source("app/login/LoginForm.tsx");
     const recovery = source("app/forgot-password/page.tsx");
 
@@ -93,7 +94,8 @@ describe("Supabase Auth ownership contracts", () => {
     expect(managerSummary).not.toContain("auth.admin.listUsers");
     expect(managerSummary).toContain('.eq("action", "login_success")');
     expect(managerLayout).not.toContain("ManagerRoutePrefetcher");
-    expect(managerActions).toContain("prefetch={false}");
+    expect(managerPage).toContain("ManagerPOSRoutePreloader");
+    expect(managerActions).toContain('href === "/dashboard/receptionist"');
     expect(loginForm).toContain("submissionInFlightRef");
     expect(recovery).toContain("submissionInFlightRef");
   });

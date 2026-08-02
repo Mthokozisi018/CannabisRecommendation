@@ -5,11 +5,11 @@ import { Redis } from "@upstash/redis";
 let redisClient: Redis | null | undefined;
 
 export const GREENCHOICE_CACHE_TTLS_SECONDS = {
-  managerDashboardSummary: 45,
-  posProducts: 60,
+  managerDashboardSummary: 120,
+  posProducts: 180,
   productCategories: 600,
-  lowStockSummary: 45,
-  managerProducts: 60
+  lowStockSummary: 90,
+  managerProducts: 120
 } as const;
 
 function keyPart(value: string | null | undefined) {

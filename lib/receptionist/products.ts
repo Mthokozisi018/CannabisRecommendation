@@ -279,6 +279,9 @@ export async function listReceptionistCatalog(params?: { category?: string; sear
 }
 
 export async function listReceptionistCatalogForStore(storeId: string, params?: { category?: string; search?: string }): Promise<ReceptionistCatalog> {
+  const cached = await cachedCatalogForStore(storeId, params);
+  if (cached) return cached;
+
   const admin = createSupabaseAdminClient();
   if (!admin) {
     return {
@@ -305,6 +308,15 @@ export async function listReceptionistCatalogForStore(storeId: string, params?: 
   }
 
   const allProducts = ((data ?? []) as ProductRow[]).map(normalizeProduct);
+  const categories = deriveCategories(allProducts);
+  await Promise.all([
+    cacheSet(posProductsCacheKey(storeId), allProducts, GREENCHOICE_CACHE_TTLS_SECONDS.posProducts),
+    cacheSet(productCategoriesCacheKey(storeId), categories, GREENCHOICE_CACHE_TTLS_SECONDS.productCategories)
+  ]);
 
-  return catalogFromProducts(allProducts, deriveCategories(allProducts), params);
+  return catalogFromProducts(allProducts, categories, params);
+}
+
+export async function warmReceptionistCatalogForStore(storeId: string): Promise<void> {
+  await listReceptionistCatalogForStore(storeId).then(() => undefined);
 }

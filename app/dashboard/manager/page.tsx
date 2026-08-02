@@ -2,10 +2,12 @@ import { Suspense } from "react";
 import { DashboardAccountPanel } from "@/components/account/DashboardAccountMenu";
 import type { DashboardAccountProfile } from "@/components/account/account-types";
 import { ManagerDashboardActions } from "@/components/manager/ManagerDashboardActions";
+import { ManagerPOSRoutePreloader } from "@/components/manager/ManagerPOSRoutePreloader";
 import { ManagerWelcomePanel } from "@/components/manager/ManagerWelcomePanel";
 import { getManagerDashboardSummary } from "@/lib/manager/dashboard-summary";
 import type { DashboardSession } from "@/lib/dashboard-session";
 import { requireCompletedManagerDashboardSession } from "@/lib/manager/onboarding";
+import { warmReceptionistCatalogForStore } from "@/lib/receptionist/products";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,12 @@ export default async function ManagerDashboardPage() {
         <Suspense fallback={<ManagerWelcomePanel greeting={greeting} managerName={managerName} roleLabel={roleLabel(session.role)} summaryLoading />}>
           <ManagerWelcomeWithSummary session={session} greeting={greeting} managerName={managerName} />
         </Suspense>
+        {session.assignedStoreId ? (
+          <Suspense fallback={null}>
+            <WarmReceptionistPOSCatalog storeId={session.assignedStoreId} />
+          </Suspense>
+        ) : null}
+        <ManagerPOSRoutePreloader />
         <ManagerDashboardActions />
       </section>
     </main>
@@ -68,4 +76,9 @@ export default async function ManagerDashboardPage() {
 async function ManagerWelcomeWithSummary({ session, greeting, managerName }: { session: DashboardSession; greeting: string; managerName: string }) {
   const summary = await getManagerDashboardSummary(session);
   return <ManagerWelcomePanel greeting={greeting} managerName={managerName} roleLabel={roleLabel(session.role)} totalSalesToday={summary.totalSalesToday} loggedInToday={summary.loggedInToday} />;
+}
+
+async function WarmReceptionistPOSCatalog({ storeId }: { storeId: string }) {
+  await warmReceptionistCatalogForStore(storeId).catch(() => undefined);
+  return null;
 }
