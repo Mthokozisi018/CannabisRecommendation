@@ -20,12 +20,15 @@ describe("mobile portrait layout", () => {
     expect(css).toContain("overflow-x: clip");
     expect(css).toContain(".gc-login-page");
     expect(css).toContain("min-height: 100dvh");
+    expect(css).toContain(".gc-login-input-shell");
+    expect(css).toContain("padding-inline: 0.9rem");
     expect(css).toContain(".gc-pos-account-slot");
     expect(css).toContain("position: absolute");
     expect(grid).toContain("gc-pos-product-grid");
     expect(card).toContain("gc-pos-product-card");
     expect(pos).toContain("gc-pos-account-slot");
     expect(login).toContain("gc-login-page");
+    expect(source("app/login/LoginForm.tsx")).toContain("gc-login-input-shell");
   });
 
   it("does not edit the receptionist filter component or filter logic", () => {
