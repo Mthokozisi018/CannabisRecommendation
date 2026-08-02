@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, UserRound } from "lucide-react";
-import { AccountManagementForms, type DashboardAccountProfile } from "@/components/account/DashboardAccountPanel";
+import { AccountManagementForms } from "@/components/account/AccountManagementForms";
+import type { DashboardAccountProfile } from "@/components/account/account-types";
 import { DashboardBackdrop } from "@/components/GreenChoiceDashboard";
 import { requireDashboardRoleSession, type DashboardSession } from "@/lib/dashboard-session";
 

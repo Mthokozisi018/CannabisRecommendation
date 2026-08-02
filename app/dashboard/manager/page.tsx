@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { DashboardAccountPanel, type DashboardAccountProfile } from "@/components/account/DashboardAccountPanel";
+import { DashboardAccountPanel } from "@/components/account/DashboardAccountMenu";
+import type { DashboardAccountProfile } from "@/components/account/account-types";
 import { ManagerDashboardActions } from "@/components/manager/ManagerDashboardActions";
 import { ManagerWelcomePanel } from "@/components/manager/ManagerWelcomePanel";
 import { getManagerDashboardSummary } from "@/lib/manager/dashboard-summary";

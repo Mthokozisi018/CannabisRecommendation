@@ -1,5 +1,5 @@
 import { ReceptionistPOS } from "@/components/receptionist/ReceptionistPOS";
-import type { DashboardAccountProfile } from "@/components/account/DashboardAccountPanel";
+import type { DashboardAccountProfile } from "@/components/account/account-types";
 import { getCurrentStaff } from "@/lib/dal/auth";
 import { getDashboardSession, type DashboardSession } from "@/lib/dashboard-session";
 import { listReceptionistCatalog } from "@/lib/receptionist/products";

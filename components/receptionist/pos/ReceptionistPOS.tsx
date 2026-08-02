@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type 
 import Link from "next/link";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { checkoutReceptionistSaleAction } from "@/app/dashboard/receptionist/actions";
-import { DashboardAccountPanel } from "@/components/account/DashboardAccountPanel";
+import { DashboardAccountPanel } from "@/components/account/DashboardAccountMenu";
 import { Money } from "@/components/GreenChoiceDashboard";
 import { isProductCategory, PRODUCT_SUBCATEGORIES } from "@/lib/manager/options";
 import type { ReceptionistCategory, ReceptionistProduct } from "@/lib/receptionist/products";

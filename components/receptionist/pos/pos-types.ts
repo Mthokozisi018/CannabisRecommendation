@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import type { ReceptionistCategory, ReceptionistProduct } from "@/lib/receptionist/products";
 import type { CheckoutInput, CheckoutResult } from "@/app/dashboard/receptionist/actions";
-import type { DashboardAccountProfile } from "@/components/account/DashboardAccountPanel";
+import type { DashboardAccountProfile } from "@/components/account/account-types";
 
 export type ReceptionistCheckoutAction = (input: CheckoutInput) => Promise<CheckoutResult>;
 
