@@ -36,7 +36,7 @@ function EdibleThcBadges({ product }: { product: ReceptionistProduct }) {
   if (badges.length === 0) return null;
 
   return (
-    <div className={`mt-3 grid gap-2 ${badges.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+    <div className={`gc-pos-edible-thc-badges mt-3 grid gap-2 ${badges.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
       {badges.map(({ label, value, Icon, className }) => (
         <div key={label} className={`flex min-h-[64px] min-w-0 items-center gap-2 rounded-xl border px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] ${className}`}>
           <Icon className="shrink-0 text-white/92" size={22} strokeWidth={2.25} />
@@ -113,40 +113,40 @@ export const ProductCard = memo(function ProductCard({
       onClick={openDescription}
       onKeyDown={handleCardKeyDown}
       aria-label={`View ${product.name} information`}
-      className={`group flex h-full cursor-pointer touch-manipulation flex-col rounded-xl ${cardBorderClass} ${cardSurfaceClass} ${cardSpacingClass} transition focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503]`}
+      className={`gc-pos-product-card group flex h-full cursor-pointer touch-manipulation flex-col rounded-xl ${cardBorderClass} ${cardSurfaceClass} ${cardSpacingClass} transition focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503]`}
     >
-      <div className={`relative grid place-items-center overflow-hidden rounded-lg bg-black/20 ${regularCard ? "mb-1.5 aspect-[16/9]" : compactStrainCard ? (solidShading ? "aspect-[16/11]" : "aspect-[4/3]") : solidShading ? "mb-1.5 aspect-[16/11]" : "mb-2 aspect-[4/3]"}`}>
+      <div className={`gc-pos-product-image relative grid place-items-center overflow-hidden rounded-lg bg-black/20 ${regularCard ? "mb-1.5 aspect-[16/9]" : compactStrainCard ? (solidShading ? "aspect-[16/11]" : "aspect-[4/3]") : solidShading ? "mb-1.5 aspect-[16/11]" : "mb-2 aspect-[4/3]"}`}>
         {/* Product images can be Supabase URLs or local placeholders. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={productImage} alt={`${product.name} product image`} className="absolute inset-0 size-full object-contain p-2 drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105" />
-        <button onClick={(event) => { stopNestedClick(event); openDescription(); }} className="absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/80 bg-black/35 text-white" aria-label={`View ${product.name} information`}>
+        <button onClick={(event) => { stopNestedClick(event); openDescription(); }} className="gc-pos-product-info-button absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/80 bg-black/35 text-white" aria-label={`View ${product.name} information`}>
           <Info size={17} />
         </button>
-        <span className="absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
+        <span className="gc-pos-product-category-badge absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
       </div>
       <div className={compactStrainCard ? "space-y-1" : ""}>
         <div className={edibleCard ? "flex items-start justify-between gap-3" : ""}>
           <div className="min-w-0">
-            <p className={`line-clamp-2 font-extrabold ${compactStrainCard ? "text-base leading-snug" : regularCard ? "text-base leading-tight" : "text-lg"}`}>{product.name}</p>
-            {compactStrainCard ? null : product.sizeLabel ? <p className={`${edibleCard ? "mt-1 min-h-5" : "mt-2 min-h-6"} text-sm text-white/72`}>{product.sizeLabel}</p> : edibleCard ? null : <div className="mt-2 min-h-6" />}
+            <p className={`gc-pos-product-name line-clamp-2 font-extrabold ${compactStrainCard ? "text-base leading-snug" : regularCard ? "text-base leading-tight" : "text-lg"}`}>{product.name}</p>
+            {compactStrainCard ? null : product.sizeLabel ? <p className={`gc-pos-product-size ${edibleCard ? "mt-1 min-h-5" : "mt-2 min-h-6"} text-sm text-white/72`}>{product.sizeLabel}</p> : edibleCard ? null : <div className="mt-2 min-h-6" />}
           </div>
         </div>
       </div>
-      <div className={stockPriceRowClass}>
-        <span>{stockLabel(product.quantityAvailable)}</span>
-        <p className={priceClass}>
-          <Money value={product.sellingPrice} /> {flowerCard ? <span className="text-sm font-extrabold text-emerald-200">/gram</span> : product.sizeLabel ? <span className="text-sm font-medium text-white/78">/ {product.sizeLabel}</span> : null}
+      <div className={`gc-pos-product-stock-price ${stockPriceRowClass}`}>
+        <span className="gc-pos-product-stock">{stockLabel(product.quantityAvailable)}</span>
+        <p className={`gc-pos-product-price ${priceClass}`}>
+          <Money value={product.sellingPrice} /> {flowerCard ? <span className="gc-pos-product-price-unit text-sm font-extrabold text-emerald-200">/gram</span> : product.sizeLabel ? <span className="gc-pos-product-price-unit text-sm font-medium text-white/78">/ {product.sizeLabel}</span> : null}
         </p>
       </div>
       {edibleCard ? (
         <div className="mt-2 flex min-h-9 items-center gap-3">
-          <ProductBadges product={product} className="flex min-w-0 flex-wrap items-center gap-2" />
+          <ProductBadges product={product} className="gc-pos-product-badges flex min-w-0 flex-wrap items-center gap-2" />
         </div>
       ) : (
         <ProductBadges product={product} />
       )}
       <EdibleThcBadges product={product} />
-      <button disabled={disabled} onClick={handleAddToCart} className={`touch-manipulation rounded-xl bg-emerald-500 font-bold text-white transition hover:bg-emerald-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none motion-reduce:transition-none ${addFeedback ? "bg-lime-400 text-[#04100a] shadow-[0_0_24px_rgba(190,242,100,0.42)]" : ""} ${addButtonGlowClass} ${solidShading ? compactStrainCard ? "min-h-11 px-4 py-2 text-sm" : regularCard ? "mt-1.5 min-h-11 px-4 py-2 text-sm" : "mt-2 min-h-12 px-4 py-2.5 text-sm" : compactStrainCard ? "min-h-11 px-4 py-2.5 text-sm" : regularCard ? "mt-2 min-h-11 px-4 py-2 text-sm" : "mt-3 min-h-12 px-4 py-3"}`}>
+      <button disabled={disabled} onClick={handleAddToCart} className={`gc-pos-product-add-button touch-manipulation rounded-xl bg-emerald-500 font-bold text-white transition hover:bg-emerald-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none motion-reduce:transition-none ${addFeedback ? "bg-lime-400 text-[#04100a] shadow-[0_0_24px_rgba(190,242,100,0.42)]" : ""} ${addButtonGlowClass} ${solidShading ? compactStrainCard ? "min-h-11 px-4 py-2 text-sm" : regularCard ? "mt-1.5 min-h-11 px-4 py-2 text-sm" : "mt-2 min-h-12 px-4 py-2.5 text-sm" : compactStrainCard ? "min-h-11 px-4 py-2.5 text-sm" : regularCard ? "mt-2 min-h-11 px-4 py-2 text-sm" : "mt-3 min-h-12 px-4 py-3"}`}>
         {addFeedback ? "Added" : "Add to cart"}
       </button>
     </article>

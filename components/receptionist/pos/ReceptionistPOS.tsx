@@ -437,8 +437,8 @@ export function ReceptionistPOS({
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-[1920px] flex-col px-4 py-3 text-white sm:px-6">
-      <header className="grid gap-0 border-b border-white/10 pb-1 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+    <main className="gc-pos-page mx-auto flex min-h-screen max-w-[1920px] flex-col px-4 py-3 text-white sm:px-6">
+      <header className="gc-pos-header grid gap-0 border-b border-white/10 pb-1 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
         <div className="flex justify-start">
           {backToDashboardHref ? (
             <Link href={backToDashboardHref} className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-[#050b08] px-4 text-sm font-bold text-white shadow-[0_0_20px_rgba(34,197,94,0.14),0_10px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-emerald-300/75 hover:bg-[#07130d] hover:text-lime-200 hover:shadow-[0_0_26px_rgba(34,197,94,0.25),0_10px_28px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.07)] focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503]">
@@ -447,11 +447,11 @@ export function ReceptionistPOS({
             </Link>
           ) : null}
         </div>
-        <div className="flex justify-center">
+        <div className="gc-pos-logo-wrap flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/branding/greenchoice-logo.png" alt={`${storeName} GreenChoice logo`} className="h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28" />
+          <img src="/branding/greenchoice-logo.png" alt={`${storeName} GreenChoice logo`} className="gc-pos-logo h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28" />
         </div>
-        <div className="flex items-center justify-start gap-3 sm:justify-end">
+        <div className="gc-pos-account-slot flex items-center justify-start gap-3 sm:justify-end">
           {cartCount ? <p className="hidden text-sm font-semibold text-white/64 md:block sm:text-right">{`${cartCount} item${cartCount === 1 ? "" : "s"} in cart`}</p> : null}
           {accountProfile ? <DashboardAccountPanel role={accountRole} profile={accountProfile} /> : null}
         </div>

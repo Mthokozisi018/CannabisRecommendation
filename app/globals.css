@@ -160,6 +160,223 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+@media (max-width: 639px) and (orientation: portrait) {
+  .gc-pos-page {
+    max-width: 100vw;
+    overflow-x: clip;
+    padding-inline: 0.5rem;
+  }
+
+  .gc-pos-header {
+    position: relative;
+    min-height: 5.5rem;
+    padding-top: 2.5rem;
+  }
+
+  .gc-pos-logo-wrap {
+    justify-content: center;
+  }
+
+  .gc-pos-logo {
+    width: min(68vw, 15rem);
+    height: 4.75rem;
+  }
+
+  .gc-pos-account-slot {
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 50;
+    justify-content: flex-end;
+  }
+
+  .gc-pos-account-slot button {
+    min-width: 2.75rem;
+    max-width: min(9.5rem, 42vw);
+    border-color: #36d179;
+    background: #04100a;
+  }
+
+  .gc-pos-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .gc-pos-product-card {
+    min-width: 0;
+    min-height: 0 !important;
+    gap: 0.35rem;
+    padding: 0.4rem !important;
+    border-style: solid;
+    border-color: #c7d5cc;
+    background: linear-gradient(145deg, #101714 0%, #07100c 52%, #030806 100%);
+    border-radius: 0.65rem;
+  }
+
+  .gc-pos-product-image {
+    margin-bottom: 0.25rem !important;
+    aspect-ratio: 1 / 0.78 !important;
+    border-radius: 0.5rem;
+  }
+
+  .gc-pos-product-image > img {
+    padding: 0.25rem;
+  }
+
+  .gc-pos-product-info-button {
+    right: 0.25rem;
+    top: 0.25rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-color: #d7e6dc;
+    background: #030806;
+  }
+
+  .gc-pos-product-category-badge {
+    bottom: 0.25rem;
+    left: 0.25rem;
+    max-width: calc(100% - 0.5rem);
+    overflow: hidden;
+    padding: 0.2rem 0.35rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-radius: 0.35rem;
+    font-size: 0.62rem;
+    line-height: 1;
+  }
+
+  .gc-pos-product-name {
+    font-size: 0.78rem !important;
+    line-height: 1.08 !important;
+  }
+
+  .gc-pos-product-size {
+    min-height: 0;
+    margin-top: 0.2rem !important;
+    font-size: 0.68rem;
+    line-height: 1.1;
+  }
+
+  .gc-pos-product-stock-price {
+    gap: 0.35rem;
+    align-items: flex-start;
+    font-size: 0.68rem !important;
+    line-height: 1.1;
+  }
+
+  .gc-pos-product-stock {
+    min-width: 0;
+  }
+
+  .gc-pos-product-price {
+    max-width: 58%;
+    font-size: 0.82rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .gc-pos-product-price-unit {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 0.62rem !important;
+    line-height: 1;
+  }
+
+  .gc-pos-product-badges {
+    min-height: 0;
+    gap: 0.25rem !important;
+    margin-top: 0.25rem !important;
+  }
+
+  .gc-pos-product-badges > span {
+    min-height: 1.55rem;
+    gap: 0.25rem;
+    padding: 0.22rem 0.35rem;
+    font-size: 0.62rem;
+    line-height: 1;
+  }
+
+  .gc-pos-product-badges svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .gc-pos-product-add-button {
+    min-height: 2.5rem !important;
+    margin-top: 0.35rem !important;
+    padding: 0.45rem 0.5rem !important;
+    border-style: solid;
+    border-color: #b7f7cf;
+    border-radius: 0.55rem;
+    font-size: 0.74rem !important;
+    line-height: 1.05;
+  }
+
+  .gc-pos-edible-thc-badges {
+    gap: 0.25rem;
+    margin-top: 0.25rem !important;
+  }
+
+  .gc-pos-edible-thc-badges > div {
+    min-height: 2.35rem;
+    gap: 0.25rem;
+    padding: 0.3rem;
+    border-radius: 0.5rem;
+  }
+
+  .gc-pos-edible-thc-badges svg {
+    width: 0.85rem;
+    height: 0.85rem;
+  }
+
+  .gc-pos-edible-thc-badges span {
+    font-size: 0.58rem;
+  }
+
+  .gc-login-page {
+    min-height: 100dvh;
+    align-items: center;
+    overflow-x: clip;
+    overflow-y: auto;
+    padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .gc-login-panel {
+    width: min(100%, 25rem);
+    max-width: calc(100vw - 1.5rem);
+    border-style: solid;
+    border-color: #6f8578;
+    border-radius: 1rem;
+    padding: 1.2rem 1rem;
+    background: linear-gradient(145deg, #202a27, #07100c 50%, #0a1010);
+  }
+}
+
+@media (max-width: 360px) and (orientation: portrait) {
+  .gc-pos-account-slot button {
+    width: 2.75rem;
+    padding-inline: 0;
+  }
+
+  .gc-pos-account-slot button span {
+    display: none;
+  }
+
+  .gc-pos-logo {
+    width: min(62vw, 12rem);
+  }
+
+  .gc-pos-product-grid {
+    gap: 0.4rem;
+  }
+
+  .gc-pos-product-card {
+    padding: 0.35rem !important;
+  }
+}
+
 @keyframes greenchoice-loader-spin {
   from {
     transform: rotate(0deg);

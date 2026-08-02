@@ -51,9 +51,9 @@ function Divider() {
 
 export default function LoginPage() {
   return (
-    <main className="relative isolate grid min-h-screen place-items-center overflow-hidden px-5 py-6 text-white sm:px-8">
+    <main className="gc-login-page relative isolate grid min-h-screen place-items-center overflow-hidden px-5 py-6 text-white sm:px-8">
       <LoginBackground />
-      <section className="relative w-full max-w-[640px] rounded-[24px] border border-white/28 bg-[linear-gradient(145deg,rgba(32,42,39,0.84),rgba(7,12,13,0.9)_48%,rgba(10,16,16,0.96))] px-5 py-8 shadow-[0_34px_96px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl sm:px-9 md:px-12 md:py-10">
+      <section className="gc-login-panel relative w-full max-w-[640px] rounded-[24px] border border-white/28 bg-[linear-gradient(145deg,rgba(32,42,39,0.84),rgba(7,12,13,0.9)_48%,rgba(10,16,16,0.96))] px-5 py-8 shadow-[0_34px_96px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl sm:px-9 md:px-12 md:py-10">
         <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-[radial-gradient(circle_at_5%_2%,rgba(255,255,255,0.16),transparent_22%),radial-gradient(circle_at_86%_92%,rgba(111,199,82,0.46),transparent_18%),radial-gradient(circle_at_50%_58%,rgba(92,197,65,0.11),transparent_30%)]" />
         <div className="relative">
           <GreenChoiceMark />
