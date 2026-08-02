@@ -5,6 +5,7 @@ vi.mock("server-only", () => ({}));
 const rpcMock = vi.fn();
 const invalidateStoreDisplayCacheMock = vi.fn();
 const revalidatePathMock = vi.fn();
+const afterMock = vi.fn((task: () => unknown) => task());
 
 vi.mock("@/lib/security", () => ({
   assertRateLimit: vi.fn().mockResolvedValue({
@@ -37,6 +38,10 @@ vi.mock("@/lib/cache/redis", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock
+}));
+
+vi.mock("next/server", () => ({
+  after: afterMock
 }));
 
 describe("receptionist checkout action", () => {
@@ -83,6 +88,8 @@ describe("receptionist checkout action", () => {
         }
       ]
     });
+    expect(afterMock).toHaveBeenCalledTimes(1);
+    await Promise.resolve();
     expect(invalidateStoreDisplayCacheMock).toHaveBeenCalledWith("22222222-2222-4222-8222-222222222222");
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/receptionist/products");
     expect(revalidatePathMock).toHaveBeenCalledWith("/dashboard/manager");

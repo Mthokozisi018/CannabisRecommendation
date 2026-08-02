@@ -69,6 +69,18 @@ export async function cacheDelete(key: string): Promise<void> {
   }
 }
 
+export async function cacheDeleteMany(keys: string[]): Promise<void> {
+  const redis = getRedisClient();
+  const uniqueKeys = Array.from(new Set(keys.filter(Boolean)));
+  if (!redis || uniqueKeys.length === 0) return;
+
+  try {
+    await redis.del(...uniqueKeys);
+  } catch {
+    // Cache invalidation failures must not block committed Supabase writes.
+  }
+}
+
 export function managerDashboardSummaryCacheKey(storeId: string) {
   return `manager-dashboard-summary:${keyPart(storeId)}`;
 }
@@ -94,11 +106,11 @@ export async function invalidateManagerDashboardSummaryCache(storeId: string): P
 }
 
 export async function invalidateStoreDisplayCache(storeId: string): Promise<void> {
-  await Promise.all([
-    cacheDelete(managerDashboardSummaryCacheKey(storeId)),
-    cacheDelete(posProductsCacheKey(storeId)),
-    cacheDelete(productCategoriesCacheKey(storeId)),
-    cacheDelete(lowStockSummaryCacheKey(storeId)),
-    cacheDelete(managerProductsCacheKey(storeId))
+  await cacheDeleteMany([
+    managerDashboardSummaryCacheKey(storeId),
+    posProductsCacheKey(storeId),
+    productCategoriesCacheKey(storeId),
+    lowStockSummaryCacheKey(storeId),
+    managerProductsCacheKey(storeId)
   ]);
 }

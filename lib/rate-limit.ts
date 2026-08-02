@@ -104,7 +104,8 @@ async function runDistributedRateLimit(key: string, input: RateLimitInput, crede
       ["PEXPIRE", key, input.windowMs, "NX"],
       ["PTTL", key]
     ]),
-    cache: "no-store"
+    cache: "no-store",
+    signal: AbortSignal.timeout(1_500)
   });
   if (!response.ok) throw new RateLimitUnavailableError();
 

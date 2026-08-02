@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { invalidateStoreDisplayCache } from "@/lib/cache/redis";
 import { requireStaff } from "@/lib/dal/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -24,6 +25,16 @@ export type CheckoutResult = {
   message: string;
   saleId?: string;
 };
+
+function scheduleCheckoutRefresh(storeId: string) {
+  after(async () => {
+    await invalidateStoreDisplayCache(storeId);
+    revalidatePath("/dashboard/receptionist/products");
+    revalidatePath("/dashboard/manager");
+    revalidatePath("/dashboard/manager/inventory");
+    revalidatePath("/dashboard/manager/sales");
+  });
+}
 
 export async function checkoutReceptionistSaleAction(input: CheckoutInput): Promise<CheckoutResult> {
   try {
@@ -57,11 +68,7 @@ export async function checkoutReceptionistSaleAction(input: CheckoutInput): Prom
     }
 
     const row = Array.isArray(data) ? data[0] : data;
-    await invalidateStoreDisplayCache(staff.storeId);
-    revalidatePath("/dashboard/receptionist/products");
-    revalidatePath("/dashboard/manager");
-    revalidatePath("/dashboard/manager/inventory");
-    revalidatePath("/dashboard/manager/sales");
+    scheduleCheckoutRefresh(staff.storeId);
 
     return {
       ok: true,
