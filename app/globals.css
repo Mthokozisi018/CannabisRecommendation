@@ -377,6 +377,59 @@ input[type="number"]::-webkit-inner-spin-button {
   .gc-login-input-shell input {
     min-width: 0;
   }
+
+  .gc-manager-actions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    width: 100%;
+    max-width: min(100%, 24rem);
+    margin-top: 1.25rem;
+    overflow-x: clip;
+  }
+
+  .gc-manager-action-card {
+    height: 9.5rem;
+    max-width: none;
+    width: 100%;
+    padding: 0.9rem 0.65rem;
+    border-style: solid;
+    border-radius: 0.9rem;
+  }
+
+  .gc-manager-action-icon {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .gc-manager-action-icon svg {
+    width: 1.85rem;
+    height: 1.85rem;
+  }
+
+  .gc-manager-action-label-wrap {
+    min-height: 2.75rem;
+  }
+
+  .gc-manager-action-label {
+    max-width: 7rem;
+    font-size: 0.88rem;
+    line-height: 1.08;
+  }
+
+  .gc-manager-action-underline {
+    margin-top: 0.55rem;
+    width: 1.75rem;
+  }
+
+  .gc-manager-action-arrow {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .gc-manager-action-arrow svg {
+    width: 1rem;
+    height: 1rem;
+  }
 }
 
 @media (max-width: 360px) and (orientation: portrait) {
@@ -408,6 +461,24 @@ input[type="number"]::-webkit-inner-spin-button {
   .gc-login-input-shell {
     gap: 0.6rem;
     padding-inline: 0.75rem;
+  }
+
+  .gc-manager-actions-grid {
+    gap: 0.55rem;
+  }
+
+  .gc-manager-action-card {
+    height: 8.75rem;
+    padding: 0.75rem 0.5rem;
+  }
+
+  .gc-manager-action-icon {
+    width: 2.9rem;
+    height: 2.9rem;
+  }
+
+  .gc-manager-action-label {
+    font-size: 0.8rem;
   }
 }
 

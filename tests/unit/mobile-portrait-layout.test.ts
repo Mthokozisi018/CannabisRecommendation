@@ -13,6 +13,7 @@ describe("mobile portrait layout", () => {
     const card = source("components/receptionist/pos/ProductCard.tsx");
     const pos = source("components/receptionist/pos/ReceptionistPOS.tsx");
     const login = source("app/login/page.tsx");
+    const managerActions = source("components/manager/ManagerDashboardActions.tsx");
 
     expect(css).toContain("@media (max-width: 639px) and (orientation: portrait)");
     expect(css).toContain(".gc-pos-product-grid");
@@ -29,6 +30,10 @@ describe("mobile portrait layout", () => {
     expect(pos).toContain("gc-pos-account-slot");
     expect(login).toContain("gc-login-page");
     expect(source("app/login/LoginForm.tsx")).toContain("gc-login-input-shell");
+    expect(css).toContain(".gc-manager-actions-grid");
+    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(managerActions).toContain("gc-manager-actions-grid");
+    expect(managerActions).toContain("gc-manager-action-card");
   });
 
   it("does not edit the receptionist filter component or filter logic", () => {
