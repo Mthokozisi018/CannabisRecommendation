@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, type KeyboardEvent, type MouseEvent } from "react";
 import { Cookie, Info, Package } from "lucide-react";
 import { Money } from "@/components/GreenChoiceDashboard";
 import type { ReceptionistProduct } from "@/lib/receptionist/products";
@@ -54,11 +54,13 @@ export const ProductCard = memo(function ProductCard({
   product,
   onAddToCart,
   onOpenDescription,
+  addFeedback = false,
   visualStyle = "default"
 }: {
   product: ReceptionistProduct;
   onAddToCart: (product: ReceptionistProduct) => void;
   onOpenDescription: (productId: string) => void;
+  addFeedback?: boolean;
   visualStyle?: "default" | "solid-shading";
 }) {
   const disabled = !canAddProduct(product);
@@ -92,14 +94,32 @@ export const ProductCard = memo(function ProductCard({
   const priceClass = solidShading
     ? "shrink-0 text-right text-xl font-extrabold leading-none text-emerald-400"
     : `shrink-0 text-right font-extrabold text-emerald-400 ${compactStrainCard ? "text-lg" : regularCard ? "text-lg" : "text-xl"}`;
+  const openDescription = () => onOpenDescription(product.id);
+  const stopNestedClick = (event: MouseEvent<HTMLButtonElement>) => event.stopPropagation();
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openDescription();
+  };
+  const handleAddToCart = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onAddToCart(product);
+  };
 
   return (
-    <article className={`group flex h-full flex-col rounded-xl ${cardBorderClass} ${cardSurfaceClass} ${cardSpacingClass}`}>
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={openDescription}
+      onKeyDown={handleCardKeyDown}
+      aria-label={`View ${product.name} information`}
+      className={`group flex h-full cursor-pointer touch-manipulation flex-col rounded-xl ${cardBorderClass} ${cardSurfaceClass} ${cardSpacingClass} transition focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503]`}
+    >
       <div className={`relative grid place-items-center overflow-hidden rounded-lg bg-black/20 ${regularCard ? "mb-1.5 aspect-[16/9]" : compactStrainCard ? (solidShading ? "aspect-[16/11]" : "aspect-[4/3]") : solidShading ? "mb-1.5 aspect-[16/11]" : "mb-2 aspect-[4/3]"}`}>
         {/* Product images can be Supabase URLs or local placeholders. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={productImage} alt={`${product.name} product image`} className="absolute inset-0 size-full object-contain p-2 drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105" />
-        <button onClick={() => onOpenDescription(product.id)} className="absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/80 bg-black/35 text-white" aria-label={`View ${product.name} information`}>
+        <button onClick={(event) => { stopNestedClick(event); openDescription(); }} className="absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/80 bg-black/35 text-white" aria-label={`View ${product.name} information`}>
           <Info size={17} />
         </button>
         <span className="absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
@@ -126,8 +146,8 @@ export const ProductCard = memo(function ProductCard({
         <ProductBadges product={product} />
       )}
       <EdibleThcBadges product={product} />
-      <button disabled={disabled} onClick={() => onAddToCart(product)} className={`rounded-xl bg-emerald-500 font-bold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:border-transparent disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none ${addButtonGlowClass} ${solidShading ? compactStrainCard ? "px-4 py-2 text-sm" : regularCard ? "mt-1.5 px-4 py-2 text-sm" : "mt-2 px-4 py-2.5 text-sm" : compactStrainCard ? "px-4 py-2.5 text-sm" : regularCard ? "mt-2 px-4 py-2 text-sm" : "mt-3 px-4 py-3"}`}>
-        Add to cart
+      <button disabled={disabled} onClick={handleAddToCart} className={`touch-manipulation rounded-xl bg-emerald-500 font-bold text-white transition hover:bg-emerald-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none motion-reduce:transition-none ${addFeedback ? "bg-lime-400 text-[#04100a] shadow-[0_0_24px_rgba(190,242,100,0.42)]" : ""} ${addButtonGlowClass} ${solidShading ? compactStrainCard ? "min-h-11 px-4 py-2 text-sm" : regularCard ? "mt-1.5 min-h-11 px-4 py-2 text-sm" : "mt-2 min-h-12 px-4 py-2.5 text-sm" : compactStrainCard ? "min-h-11 px-4 py-2.5 text-sm" : regularCard ? "mt-2 min-h-11 px-4 py-2 text-sm" : "mt-3 min-h-12 px-4 py-3"}`}>
+        {addFeedback ? "Added" : "Add to cart"}
       </button>
     </article>
   );
