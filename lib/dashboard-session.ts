@@ -10,7 +10,7 @@ import { profileRoleToStaffRole } from "@/lib/staff-profile";
 import type { AccountRole, StaffDTO, StaffRole, StoreAccessStatus, StoreMembershipDTO } from "@/lib/types";
 
 const DASHBOARD_PROFILE_SELECT =
-  "id, auth_user_id, user_id, store_id, email, full_name, first_name, surname, physical_address, city, province, postal_code, mobile_number, phone_number, role, is_active, account_status, account_setup_complete, profile_setup_complete, store_setup_complete, onboarding_completed_at, onboarding_complete_seen_at, temporary_password_active, password_changed_at, terms_accepted_at, privacy_policy_accepted_at, terms_version, privacy_policy_version, stores(id, slug, name, store_access_status, store_information_confirmed_at, store_information_confirmed_by)";
+  "id, auth_user_id, user_id, store_id, email, full_name, first_name, surname, physical_address, city, province, postal_code, country, mobile_number, phone_number, alternative_phone, employee_id, role, is_active, account_status, account_setup_complete, profile_setup_complete, store_setup_complete, onboarding_completed_at, onboarding_complete_seen_at, temporary_password_active, password_changed_at, terms_accepted_at, privacy_policy_accepted_at, terms_version, privacy_policy_version, stores(id, slug, name, store_access_status, store_information_confirmed_at, store_information_confirmed_by)";
 
 type DashboardStoreRow = {
   id: string;
@@ -34,8 +34,11 @@ export type DashboardStaffProfile = {
   city?: string | null;
   province?: string | null;
   postal_code?: string | null;
+  country?: string | null;
   mobile_number?: string | null;
   phone_number?: string | null;
+  alternative_phone?: string | null;
+  employee_id?: string | null;
   role: "admin" | "manager" | "receptionist";
   is_active?: boolean | null;
   account_status?: "active" | "restricted" | "deactivated" | "deleted" | null;

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type 
 import Link from "next/link";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { checkoutReceptionistSaleAction } from "@/app/dashboard/receptionist/actions";
+import { DashboardAccountPanel } from "@/components/account/DashboardAccountPanel";
 import { Money } from "@/components/GreenChoiceDashboard";
 import { isProductCategory, PRODUCT_SUBCATEGORIES } from "@/lib/manager/options";
 import type { ReceptionistCategory, ReceptionistProduct } from "@/lib/receptionist/products";
@@ -134,7 +135,9 @@ export function ReceptionistPOS({
   isDemo = false,
   storeName = "DISPENSARY",
   backToDashboardHref,
-  checkoutAction
+  checkoutAction,
+  accountProfile,
+  accountRole = "receptionist"
 }: ReceptionistPOSProps) {
   const initialStoredSelection = initialCategory ? null : storedSelection();
   const [category, setCategory] = useState(initialCategory ?? initialStoredSelection?.category ?? "");
@@ -376,8 +379,9 @@ export function ReceptionistPOS({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/branding/greenchoice-logo.png" alt={`${storeName} GreenChoice logo`} className="h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28" />
         </div>
-        <div className="flex justify-start sm:justify-end">
-          <p className="text-sm font-semibold text-white/64 sm:text-right">{cartCount ? `${cartCount} item${cartCount === 1 ? "" : "s"} in cart` : "Ready for sale"}</p>
+        <div className="flex items-center justify-start gap-3 sm:justify-end">
+          <p className="hidden text-sm font-semibold text-white/64 md:block sm:text-right">{cartCount ? `${cartCount} item${cartCount === 1 ? "" : "s"} in cart` : "Ready for sale"}</p>
+          {accountProfile ? <DashboardAccountPanel role={accountRole} profile={accountProfile} /> : null}
         </div>
       </header>
 
