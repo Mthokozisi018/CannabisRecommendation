@@ -17,6 +17,7 @@ export type RateLimitResult = {
 };
 
 type LocalWindow = { count: number; resetAt: number };
+type RedisRestCredentials = { endpoint: string; token: string };
 const localWindows = new Map<string, LocalWindow>();
 
 export class RateLimitExceededError extends Error {
@@ -73,18 +74,28 @@ function localRateLimit(key: string, input: RateLimitInput): RateLimitResult {
   };
 }
 
-async function distributedRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
-  const endpoint = (process.env.RATE_LIMIT_REDIS_REST_URL || process.env.UPSTASH_REDIS_REST_URL)?.replace(/\/$/, "");
-  const token = process.env.RATE_LIMIT_REDIS_REST_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!endpoint || !token) {
-    if (process.env.NODE_ENV === "production") throw new RateLimitUnavailableError();
-    return localRateLimit(key, input);
-  }
+function redisCredentialCandidates(): RedisRestCredentials[] {
+  const candidates = [
+    {
+      endpoint: process.env.RATE_LIMIT_REDIS_REST_URL?.replace(/\/$/, ""),
+      token: process.env.RATE_LIMIT_REDIS_REST_TOKEN
+    },
+    {
+      endpoint: process.env.UPSTASH_REDIS_REST_URL?.replace(/\/$/, ""),
+      token: process.env.UPSTASH_REDIS_REST_TOKEN
+    }
+  ].filter((item): item is RedisRestCredentials => Boolean(item.endpoint && item.token));
 
-  const response = await fetch(`${endpoint}/pipeline`, {
+  return candidates.filter((item, index, list) =>
+    list.findIndex((candidate) => candidate.endpoint === item.endpoint && candidate.token === item.token) === index
+  );
+}
+
+async function runDistributedRateLimit(key: string, input: RateLimitInput, credentials: RedisRestCredentials): Promise<RateLimitResult> {
+  const response = await fetch(`${credentials.endpoint}/pipeline`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${credentials.token}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify([
@@ -114,6 +125,23 @@ async function distributedRateLimit(key: string, input: RateLimitInput): Promise
     retryAfterSeconds: allowed ? 0 : Math.max(1, Math.ceil(ttlMs / 1000)),
     resetAt: now + ttlMs
   };
+}
+
+async function distributedRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
+  const candidates = redisCredentialCandidates();
+  if (candidates.length === 0) {
+    if (process.env.NODE_ENV === "production") throw new RateLimitUnavailableError();
+    return localRateLimit(key, input);
+  }
+
+  for (const credentials of candidates) {
+    try {
+      return await runDistributedRateLimit(key, input, credentials);
+    } catch {
+      // Try the shared Upstash cache credentials before failing closed.
+    }
+  }
+  throw new RateLimitUnavailableError();
 }
 
 export async function consumeRateLimit(input: RateLimitInput) {

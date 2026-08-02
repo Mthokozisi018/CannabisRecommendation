@@ -92,4 +92,32 @@ describe("application rate limiter", () => {
       })
     }));
   });
+
+  it("falls back to shared Upstash Redis when dedicated rate-limit Redis fails", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_KEY_SECRET", "a-production-test-secret-that-is-long-enough");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_URL", "https://rate-limit-redis.example.invalid");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_TOKEN", "a-rate-limit-token-that-is-long-enough-for-production");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://shared-redis.example.invalid");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "a-shared-test-token-that-is-long-enough-for-production");
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(new Response(JSON.stringify([
+        { result: 1 },
+        { result: 1 },
+        { result: 60_000 }
+      ]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await consumeRateLimit({
+      namespace: "fallback-upstash",
+      identifiers: ["anonymous"],
+      limit: 2,
+      windowMs: 60_000
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "https://rate-limit-redis.example.invalid/pipeline", expect.any(Object));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "https://shared-redis.example.invalid/pipeline", expect.any(Object));
+  });
 });
