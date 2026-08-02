@@ -74,8 +74,8 @@ function localRateLimit(key: string, input: RateLimitInput): RateLimitResult {
 }
 
 async function distributedRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
-  const endpoint = process.env.RATE_LIMIT_REDIS_REST_URL?.replace(/\/$/, "");
-  const token = process.env.RATE_LIMIT_REDIS_REST_TOKEN;
+  const endpoint = (process.env.RATE_LIMIT_REDIS_REST_URL || process.env.UPSTASH_REDIS_REST_URL)?.replace(/\/$/, "");
+  const token = process.env.RATE_LIMIT_REDIS_REST_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!endpoint || !token) {
     if (process.env.NODE_ENV === "production") throw new RateLimitUnavailableError();
     return localRateLimit(key, input);

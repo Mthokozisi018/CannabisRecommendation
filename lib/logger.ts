@@ -29,6 +29,7 @@ function redactString(value: string) {
     process.env.SUPABASE_SECRET_KEY,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     process.env.RATE_LIMIT_REDIS_REST_TOKEN,
+    process.env.UPSTASH_REDIS_REST_TOKEN,
     process.env.CSRF_SECRET,
     process.env.SESSION_SIGNING_SECRET,
     process.env.GREENCHOICE_PASSWORD_FINGERPRINT_SECRET

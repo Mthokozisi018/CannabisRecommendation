@@ -89,7 +89,7 @@ describe("critical repository security contracts", () => {
   it("fails closed for missing origins, production URLs, secrets, and rate-limit storage", () => {
     expect(source("lib/security.ts")).toContain('if (!origin) throw new Error("Request origin is required.")');
     expect(source("lib/app-url.ts")).toContain("The production application URL is not configured");
-    expect(source("lib/environment.ts")).toContain("RATE_LIMIT_REDIS_REST_URL");
+    expect(source("lib/environment.ts")).toContain("UPSTASH_REDIS_REST_URL");
     expect(source("lib/rate-limit.ts")).toContain("if (process.env.NODE_ENV === \"production\") throw new RateLimitUnavailableError()");
   });
 
