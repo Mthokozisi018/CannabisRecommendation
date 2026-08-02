@@ -138,6 +138,7 @@ export async function updateOwnAccountProfileAction(_prev: AccountActionState, f
     if (!data?.id) throw new Error("Your active account profile could not be found.");
 
     await writeAccountAudit(session, session.isManager ? "manager_updated_own_profile" : "receptionist_updated_own_profile", { changedFields });
+    revalidatePath("/dashboard/account");
     revalidatePath("/dashboard/manager");
     revalidatePath("/dashboard/receptionist");
     return { ok: true, message: changedFields.length ? "Your account details were updated." : "No profile changes were needed." };
