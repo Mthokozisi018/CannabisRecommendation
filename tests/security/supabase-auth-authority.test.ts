@@ -122,6 +122,7 @@ describe("Supabase Auth ownership contracts", () => {
     expect(loginForm).not.toContain('fetch("/api/auth/access-decision"');
     expect(loginForm).not.toContain("confirmServerSession");
     expect(loginForm).toContain('method="post"');
+    expect(loginForm).toContain('action="/api/auth/login-form"');
     expect(loginForm).toContain("disabled={isSubmitting || !isReady}");
     expect(loginForm).toContain("window.location.replace");
   });

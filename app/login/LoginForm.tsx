@@ -94,7 +94,7 @@ export function LoginForm() {
   return (
     <>
       <LoadingOverlay active={isSubmitting} />
-      <form method="post" onSubmit={handleSubmit} className="gc-login-form mt-9 grid gap-6">
+      <form method="post" action="/api/auth/login-form" onSubmit={handleSubmit} className="gc-login-form mt-9 grid gap-6">
         {message ? <p className="rounded-xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-center text-sm text-red-100">{message}</p> : null}
         <LoginField name="email" label="Email Address" icon={<Mail size={24} strokeWidth={2.2} />} placeholder="Enter your work email" type="email" value={email} onChange={setEmail} />
         <LoginField
