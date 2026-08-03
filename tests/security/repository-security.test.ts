@@ -41,6 +41,7 @@ describe("critical repository security contracts", () => {
     expect(statusRoute).toContain(".eq(\"auth_user_id\", user.id)");
     expect(completionRoute).toContain("metadataInvitationId !== parsed.data.invitationId");
     expect(completionRoute).toContain('user.user_metadata?.invited_role !== "manager"');
+    expect(completionRoute).toContain("localFallbackWhenConfiguredProviderFails: true");
     expect(migration).toContain("v_invitation.auth_user_id is distinct from v_user_id");
     expect(migration).toContain("lower(v_invitation.email) <> v_user_email");
     expect(migration).toContain("auth.jwt() -> 'user_metadata' ->> 'invitation_id'");

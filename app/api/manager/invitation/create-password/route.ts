@@ -47,7 +47,8 @@ export async function POST(request: Request) {
       namespace: "manager-invitation-complete",
       identifiers: [trustedClientIp(request.headers), parsed.data.invitationId],
       limit: configuredRateLimit("RATE_LIMIT_MANAGER_INVITATION_ATTEMPTS", 5),
-      windowMs: 15 * 60_000
+      windowMs: 15 * 60_000,
+      localFallbackWhenConfiguredProviderFails: true
     });
 
     const passwordIssues = managerPasswordIssues(parsed.data.password, parsed.data.confirmPassword);
