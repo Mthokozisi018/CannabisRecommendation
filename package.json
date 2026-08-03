@@ -24,6 +24,7 @@
     "seed:admin": "node scripts/seed-admin-user.mjs"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.69.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.77.0",
     "@upstash/redis": "^1.38.0",

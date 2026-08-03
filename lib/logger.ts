@@ -1,4 +1,5 @@
 import "server-only";
+import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
@@ -93,6 +94,12 @@ export async function logServerEvent(level: LogLevel, event: string, context: Sa
 export async function reportServerException(event: string, error: unknown, context: SafeContext = {}) {
   const safeError = safeValue(error, "error");
   await logServerEvent("error", event, { ...context, error: safeError });
+
+  Sentry.withScope((scope) => {
+    scope.setTag("greenchoice.event", event.slice(0, 120));
+    scope.setContext("greenchoice", safeValue(context) as Record<string, unknown>);
+    Sentry.captureException(error instanceof Error ? error : new Error(String(safeError)));
+  });
 
   const endpoint = process.env.ERROR_REPORTING_DSN?.trim();
   if (!endpoint) return;

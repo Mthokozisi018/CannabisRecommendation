@@ -35,9 +35,14 @@ function configuredOrigin(value: string | undefined) {
   }
 }
 
+function configuredSentryOrigin() {
+  const dsnOrigin = configuredOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN);
+  return dsnOrigin ?? "https://o4511845984305152.ingest.de.sentry.io";
+}
+
 function contentSecurityPolicy(nonce: string) {
   const supabaseOrigin = configuredOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const connectSources = ["'self'"];
+  const connectSources = ["'self'", configuredSentryOrigin()];
   const imageSources = ["'self'", "data:", "blob:"];
   if (supabaseOrigin) {
     connectSources.push(supabaseOrigin, supabaseOrigin.replace(/^http/, "ws"));
