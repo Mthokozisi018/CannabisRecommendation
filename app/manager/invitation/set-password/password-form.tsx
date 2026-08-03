@@ -71,7 +71,13 @@ function InvitationPasswordContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("Verifying your invitation...");
   const [status, setStatus] = useState<"loading" | "ready" | "submitting" | "error">("loading");
+  const [isReady, setIsReady] = useState(false);
   const verifiedInvitationRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsReady(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const currentInvitationId = searchParams.get("invitation_id") ?? "";
@@ -180,7 +186,7 @@ function InvitationPasswordContent() {
           ) : null}
 
           {status === "ready" || status === "submitting" ? (
-            <form onSubmit={submit} className="mt-8 grid gap-5">
+            <form method="post" onSubmit={submit} className="mt-8 grid gap-5">
               <PasswordInput label="New password" value={password} onChange={setPassword} visible={showPassword} onToggle={() => setShowPassword((value) => !value)} />
               <PasswordInput label="Confirm new password" value={confirmPassword} onChange={setConfirmPassword} visible={showPassword} onToggle={() => setShowPassword((value) => !value)} />
 
@@ -191,10 +197,10 @@ function InvitationPasswordContent() {
 
               <button
                 type="submit"
-                disabled={status === "submitting"}
+                disabled={!isReady || status === "submitting"}
                 className="inline-flex min-h-16 items-center justify-center gap-4 rounded-xl bg-[linear-gradient(135deg,#c6ff13,#73d51d)] px-6 text-xl font-black text-black shadow-[0_20px_60px_rgba(157,255,24,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Complete invitation
+                {!isReady ? "Preparing..." : "Complete invitation"}
                 <ArrowRight size={24} />
               </button>
             </form>

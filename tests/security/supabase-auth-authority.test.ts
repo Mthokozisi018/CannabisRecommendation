@@ -121,15 +121,22 @@ describe("Supabase Auth ownership contracts", () => {
     expect(loginForm).toContain('fetch("/api/auth/login"');
     expect(loginForm).not.toContain('fetch("/api/auth/access-decision"');
     expect(loginForm).not.toContain("confirmServerSession");
+    expect(loginForm).toContain('method="post"');
+    expect(loginForm).toContain("disabled={isSubmitting || !isReady}");
     expect(loginForm).toContain("window.location.replace");
   });
 
   it("exchanges each recovery or invitation code only once per mounted flow", () => {
     const updatePassword = source("app/update-password/page.tsx");
+    const managerInvitationPassword = source("app/manager/invitation/set-password/password-form.tsx");
     expect(updatePassword).toContain("exchangedCodeRef");
     expect(updatePassword).toContain("exchangePromiseRef");
     expect(updatePassword).toContain("await (exchangePromiseRef.current");
+    expect(updatePassword).toContain('method="post"');
+    expect(updatePassword).toContain("!isReady || isSubmitting");
     expect(source("components/staff/StaffInvitationSessionGate.tsx")).toContain("preparedInvitationRef");
-    expect(source("app/manager/invitation/set-password/password-form.tsx")).toContain("verifiedInvitationRef");
+    expect(managerInvitationPassword).toContain("verifiedInvitationRef");
+    expect(managerInvitationPassword).toContain('method="post"');
+    expect(managerInvitationPassword).toContain("!isReady || status === \"submitting\"");
   });
 });

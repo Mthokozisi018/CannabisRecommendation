@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, LogIn, LockKeyhole, Mail } from "lucide-react";
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 function fieldErrorFromSearch(error: string | null) {
@@ -45,7 +45,13 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState(fieldErrorFromSearch(searchParams.get("error")));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const submissionInFlightRef = useRef(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsReady(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,7 +94,7 @@ export function LoginForm() {
   return (
     <>
       <LoadingOverlay active={isSubmitting} />
-      <form onSubmit={handleSubmit} className="gc-login-form mt-9 grid gap-6">
+      <form method="post" onSubmit={handleSubmit} className="gc-login-form mt-9 grid gap-6">
         {message ? <p className="rounded-xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-center text-sm text-red-100">{message}</p> : null}
         <LoginField name="email" label="Email Address" icon={<Mail size={24} strokeWidth={2.2} />} placeholder="Enter your work email" type="email" value={email} onChange={setEmail} />
         <LoginField
@@ -105,9 +111,9 @@ export function LoginForm() {
             </button>
           }
         />
-        <button type="submit" disabled={isSubmitting} className="mt-3 inline-flex h-14 items-center justify-center gap-4 rounded-xl bg-[linear-gradient(135deg,#78d95b,#55a93e)] text-xl font-extrabold text-white shadow-[0_18px_42px_rgba(89,188,65,0.28),inset_0_1px_0_rgba(255,255,255,0.24)] transition hover:brightness-110 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70">
+        <button type="submit" disabled={isSubmitting || !isReady} className="mt-3 inline-flex h-14 items-center justify-center gap-4 rounded-xl bg-[linear-gradient(135deg,#78d95b,#55a93e)] text-xl font-extrabold text-white shadow-[0_18px_42px_rgba(89,188,65,0.28),inset_0_1px_0_rgba(255,255,255,0.24)] transition hover:brightness-110 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-70">
           <LogIn size={26} strokeWidth={2.2} />
-          {isSubmitting ? "Signing In..." : "Sign In"}
+          {!isReady ? "Preparing..." : isSubmitting ? "Signing In..." : "Sign In"}
         </button>
       </form>
     </>

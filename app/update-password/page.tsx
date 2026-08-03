@@ -27,9 +27,15 @@ function UpdatePasswordForm() {
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreparingSession, setIsPreparingSession] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const exchangedCodeRef = useRef<string | null>(null);
   const exchangePromiseRef = useRef<Promise<boolean> | null>(null);
   const submissionInFlightRef = useRef(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsReady(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -99,7 +105,7 @@ function UpdatePasswordForm() {
   return (
     <>
       <LoadingOverlay active={isSubmitting} />
-      <form onSubmit={handleSubmit} className="mt-9 grid gap-6">
+      <form method="post" onSubmit={handleSubmit} className="mt-9 grid gap-6">
         {message ? <p className="rounded-xl border border-lime-300/25 bg-lime-500/10 px-5 py-4 text-lime-50">{message}</p> : null}
         {isPreparingSession ? <p className="rounded-xl border border-lime-300/25 bg-lime-500/10 px-5 py-4 text-lime-50">Preparing your secure reset session...</p> : null}
         {errors.length ? <div className="rounded-xl border border-red-300/25 bg-red-500/10 px-5 py-4 text-red-100">{errors.map((error) => <p key={error}>{error}</p>)}</div> : null}
@@ -120,8 +126,8 @@ function UpdatePasswordForm() {
             <input value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} type={showPassword ? "text" : "password"} className="min-w-0 flex-1 bg-transparent text-lg text-white outline-none placeholder:text-white/42" placeholder="Confirm new password" />
           </span>
         </label>
-        <button disabled={isSubmitting || isPreparingSession || Boolean(message)} className="h-14 rounded-xl bg-lime-500 font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70">
-          {isPreparingSession ? "Preparing..." : isSubmitting ? "Updating..." : "Update password"}
+        <button disabled={!isReady || isSubmitting || isPreparingSession || Boolean(message)} className="h-14 rounded-xl bg-lime-500 font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70">
+          {!isReady || isPreparingSession ? "Preparing..." : isSubmitting ? "Updating..." : "Update password"}
         </button>
       </form>
     </>
