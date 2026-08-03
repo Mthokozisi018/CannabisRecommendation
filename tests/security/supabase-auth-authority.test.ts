@@ -125,7 +125,10 @@ describe("Supabase Auth ownership contracts", () => {
   });
 
   it("exchanges each recovery or invitation code only once per mounted flow", () => {
-    expect(source("app/update-password/page.tsx")).toContain("exchangedCodeRef");
+    const updatePassword = source("app/update-password/page.tsx");
+    expect(updatePassword).toContain("exchangedCodeRef");
+    expect(updatePassword).toContain("exchangePromiseRef");
+    expect(updatePassword).toContain("await (exchangePromiseRef.current");
     expect(source("components/staff/StaffInvitationSessionGate.tsx")).toContain("preparedInvitationRef");
     expect(source("app/manager/invitation/set-password/password-form.tsx")).toContain("verifiedInvitationRef");
   });
