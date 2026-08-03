@@ -6,6 +6,7 @@ import { LEGAL_DOCUMENTS } from "@/lib/manager/legal-documents";
 import { normalizeSAPhone } from "@/lib/manager/onboarding";
 import { southAfricanPhoneRegex, southAfricanProvinces } from "@/lib/manager/onboarding-options";
 import { managerPasswordIssues } from "@/lib/manager/password-policy";
+import { invalidateManagerStaffCache } from "@/lib/cache/redis";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
 
@@ -84,7 +85,7 @@ export async function completeStaffOnboardingAction(_prev: StaffOnboardingState,
 
     const { data: invitation, error: invitationError } = await supabase
       .from("staff_invitations")
-      .select("id, email, auth_user_id")
+      .select("id, email, auth_user_id, store_id")
       .eq("id", parsed.invitationId)
       .maybeSingle();
     if (invitationError || !invitation ||
@@ -113,6 +114,7 @@ export async function completeStaffOnboardingAction(_prev: StaffOnboardingState,
       p_privacy_policy_version: LEGAL_DOCUMENTS.privacy.version
     });
     if (completionError) throw new Error("Invitation completion failed.");
+    if (typeof invitation.store_id === "string") await invalidateManagerStaffCache(invitation.store_id);
   } catch (error) {
     return { ok: false, message: firstIssue(error, "Unable to complete onboarding. Open the latest invitation link and try again.") };
   }

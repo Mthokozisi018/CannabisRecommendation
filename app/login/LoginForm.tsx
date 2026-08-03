@@ -47,19 +47,6 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlightRef = useRef(false);
 
-  async function confirmServerSession() {
-    const response = await fetch("/api/auth/access-decision", {
-      method: "GET",
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Accept": "application/json" }
-    });
-    const result = await response.json().catch(() => ({})) as { allowed?: boolean; message?: string; reason?: string };
-    if (!response.ok || result.allowed !== true) {
-      throw new Error(result.message || (result.reason === "missing_session" ? "Your sign-in succeeded, but this browser did not finish saving the session. Refresh the page and sign in again." : "GreenChoice could not confirm your dashboard access."));
-    }
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submissionInFlightRef.current) return;
@@ -90,7 +77,6 @@ export function LoginForm() {
         return;
       }
 
-      await confirmServerSession();
       window.location.replace(loginResult.redirectTo ?? "/dashboard");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "GreenChoice authentication is not reachable. Check the Supabase configuration.");

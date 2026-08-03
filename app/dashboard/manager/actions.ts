@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { configuredApplicationUrl } from "@/lib/app-url";
-import { invalidateManagerDashboardSummaryCache, invalidateStoreDisplayCache } from "@/lib/cache/redis";
+import { invalidateManagerStaffCache, invalidateStoreDisplayCache } from "@/lib/cache/redis";
 import { requireActiveManager, requireAdminClient } from "@/lib/manager/auth";
 import { edibleThcDatabaseFields, type ManagerInventoryProduct } from "@/lib/manager/data";
 import { categoryAllowsCultivationType, categoryAllowsProductImageOnCreate, VAPE_PRODUCT_TYPES, VAPE_STRAIN_TYPES } from "@/lib/manager/options";
@@ -653,6 +653,7 @@ export async function inviteReceptionistAction(_prev: ManagerActionState, formDa
     }
 
     await audit(resend ? "manager_resent_staff_invitation" : "manager_created_staff_invitation", "staff_invitations", invitationId, { email: parsed.email, storeId, intendedRole: "receptionist", expiresAt, result: resend ? "resent" : "created" });
+    await invalidateManagerStaffCache(storeId);
     revalidatePath("/dashboard/manager/staff");
     return { ok: true, message: resend ? "Invitation resent. The invited person can use the newest email link." : "Invitation sent. The invited person becomes staff only after completing secure onboarding." };
   } catch (error) {
@@ -703,7 +704,7 @@ export async function updateStaffStatusAction(_prev: ManagerActionState, formDat
       throw new Error("This store has reached its receptionist limit (5 / 5). Deactivate a receptionist or revoke an invitation first.");
     }
     if (error) throw new Error("Receptionist account status could not be updated.");
-    await invalidateManagerDashboardSummaryCache(storeId);
+    await invalidateManagerStaffCache(storeId);
     revalidatePath("/dashboard/manager/staff");
     return { ok: true, message: "Receptionist account status updated." };
   } catch (error) {

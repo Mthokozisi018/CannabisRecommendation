@@ -76,12 +76,11 @@ const toneStyles: Record<CardTone, { card: string; iconRing: string; icon: strin
 
 function ManagerActionCard({ href, icon: Icon, title, tone }: Omit<ManagerCard, "key">) {
   const styles = toneStyles[tone];
-  const prefetch = href === "/dashboard/receptionist";
 
   return (
     <Link
       href={href as never}
-      prefetch={prefetch}
+      prefetch
       aria-label={title}
       className={`gc-manager-action-card group relative flex h-[230px] w-full max-w-[176px] flex-col items-center justify-between overflow-hidden rounded-[18px] border px-5 py-8 text-center text-white backdrop-blur-xl transition duration-300 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-[252px] sm:max-w-[190px] lg:h-[270px] lg:max-w-[200px] ${styles.card}`}
     >

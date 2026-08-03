@@ -87,6 +87,8 @@ describe("Supabase Auth ownership contracts", () => {
     const managerLayout = source("app/dashboard/manager/layout.tsx");
     const managerActions = source("components/manager/ManagerDashboardActions.tsx");
     const managerPage = source("app/dashboard/manager/page.tsx");
+    const managerData = source("lib/manager/data.ts");
+    const cache = source("lib/cache/redis.ts");
     const loginForm = source("app/login/LoginForm.tsx");
     const recovery = source("app/forgot-password/page.tsx");
 
@@ -95,17 +97,24 @@ describe("Supabase Auth ownership contracts", () => {
     expect(managerSummary).toContain('.eq("action", "login_success")');
     expect(managerLayout).not.toContain("ManagerRoutePrefetcher");
     expect(managerPage).toContain("ManagerPOSRoutePreloader");
-    expect(managerActions).toContain('href === "/dashboard/receptionist"');
+    expect(managerActions).toContain("prefetch");
+    expect(source("components/manager/ManagerPOSRoutePreloader.tsx")).toContain("MANAGER_FAST_ROUTES");
+    expect(managerData).toContain("managerProductsCacheKey");
+    expect(managerData).toContain("managerStaffAccountsCacheKey");
+    expect(managerData).toContain("receptionistSlotUsageCacheKey");
+    expect(cache).toContain("invalidateManagerStaffCache");
     expect(loginForm).toContain("submissionInFlightRef");
     expect(recovery).toContain("submissionInFlightRef");
   });
 
-  it("confirms the cookie-backed server session before leaving login", () => {
+  it("relies on the login route access decision before leaving login", () => {
+    const loginRoute = source("app/api/auth/login/route.ts");
     const loginForm = source("app/login/LoginForm.tsx");
-    expect(loginForm).toContain('fetch("/api/auth/access-decision"');
-    expect(loginForm).toContain('cache: "no-store"');
-    expect(loginForm).toContain('credentials: "same-origin"');
-    expect(loginForm).toContain("confirmServerSession");
+    expect(loginRoute).toContain("decideDashboardAccess");
+    expect(loginRoute).toContain("getDashboardSessionForVerifiedUser");
+    expect(loginForm).toContain('fetch("/api/auth/login"');
+    expect(loginForm).not.toContain('fetch("/api/auth/access-decision"');
+    expect(loginForm).not.toContain("confirmServerSession");
     expect(loginForm).toContain("window.location.replace");
   });
 
