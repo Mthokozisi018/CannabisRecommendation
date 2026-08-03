@@ -17,6 +17,13 @@ function passwordErrors(password: string) {
   return errors;
 }
 
+function clearRecoveryParameters() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("code");
+  url.hash = "";
+  window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+}
+
 function UpdatePasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,32 +37,45 @@ function UpdatePasswordForm() {
   const [isReady, setIsReady] = useState(false);
   const exchangedCodeRef = useRef<string | null>(null);
   const exchangePromiseRef = useRef<Promise<boolean> | null>(null);
+  const preparationStartedRef = useRef(false);
   const submissionInFlightRef = useRef(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setIsReady(true), 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
+    if (preparationStartedRef.current) return;
+    preparationStartedRef.current = true;
     const code = searchParams.get("code");
-    if (!code || exchangedCodeRef.current === code) return;
-    exchangedCodeRef.current = code;
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const accessToken = hash.get("access_token");
+    const refreshToken = hash.get("refresh_token");
+    const isRecoveryToken = hash.get("type") === "recovery";
     setIsPreparingSession(true);
     const supabase = createSupabaseBrowserClient();
-    exchangePromiseRef.current = supabase.auth.exchangeCodeForSession(code)
-      .then(({ error }) => {
-        if (error) {
-          setErrors(["Password reset session is invalid or expired. Request a new reset link."]);
-          return false;
-        }
-        return true;
-      })
+
+    exchangePromiseRef.current = (async () => {
+      if (code && exchangedCodeRef.current !== code) {
+        exchangedCodeRef.current = code;
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) throw error;
+        clearRecoveryParameters();
+      } else if (accessToken && refreshToken && isRecoveryToken) {
+        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (error) throw error;
+        clearRecoveryParameters();
+      } else {
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) throw error ?? new Error("Missing recovery session.");
+      }
+
+      setIsReady(true);
+      return true;
+    })()
       .catch(() => {
         setErrors(["Password reset session is invalid or expired. Request a new reset link."]);
         return false;
       })
-      .finally(() => setIsPreparingSession(false));
+      .finally(() => {
+        setIsPreparingSession(false);
+      });
   }, [searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -72,7 +92,7 @@ function UpdatePasswordForm() {
     setIsSubmitting(true);
     setErrors([]);
     try {
-      const exchangeOk = await (exchangePromiseRef.current ?? Promise.resolve(true));
+      const exchangeOk = await (exchangePromiseRef.current ?? Promise.resolve(false));
       if (!exchangeOk) {
         submissionInFlightRef.current = false;
         setIsSubmitting(false);

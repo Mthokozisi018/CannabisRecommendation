@@ -133,6 +133,10 @@ describe("Supabase Auth ownership contracts", () => {
     expect(updatePassword).toContain("exchangedCodeRef");
     expect(updatePassword).toContain("exchangePromiseRef");
     expect(updatePassword).toContain("await (exchangePromiseRef.current");
+    expect(updatePassword).toContain("window.location.hash");
+    expect(updatePassword).toContain("supabase.auth.setSession");
+    expect(updatePassword).toContain("window.history.replaceState");
+    expect(updatePassword).toContain("Promise.resolve(false)");
     expect(updatePassword).toContain('method="post"');
     expect(updatePassword).toContain("!isReady || isSubmitting");
     expect(source("components/staff/StaffInvitationSessionGate.tsx")).toContain("preparedInvitationRef");
