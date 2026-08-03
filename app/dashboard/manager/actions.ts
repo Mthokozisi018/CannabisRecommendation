@@ -196,6 +196,25 @@ async function sendStaffInvite(email: string, invitationId: string, existingAuth
   return data.user.id;
 }
 
+async function deleteUnboundStaffInviteAuthUser(authUserId: string | null, invitationId: string) {
+  if (!authUserId) return;
+  try {
+    const admin = requireAdminClient();
+    const [{ data: authData }, profileResult] = await Promise.all([
+      admin.auth.admin.getUserById(authUserId),
+      admin.from("staff_profiles").select("id").eq("auth_user_id", authUserId).maybeSingle()
+    ]);
+    const user = authData.user;
+    if (!profileResult.error && !profileResult.data &&
+        user?.user_metadata?.invited_role === "receptionist" &&
+        user.user_metadata?.staff_invitation_id === invitationId) {
+      await admin.auth.admin.deleteUser(authUserId);
+    }
+  } catch {
+    // Invitation cleanup must not hide the original bind/send failure.
+  }
+}
+
 export async function createProductAction(_prev: ManagerActionState, formData: FormData): Promise<ManagerActionState> {
   try {
     await verifyOrigin();
@@ -630,10 +649,11 @@ export async function inviteReceptionistAction(_prev: ManagerActionState, formDa
       existingInvitationAuthUserId = existingInvitation?.auth_user_id ?? null;
     }
 
+    let invitedAuthUserId: string | null = null;
     try {
       await audit("manager_staff_invitation_email_requested", "staff_invitations", invitationId, { email: parsed.email, storeId, result: "requested", resend });
-      const invitedAuthUserId = await sendStaffInvite(parsed.email, invitationId, existingInvitationAuthUserId);
-      await admin
+      invitedAuthUserId = await sendStaffInvite(parsed.email, invitationId, existingInvitationAuthUserId);
+      const { error: bindError } = await admin
         .from("staff_invitations")
         .update({
           auth_user_id: invitedAuthUserId,
@@ -645,10 +665,12 @@ export async function inviteReceptionistAction(_prev: ManagerActionState, formDa
         })
         .eq("id", invitationId)
         .eq("store_id", storeId);
+      if (bindError) throw new Error(bindError.message);
       await audit("manager_staff_invitation_email_sent", "staff_invitations", invitationId, { email: parsed.email, storeId, result: "sent", resend });
     } catch (error) {
       await admin.from("staff_invitations").update({ status: "failed", failed_at: new Date().toISOString(), email_delivery_result: "failed" }).eq("id", invitationId).eq("store_id", storeId);
       await audit("manager_staff_invitation_email_failed", "staff_invitations", invitationId, { email: parsed.email, storeId, result: "failed", resend });
+      if (!existingInvitationAuthUserId) await deleteUnboundStaffInviteAuthUser(invitedAuthUserId, invitationId);
       throw error;
     }
 

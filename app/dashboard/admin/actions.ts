@@ -134,6 +134,25 @@ async function sendManagerInvite(email: string, invitationId: string) {
   throw inviteAuthError(error);
 }
 
+async function deleteUnboundManagerInviteAuthUser(authUserId: string | null, invitationId: string) {
+  if (!authUserId) return;
+  try {
+    const admin = adminClient();
+    const [{ data: authData }, profileResult] = await Promise.all([
+      admin.auth.admin.getUserById(authUserId),
+      admin.from("staff_profiles").select("id").eq("auth_user_id", authUserId).maybeSingle()
+    ]);
+    const user = authData.user;
+    if (!profileResult.error && !profileResult.data &&
+        user?.user_metadata?.invited_role === "manager" &&
+        user.user_metadata?.invitation_id === invitationId) {
+      await admin.auth.admin.deleteUser(authUserId);
+    }
+  } catch {
+    // Invitation cleanup must not hide the original bind/send failure.
+  }
+}
+
 async function resendManagerInvite(email: string, invitationId: string) {
   const { error } = await adminClient().auth.resend({
     type: "signup",
@@ -189,8 +208,9 @@ export async function inviteManagerAction(_prev: AdminActionState, formData: For
     if (invitationError) throw new Error(invitationError.message);
     if (!invitation) throw new Error("Manager invitation was not created.");
 
+    let authUserId: string | null = null;
     try {
-      const authUserId = await sendManagerInvite(parsed.email, invitation.id);
+      authUserId = await sendManagerInvite(parsed.email, invitation.id);
       const { error: bindError } = await admin
         .from("manager_invitations")
         .update({ auth_user_id: authUserId })
@@ -199,6 +219,7 @@ export async function inviteManagerAction(_prev: AdminActionState, formData: For
       if (bindError) throw new Error(bindError.message);
     } catch (error) {
       await admin.from("manager_invitations").update({ status: "revoked", revoked_at: new Date().toISOString() }).eq("id", invitation.id);
+      await deleteUnboundManagerInviteAuthUser(authUserId, invitation.id);
       throw error;
     }
 

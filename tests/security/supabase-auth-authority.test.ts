@@ -32,10 +32,16 @@ describe("Supabase Auth ownership contracts", () => {
 
   it("uses Supabase invitations and user-chosen passwords while GreenChoice assigns authorization", () => {
     const managerInvite = source("app/dashboard/admin/actions.ts");
+    const receptionistInvite = source("app/dashboard/manager/actions.ts");
     const managerCompletion = source("app/api/manager/invitation/create-password/route.ts");
     const receptionistCompletion = source("app/staff/invitation/actions.ts");
 
     expect(managerInvite).toContain("auth.admin.inviteUserByEmail");
+    expect(managerInvite).toContain("deleteUnboundManagerInviteAuthUser");
+    expect(managerInvite).toContain("if (bindError) throw new Error(bindError.message)");
+    expect(receptionistInvite).toContain("auth.admin.inviteUserByEmail");
+    expect(receptionistInvite).toContain("deleteUnboundStaffInviteAuthUser");
+    expect(receptionistInvite).toContain("if (bindError) throw new Error(bindError.message)");
     expect(managerCompletion).toContain("supabase.auth.updateUser");
     expect(managerCompletion).toContain('rpc("complete_manager_invitation"');
     expect(receptionistCompletion).toContain("supabase.auth.updateUser");
