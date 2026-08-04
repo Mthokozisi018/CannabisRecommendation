@@ -28,7 +28,7 @@ function accountStatus(profile: AccountFlowProfile) {
 
 export function decideAccountAccess(profile: AccountFlowProfile | null | undefined): AccountAccessDecision {
   if (!profile) {
-    return { allowed: false, reason: "missing_profile", message: "No staff profile found. Contact your administrator." };
+    return { allowed: false, reason: "missing_profile", message: "This account has not been authorized for GreenChoice. Contact the administrator." };
   }
 
   const status = accountStatus(profile);

@@ -46,6 +46,7 @@ describe("critical repository security contracts", () => {
     expect(migration).toContain("manual_manager_profile_initialized");
     expect(migration).toContain("revoke execute on function public.complete_manager_invitation(uuid) from authenticated");
     expect(dashboardSession).toContain("bootstrapManualManagerProfile");
+    expect(source("app/api/auth/login/route.ts")).toContain("This account has not been authorized for GreenChoice");
     expect(adminActions).not.toContain("inviteUserByEmail");
     expect(existsSync(resolve(process.cwd(), "app/dashboard/admin/invite-manager/page.tsx"))).toBe(false);
     expect(existsSync(resolve(process.cwd(), "app/dashboard/admin/invitations/page.tsx"))).toBe(false);

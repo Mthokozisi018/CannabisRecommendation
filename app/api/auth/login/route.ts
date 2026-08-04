@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     if (!session) {
       await supabase.auth.signOut();
       await logServerEvent("warn", "login_access_denied", { reason: "missing_profile" });
-      return NextResponse.json({ error: "No staff profile found. Contact your administrator." }, {
+      return NextResponse.json({ error: "This account has not been authorized for GreenChoice. Contact the administrator." }, {
         status: 403,
         headers: privateHeaders
       });

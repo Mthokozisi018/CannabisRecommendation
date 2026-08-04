@@ -6,7 +6,7 @@ import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 function fieldErrorFromSearch(error: string | null) {
-  if (error === "staff") return "No staff profile found. Contact your administrator.";
+  if (error === "staff") return "This account has not been authorized for GreenChoice. Contact the administrator.";
   if (error === "inactive") return "Your account is inactive. Please contact your manager.";
   if (error === "unauthorized") return "You are not authorized to access that dashboard.";
   if (error === "unavailable") return "GreenChoice authentication is not reachable. Check the Supabase configuration.";
