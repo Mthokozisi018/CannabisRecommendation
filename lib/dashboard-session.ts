@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
+import { decideAccountAccess, type AccountAccessDecision, type AccountAccessDenialReason } from "@/lib/account-flow";
 import { STORE } from "@/lib/data";
 import { normalizeRole } from "@/lib/authorization";
 import { getSessionState, updateSessionState } from "@/lib/session";
@@ -84,11 +85,8 @@ export type DashboardSession = {
   profile: DashboardStaffProfile;
 };
 
-export type DashboardAccessDenialReason = "missing_profile" | "account_restricted" | "account_inactive" | "account_deleted" | "store_unassigned" | "store_restricted";
-
-export type DashboardAccessDecision =
-  | { allowed: true }
-  | { allowed: false; reason: DashboardAccessDenialReason; message: string };
+export type DashboardAccessDenialReason = AccountAccessDenialReason;
+export type DashboardAccessDecision = AccountAccessDecision;
 
 function profileStore(profile: DashboardStaffProfile) {
   return Array.isArray(profile.stores) ? profile.stores[0] ?? null : profile.stores ?? null;
@@ -98,37 +96,8 @@ function profileAccountStatus(profile: DashboardStaffProfile): DashboardSession[
   return profile.account_status ?? (profile.is_active ? "active" : "deactivated");
 }
 
-function accessStatusForStore(profile: DashboardStaffProfile): StoreAccessStatus {
-  const store = profileStore(profile);
-  return store?.store_access_status ?? "restricted";
-}
-
 export function decideDashboardAccess(profile: DashboardStaffProfile | null | undefined): DashboardAccessDecision {
-  if (!profile) {
-    return { allowed: false, reason: "missing_profile", message: "No staff profile found. Contact your administrator." };
-  }
-
-  const accountStatus = profileAccountStatus(profile);
-  if (accountStatus === "restricted") {
-    return { allowed: false, reason: "account_restricted", message: "Your password was changed successfully, but this account currently has restricted access. Please contact your store administrator or GreenChoice support." };
-  }
-  if (accountStatus === "deleted") {
-    return { allowed: false, reason: "account_deleted", message: "This account is no longer available. Please contact your administrator." };
-  }
-  if (accountStatus !== "active") {
-    return { allowed: false, reason: "account_inactive", message: "Your account is inactive. Please contact your manager." };
-  }
-
-  if (profile.role !== "admin") {
-    if (!profile.store_id) {
-      return { allowed: false, reason: "store_unassigned", message: "Your account is not assigned to an active store. Please contact your administrator." };
-    }
-    if (accessStatusForStore(profile) !== "active") {
-      return { allowed: false, reason: "store_restricted", message: "Your password was changed successfully, but this account currently has restricted access. Please contact your store administrator or GreenChoice support." };
-    }
-  }
-
-  return { allowed: true };
+  return decideAccountAccess(profile);
 }
 
 export function restrictedPathForSession(session: Pick<DashboardSession, "isManager" | "isReceptionist"> | null | undefined) {

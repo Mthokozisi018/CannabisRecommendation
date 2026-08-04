@@ -21,6 +21,24 @@ describe("Supabase Auth ownership contracts", () => {
     }
   });
 
+  it("keeps first-time invitation password creation separate from password recovery", () => {
+    const managerCompletion = source("app/api/manager/invitation/create-password/route.ts");
+    const recoveryRequest = source("app/api/auth/password-recovery/route.ts");
+    const recoveryPage = source("app/update-password/page.tsx");
+    const recoveryUpdate = source("app/api/auth/password-update/route.ts");
+
+    expect(managerCompletion).toContain("Manager account password created successfully");
+    expect(managerCompletion).toContain("/manager/setup/account?password=created");
+    expect(managerCompletion).not.toContain("Password reset");
+    expect(recoveryRequest).toContain("/update-password?flow=recovery");
+    expect(recoveryPage).toContain('redirectType !== "recovery"');
+    expect(recoveryPage).toContain('hash.get("type") === "recovery"');
+    expect(recoveryPage).not.toContain("supabase.auth.getSession()");
+    expect(recoveryUpdate).toContain("hasPendingInvitationSession");
+    expect(recoveryUpdate).toContain('redirectTo: "/login"');
+    expect(recoveryUpdate).not.toContain('.from("staff_profiles").update');
+  });
+
   it("keeps account and store access checks after Supabase authenticates a user", () => {
     const login = source("app/api/auth/login/route.ts");
     const update = source("app/api/auth/password-update/route.ts");
@@ -28,6 +46,7 @@ describe("Supabase Auth ownership contracts", () => {
     expect(login).toContain("supabase.auth.signOut()");
     expect(update).toContain("decideDashboardAccess");
     expect(update).toContain("password_reset_completed_restricted_account");
+    expect(update).not.toContain("restrictedPathForSession");
   });
 
   it("uses Supabase invitations and user-chosen passwords while GreenChoice assigns authorization", () => {

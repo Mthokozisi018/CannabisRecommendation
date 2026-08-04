@@ -154,7 +154,7 @@ function SectionTitle({ icon, title, body }: { icon: ReactNode; title: string; b
   );
 }
 
-export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustChangePassword }: { legalDocuments: LegalDocumentsStatus; initialValues: ManagerAccountInitialValues; mustChangePassword: boolean }) {
+export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustChangePassword, passwordCreated = false }: { legalDocuments: LegalDocumentsStatus; initialValues: ManagerAccountInitialValues; mustChangePassword: boolean; passwordCreated?: boolean }) {
   const [state, formAction, pending] = useActionState(completeManagerAccountSetupAction, initialState);
   const [formValid, setFormValid] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -165,11 +165,16 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
   }
 
   return (
-    <Shell heading="Manager" accent="Onboarding" body="Let's set up your account to get your store up and running.">
+    <Shell heading="Manager" accent="Onboarding" body="Complete your personal details and required agreements before registering your store.">
       <Progress current={1} />
+      {passwordCreated ? (
+        <p className="mx-auto mt-8 max-w-5xl rounded-lg border border-lime-400 bg-[#07130b] px-5 py-4 text-center font-semibold text-lime-100">
+          Manager account password created successfully. Complete onboarding to continue.
+        </p>
+      ) : null}
       <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_300px]">
         <form action={formAction} onInput={updateValidity} onChange={updateValidity} className="rounded-[22px] border border-lime-400/55 bg-[linear-gradient(145deg,rgba(6,13,11,.9),rgba(0,0,0,.88))] p-6 shadow-[0_30px_120px_rgba(0,0,0,.52)] sm:p-8">
-          <SectionTitle icon={<UserRound size={34} />} title="Account Registration" body="Fill in your details and create your new password." />
+          <SectionTitle icon={<UserRound size={34} />} title="Account Registration" body={mustChangePassword ? "Fill in your details and replace the temporary password." : "Fill in your personal details and accept the required agreements."} />
 
           <div className="mt-8">
             <h3 className="text-xl font-black text-lime-400">Personal Information</h3>
@@ -199,7 +204,7 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your new password"
                   icon={<LockKeyhole size={21} />}
-                  minLength={8}
+                  minLength={12}
                   trailing={
                     <button type="button" onClick={() => setShowPassword((value) => !value)} className="grid size-9 place-items-center rounded-full text-lime-300 transition hover:bg-lime-400/10" aria-label={showPassword ? "Hide password" : "Show password"}>
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -212,7 +217,7 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your new password"
                   icon={<LockKeyhole size={21} />}
-                  minLength={8}
+                  minLength={12}
                   trailing={
                     <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="grid size-9 place-items-center rounded-full text-lime-300 transition hover:bg-lime-400/10" aria-label={showConfirmPassword ? "Hide password" : "Show password"}>
                       {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -223,7 +228,7 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
               <div className="mt-5 rounded-lg border border-lime-400/20 bg-lime-400/10 p-5">
                 <p className="font-semibold text-white">Password must contain:</p>
                 <div className="mt-4 grid gap-3 text-sm text-white/74 sm:grid-cols-2 lg:grid-cols-3">
-                  {["At least 8 characters", "At least 1 uppercase letter", "At least 1 lowercase letter", "At least 1 number", "At least 1 special character", "Passwords match"].map((item) => (
+                  {["At least 12 characters", "At least 1 uppercase letter", "At least 1 lowercase letter", "At least 1 number", "At least 1 special character", "Passwords match"].map((item) => (
                     <span key={item} className="flex items-center gap-2"><CheckCircle2 size={16} className="text-lime-400" />{item}</span>
                   ))}
                 </div>
@@ -265,10 +270,14 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
           </span>
           <p className="mt-8 text-lg font-black text-lime-300">Step 1 of 3</p>
           <h2 className="mt-4 text-2xl font-black text-white">Account Registration</h2>
-          <p className="mt-6 text-lg leading-8 text-white/68">This is where you set up your personal account information and create a new password.</p>
-          <div className="my-8 h-px bg-lime-400/20" />
-          <p className="flex items-start gap-3 text-lg font-black text-lime-300"><LockKeyhole size={25} />Why create a new password?</p>
-          <p className="mt-5 leading-8 text-white/66">For your security, you must create a password that only you know before continuing.</p>
+          <p className="mt-6 text-lg leading-8 text-white/68">Add the personal and legal information required for your manager account.</p>
+          {mustChangePassword ? (
+            <>
+              <div className="my-8 h-px bg-lime-400/20" />
+              <p className="flex items-start gap-3 text-lg font-black text-lime-300"><LockKeyhole size={25} />Replace temporary password</p>
+              <p className="mt-5 leading-8 text-white/66">Create a permanent password that only you know before continuing.</p>
+            </>
+          ) : null}
           <div className="my-8 h-px bg-lime-400/20" />
           <p className="flex items-start gap-3 text-lg font-black text-lime-300"><ShieldCheck size={25} />Your information is safe</p>
           <p className="mt-5 leading-8 text-white/66">We use secure account checks to protect your data and keep your account ready for store access.</p>

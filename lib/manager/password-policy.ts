@@ -1,6 +1,6 @@
 export function managerPasswordIssues(password: string, confirmPassword?: string) {
   const issues: string[] = [];
-  if (password.length < 8) issues.push("At least 8 characters");
+  if (password.length < 12) issues.push("At least 12 characters");
   if (!/[A-Z]/.test(password)) issues.push("At least 1 uppercase letter");
   if (!/[a-z]/.test(password)) issues.push("At least 1 lowercase letter");
   if (!/[0-9]/.test(password)) issues.push("At least 1 number");
@@ -12,7 +12,7 @@ export function managerPasswordIssues(password: string, confirmPassword?: string
 
 export function passwordStrength(password: string) {
   const checks = [
-    password.length >= 8,
+    password.length >= 12,
     /[A-Z]/.test(password),
     /[a-z]/.test(password),
     /[0-9]/.test(password),

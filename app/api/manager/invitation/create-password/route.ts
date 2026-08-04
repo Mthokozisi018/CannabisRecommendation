@@ -113,7 +113,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      redirectTo: "/manager/setup/account"
+      message: "Manager account password created successfully. Continue to onboarding.",
+      redirectTo: "/manager/setup/account?password=created"
     }, {
       headers: { ...privateHeaders, ...rateLimitHeaders(rateLimit) }
     });

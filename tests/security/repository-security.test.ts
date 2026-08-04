@@ -53,6 +53,21 @@ describe("critical repository security contracts", () => {
     expect(completionRoute).toContain("Your password was saved, but account activation could not finish.");
   });
 
+  it("keeps incomplete manager onboarding distinct from deliberate access restriction", () => {
+    const accountFlow = source("lib/account-flow.ts");
+    const loginRoute = source("app/api/auth/login/route.ts");
+    const loginFormRoute = source("app/api/auth/login-form/route.ts");
+
+    expect(accountFlow).toContain('profile.role === "manager" && !profile.store_id');
+    expect(accountFlow).toContain('return "/manager/setup/account"');
+    expect(accountFlow).toContain('return "/manager/setup/store"');
+    expect(accountFlow).toContain('return "/manager/setup/complete"');
+    expect(accountFlow).toContain('return "/dashboard/manager"');
+    expect(loginRoute).toContain("managerLoginDestination(session)");
+    expect(loginFormRoute).toContain("managerLoginDestination(session)");
+    expect(accountFlow).not.toContain("Your password was changed successfully");
+  });
+
   it("binds checkout to trusted server identity and revokes the obsolete RPC", () => {
     const action = source("app/dashboard/receptionist/actions.ts");
     const migration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");

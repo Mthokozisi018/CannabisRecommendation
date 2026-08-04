@@ -10,10 +10,11 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function passwordErrors(password: string) {
   const errors: string[] = [];
-  if (password.length < 8) errors.push("Use at least 8 characters.");
+  if (password.length < 12) errors.push("Use at least 12 characters.");
   if (!/[A-Z]/.test(password)) errors.push("Include at least one uppercase letter.");
   if (!/[a-z]/.test(password)) errors.push("Include at least one lowercase letter.");
   if (!/[0-9]/.test(password)) errors.push("Include at least one number.");
+  if (!/[^A-Za-z0-9]/.test(password)) errors.push("Include at least one symbol.");
   return errors;
 }
 
@@ -52,18 +53,21 @@ function UpdatePasswordForm() {
     const supabase = createSupabaseBrowserClient();
 
     exchangePromiseRef.current = (async () => {
+      if (searchParams.get("flow") !== "recovery") {
+        throw new Error("Missing password recovery context.");
+      }
       if (code && exchangedCodeRef.current !== code) {
         exchangedCodeRef.current = code;
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) throw error;
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        const redirectType = (data as typeof data & { redirectType?: string | null }).redirectType;
+        if (error || redirectType !== "recovery") throw error ?? new Error("Invalid recovery purpose.");
         clearRecoveryParameters();
       } else if (accessToken && refreshToken && isRecoveryToken) {
         const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (error) throw error;
         clearRecoveryParameters();
       } else {
-        const { data, error } = await supabase.auth.getSession();
-        if (error || !data.session) throw error ?? new Error("Missing recovery session.");
+        throw new Error("Missing recovery token.");
       }
 
       setIsReady(true);
@@ -103,7 +107,7 @@ function UpdatePasswordForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password, confirmPassword })
       });
-      const updateResult = await updateResponse.json() as { updated?: boolean; restricted?: boolean; message?: string; redirectTo?: string; error?: string };
+      const updateResult = await updateResponse.json() as { updated?: boolean; message?: string; redirectTo?: string; error?: string };
       if (!updateResponse.ok || !updateResult.updated) {
         setErrors([updateResult.error ?? "Password reset session is invalid or expired. Request a new reset link."]);
         submissionInFlightRef.current = false;
@@ -114,7 +118,7 @@ function UpdatePasswordForm() {
       setTimeout(() => {
         startNavigationLoading();
         router.replace((updateResult.redirectTo ?? "/login") as never);
-      }, updateResult.restricted ? 1800 : 1500);
+      }, 1500);
     } catch {
       setErrors(["Password reset session is invalid or expired. Request a new reset link."]);
       submissionInFlightRef.current = false;
@@ -147,7 +151,7 @@ function UpdatePasswordForm() {
           </span>
         </label>
         <button disabled={!isReady || isSubmitting || isPreparingSession || Boolean(message)} className="h-14 rounded-xl bg-lime-500 font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70">
-          {!isReady || isPreparingSession ? "Preparing..." : isSubmitting ? "Updating..." : "Update password"}
+          {!isReady || isPreparingSession ? "Preparing..." : isSubmitting ? "Resetting..." : "Reset password"}
         </button>
       </form>
     </>
@@ -158,8 +162,8 @@ export default function UpdatePasswordPage() {
   return (
     <main className="grid min-h-screen place-items-center bg-[#060b0b] px-5 py-10 text-white">
       <section className="w-full max-w-xl rounded-[30px] border border-white/22 bg-[linear-gradient(145deg,rgba(32,42,39,0.84),rgba(7,12,13,0.94))] p-8 shadow-[0_42px_120px_rgba(0,0,0,0.62)] sm:p-10">
-        <h1 className="text-4xl font-extrabold">Update password</h1>
-        <p className="mt-4 text-lg leading-8 text-white/68">Choose a new password for your staff account.</p>
+        <h1 className="text-4xl font-extrabold">Reset password</h1>
+        <p className="mt-4 text-lg leading-8 text-white/68">Choose a replacement password for your existing GreenChoice account.</p>
         <Suspense fallback={<LoadingOverlay />}>
           <UpdatePasswordForm />
         </Suspense>

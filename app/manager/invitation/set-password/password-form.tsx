@@ -149,12 +149,13 @@ function InvitationPasswordContent() {
         cache: "no-store",
         body: JSON.stringify({ invitationId, password, confirmPassword })
       });
-      const result = await response.json() as { ok?: boolean; error?: string; redirectTo?: string };
+      const result = await response.json() as { ok?: boolean; message?: string; error?: string; redirectTo?: string };
       if (!response.ok || !result.ok || !result.redirectTo) {
         setMessage(result.error || "Unable to complete manager setup.");
         setStatus(response.status === 401 || response.status === 403 ? "error" : "ready");
         return;
       }
+      setMessage(result.message ?? "Manager account password created successfully. Continue to onboarding.");
       startNavigationLoading();
       router.replace(result.redirectTo as never);
       router.refresh();

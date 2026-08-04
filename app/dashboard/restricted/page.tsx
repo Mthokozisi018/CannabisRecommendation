@@ -13,7 +13,7 @@ export default function RestrictedAccessPage() {
         </span>
         <h1 className="mt-7 text-4xl font-extrabold">Access Restricted</h1>
         <p className="mx-auto mt-5 max-w-2xl text-xl leading-8 text-white/78">
-          Your password was changed successfully, but this account currently has restricted access. Please contact your store administrator or GreenChoice support.
+          This account has been deliberately restricted. Please contact your administrator or GreenChoice support.
         </p>
       </section>
     </main>

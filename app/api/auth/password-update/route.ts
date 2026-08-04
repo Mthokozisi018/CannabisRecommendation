@@ -1,15 +1,41 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auditAccessDenied, decideDashboardAccess, getDashboardSession, restrictedPathForSession } from "@/lib/dashboard-session";
+import type { User } from "@supabase/supabase-js";
+import { auditAccessDenied, decideDashboardAccess, getDashboardSession } from "@/lib/dashboard-session";
 import { managerPasswordIssues } from "@/lib/manager/password-policy";
 import { verifyOrigin } from "@/lib/security";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
 const schema = z.object({
   password: z.string().min(8).max(256),
   confirmPassword: z.string().min(8).max(256)
 }).strict();
 const privateHeaders = { "Cache-Control": "private, no-store, max-age=0", "Vary": "Cookie, Authorization" };
+
+async function hasPendingInvitationSession(user: User) {
+  const admin = createSupabaseAdminClient();
+  if (!admin) throw new Error("Supabase admin client is not configured.");
+
+  const managerInvitationId = typeof user.user_metadata?.invitation_id === "string"
+    ? user.user_metadata.invitation_id
+    : null;
+  const staffInvitationId = typeof user.user_metadata?.staff_invitation_id === "string"
+    ? user.user_metadata.staff_invitation_id
+    : null;
+  const checks = [];
+  if (managerInvitationId) {
+    checks.push(admin.from("manager_invitations").select("id", { count: "exact", head: true })
+      .eq("id", managerInvitationId).eq("auth_user_id", user.id).eq("status", "pending"));
+  }
+  if (staffInvitationId) {
+    checks.push(admin.from("staff_invitations").select("id", { count: "exact", head: true })
+      .eq("id", staffInvitationId).eq("auth_user_id", user.id).in("status", ["pending", "accepted"]));
+  }
+  if (checks.length === 0) return false;
+  const results = await Promise.all(checks);
+  if (results.some((result) => result.error)) throw new Error("Unable to verify password reset purpose.");
+  return results.some((result) => (result.count ?? 0) > 0);
+}
 
 export async function POST(request: Request) {
   try {
@@ -25,21 +51,25 @@ export async function POST(request: Request) {
     if (!supabase) return NextResponse.json({ error: "Password reset is unavailable." }, { status: 503, headers: privateHeaders });
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return NextResponse.json({ error: "Password reset session is invalid or expired." }, { status: 401, headers: privateHeaders });
+    if (await hasPendingInvitationSession(userData.user)) {
+      return NextResponse.json({
+        error: "This is a first-time invitation session. Open the latest invitation link to create the account password."
+      }, { status: 409, headers: privateHeaders });
+    }
     const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
     if (error) return NextResponse.json({ error: "Password reset session is invalid or expired." }, { status: 401, headers: privateHeaders });
 
     const session = await getDashboardSession();
     const decision = decideDashboardAccess(session?.profile);
-    const restricted = !decision.allowed;
     if (!decision.allowed && session) {
       await auditAccessDenied(session, "password_reset_completed_restricted_account", decision.reason);
     }
-    const redirectTo = restricted ? restrictedPathForSession(session) : "/login";
-    const message = restricted
-      ? "Your password was changed successfully, but this account currently has restricted access. Please contact your store administrator or GreenChoice support."
-      : "Password updated successfully. Please log in again.";
     await supabase.auth.signOut();
-    return NextResponse.json({ updated: true, restricted, message, redirectTo }, { headers: privateHeaders });
+    return NextResponse.json({
+      updated: true,
+      message: "Password updated successfully. Please log in again.",
+      redirectTo: "/login"
+    }, { headers: privateHeaders });
   } catch {
     return NextResponse.json({ error: "Password reset is unavailable." }, { status: 503, headers: privateHeaders });
   }
