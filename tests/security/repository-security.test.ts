@@ -33,6 +33,7 @@ describe("critical repository security contracts", () => {
     const statusRoute = source("app/api/manager/invitation/status/route.ts");
     const completionRoute = source("app/api/manager/invitation/create-password/route.ts");
     const migration = source("supabase/migrations/20260729123000_secure_manager_invitation_completion.sql");
+    const triggerCleanup = source("supabase/migrations/20260804110000_remove_legacy_manager_invitation_trigger.sql");
 
     expect(adminActions).toContain('data: { invited_role: "manager", invitation_id: invitationId }');
     expect(adminActions).toContain(".eq(\"status\", \"pending\")");
@@ -46,6 +47,10 @@ describe("critical repository security contracts", () => {
     expect(migration).toContain("lower(v_invitation.email) <> v_user_email");
     expect(migration).toContain("auth.jwt() -> 'user_metadata' ->> 'invitation_id'");
     expect(migration).toContain("on conflict (auth_user_id) do update");
+    expect(triggerCleanup).toContain("drop trigger if exists staff_profiles_mark_invitation_accepted");
+    expect(triggerCleanup).toContain("drop function if exists public.mark_manager_invitation_accepted()");
+    expect(completionRoute).toContain("manager_invitation_completion_failed");
+    expect(completionRoute).toContain("Your password was saved, but account activation could not finish.");
   });
 
   it("binds checkout to trusted server identity and revokes the obsolete RPC", () => {
@@ -63,11 +68,15 @@ describe("critical repository security contracts", () => {
   it("preserves restricted store state during manager registration", () => {
     const onboarding = source("lib/manager/onboarding.ts");
     const migration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");
+    const outputFix = source("supabase/migrations/20260804111000_fix_manager_store_registration_output.sql");
 
     expect(onboarding).toContain("store_access_status");
     expect(onboarding).toContain('redirect("/dashboard/restricted/manager" as never)');
     expect(migration).toContain("resolved_status := coalesce(");
     expect(migration).toContain("manager_store_registration_preserved_restriction");
+    expect(outputFix).toContain("insert into public.stores as created_store");
+    expect(outputFix).toContain("returning created_store.id, created_store.store_access_status");
+    expect(outputFix).toContain("linked_store.created_by_manager_id <> caller_id");
   });
 
   it("guards the full admin route tree and disables request-time provisioning", () => {

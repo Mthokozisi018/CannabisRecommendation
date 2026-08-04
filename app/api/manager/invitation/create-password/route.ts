@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { reportServerException } from "@/lib/logger";
 import { managerPasswordIssues } from "@/lib/manager/password-policy";
 import {
   RateLimitExceededError,
@@ -93,8 +94,19 @@ export async function POST(request: Request) {
       .rpc("complete_manager_invitation", { p_invitation_id: parsed.data.invitationId })
       .maybeSingle<{ staff_profile_id: string; invitation_status: string }>();
     if (completionError || !completed?.staff_profile_id) {
-      return NextResponse.json({ ok: false, error: "Invitation link is invalid or expired." }, {
-        status: 403,
+      await reportServerException(
+        "manager_invitation_completion_failed",
+        completionError ?? new Error("Manager invitation completion returned no profile."),
+        { errorCode: completionError?.code ?? "missing_profile" }
+      );
+      const invitationRejected = completionError?.code === "42501";
+      return NextResponse.json({
+        ok: false,
+        error: invitationRejected
+          ? "Invitation link is invalid or expired."
+          : "Your password was saved, but account activation could not finish. Please try Complete Invitation again."
+      }, {
+        status: invitationRejected ? 403 : 503,
         headers: privateHeaders
       });
     }
