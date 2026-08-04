@@ -86,7 +86,7 @@ function Progress({ current }: { current: 1 | 2 | 3 }) {
   );
 }
 
-function Field({ label, name, placeholder, icon, type = "text", className = "", defaultValue = "", minLength, maxLength, pattern, inputMode, trailing }: {
+function Field({ label, name, placeholder, icon, type = "text", className = "", defaultValue = "", minLength, maxLength, pattern, inputMode, autoComplete, trailing }: {
   label: string;
   name: string;
   placeholder: string;
@@ -98,6 +98,7 @@ function Field({ label, name, placeholder, icon, type = "text", className = "", 
   maxLength?: number;
   pattern?: string;
   inputMode?: "text" | "tel" | "numeric";
+  autoComplete?: string;
   trailing?: ReactNode;
 }) {
   return (
@@ -105,7 +106,7 @@ function Field({ label, name, placeholder, icon, type = "text", className = "", 
       <span className="font-semibold text-white">{label}</span>
       <span className="mt-3 flex h-14 items-center gap-3 rounded-lg border border-white/16 bg-black/35 px-4 text-white/55 transition focus-within:border-lime-300/85">
         <span className="text-lime-400">{icon}</span>
-        <input name={name} type={type} required defaultValue={defaultValue} placeholder={placeholder} minLength={minLength} maxLength={maxLength} pattern={pattern} inputMode={inputMode} className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/42" />
+        <input name={name} type={type} required defaultValue={defaultValue} placeholder={placeholder} minLength={minLength} maxLength={maxLength} pattern={pattern} inputMode={inputMode} autoComplete={autoComplete} className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/42" />
         {trailing}
       </span>
     </label>
@@ -154,11 +155,12 @@ function SectionTitle({ icon, title, body }: { icon: ReactNode; title: string; b
   );
 }
 
-export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustChangePassword, passwordCreated = false }: { legalDocuments: LegalDocumentsStatus; initialValues: ManagerAccountInitialValues; mustChangePassword: boolean; passwordCreated?: boolean }) {
+export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustChangePassword }: { legalDocuments: LegalDocumentsStatus; initialValues: ManagerAccountInitialValues; mustChangePassword: boolean }) {
   const [state, formAction, pending] = useActionState(completeManagerAccountSetupAction, initialState);
   const [formValid, setFormValid] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
   function updateValidity(event: FormEvent<HTMLFormElement>) {
     setFormValid(event.currentTarget.checkValidity());
@@ -167,11 +169,6 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
   return (
     <Shell heading="Manager" accent="Onboarding" body="Complete your personal details and required agreements before registering your store.">
       <Progress current={1} />
-      {passwordCreated ? (
-        <p className="mx-auto mt-8 max-w-5xl rounded-lg border border-lime-400 bg-[#07130b] px-5 py-4 text-center font-semibold text-lime-100">
-          Manager account password created successfully. Complete onboarding to continue.
-        </p>
-      ) : null}
       <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_300px]">
         <form action={formAction} onInput={updateValidity} onChange={updateValidity} className="rounded-[22px] border border-lime-400/55 bg-[linear-gradient(145deg,rgba(6,13,11,.9),rgba(0,0,0,.88))] p-6 shadow-[0_30px_120px_rgba(0,0,0,.52)] sm:p-8">
           <SectionTitle icon={<UserRound size={34} />} title="Account Registration" body={mustChangePassword ? "Fill in your details and replace the temporary password." : "Fill in your personal details and accept the required agreements."} />
@@ -199,12 +196,26 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
               <p className="mt-3 text-white/62">For your security, you must create a new password that only you know.</p>
               <div className="mt-5 grid gap-5">
                 <Field
+                  label="Current Temporary Password"
+                  name="currentTemporaryPassword"
+                  type={showCurrentPassword ? "text" : "password"}
+                  placeholder="Enter the temporary password"
+                  icon={<LockKeyhole size={21} />}
+                  autoComplete="current-password"
+                  trailing={
+                    <button type="button" onClick={() => setShowCurrentPassword((value) => !value)} className="grid size-9 place-items-center rounded-full text-lime-300 transition hover:bg-lime-400/10" aria-label={showCurrentPassword ? "Hide temporary password" : "Show temporary password"}>
+                      {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  }
+                />
+                <Field
                   label="New Password"
                   name="permanentPassword"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your new password"
                   icon={<LockKeyhole size={21} />}
                   minLength={12}
+                  autoComplete="new-password"
                   trailing={
                     <button type="button" onClick={() => setShowPassword((value) => !value)} className="grid size-9 place-items-center rounded-full text-lime-300 transition hover:bg-lime-400/10" aria-label={showPassword ? "Hide password" : "Show password"}>
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
@@ -218,6 +229,7 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
                   placeholder="Confirm your new password"
                   icon={<LockKeyhole size={21} />}
                   minLength={12}
+                  autoComplete="new-password"
                   trailing={
                     <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="grid size-9 place-items-center rounded-full text-lime-300 transition hover:bg-lime-400/10" aria-label={showConfirmPassword ? "Hide password" : "Show password"}>
                       {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}

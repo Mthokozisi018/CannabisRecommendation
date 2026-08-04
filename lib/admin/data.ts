@@ -21,18 +21,10 @@ export type AdminStore = {
 
 export type AdminStoreAccessRow = Pick<AdminStore, "id" | "name" | "address" | "accessStatus">;
 
-export type PendingManagerInvitation = {
-  id: string;
-  email: string;
-  invitedAt: string;
-  lastSentAt: string | null;
-};
-
 export type AdminStats = {
   totalStores: number;
   totalManagers: number;
   totalReceptionists: number;
-  pendingInvitations: number;
   activeSubscriptions: number;
 };
 
@@ -87,22 +79,20 @@ export async function getAdminStats(): Promise<AdminStats> {
   await requireAdminUser();
   const admin = requireAdminClient();
 
-  const [stores, managers, receptionists, invitations, activeStores] = await Promise.all([
+  const [stores, managers, receptionists, activeStores] = await Promise.all([
     admin.from("stores").select("id", { count: "exact", head: true }),
     admin.from("staff_profiles").select("id", { count: "exact", head: true }).eq("role", "manager").or("account_status.eq.active,and(account_status.is.null,is_active.eq.true)"),
     admin.from("staff_profiles").select("id", { count: "exact", head: true }).eq("role", "receptionist").or("account_status.eq.active,and(account_status.is.null,is_active.eq.true)"),
-    admin.from("manager_invitations").select("id", { count: "exact", head: true }).eq("status", "pending"),
     admin.from("stores").select("id", { count: "exact", head: true }).eq("store_access_status", "active")
   ]);
 
-  const firstError = [stores.error, managers.error, receptionists.error, invitations.error, activeStores.error].find(Boolean);
+  const firstError = [stores.error, managers.error, receptionists.error, activeStores.error].find(Boolean);
   if (firstError) throw new Error(firstError.message);
 
   return {
     totalStores: stores.count ?? 0,
     totalManagers: managers.count ?? 0,
     totalReceptionists: receptionists.count ?? 0,
-    pendingInvitations: invitations.count ?? 0,
     activeSubscriptions: activeStores.count ?? 0
   };
 }
@@ -137,24 +127,6 @@ export async function getAdminStores(): Promise<AdminStore[]> {
       receptionists: members.filter((member) => member.role === "receptionist").map(toMember)
     };
   });
-}
-
-export async function getPendingManagerInvitations(): Promise<PendingManagerInvitation[]> {
-  await requireAdminUser();
-  const admin = requireAdminClient();
-  const { data, error } = await admin
-    .from("manager_invitations")
-    .select("id, email, invited_at, last_sent_at")
-    .eq("status", "pending")
-    .order("invited_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((item) => ({
-    id: item.id,
-    email: item.email,
-    invitedAt: item.invited_at,
-    lastSentAt: item.last_sent_at
-  }));
 }
 
 export async function getStoreAccessRows(): Promise<AdminStoreAccessRow[]> {

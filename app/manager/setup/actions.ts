@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { LEGAL_DOCUMENTS, assertLegalDocumentsAvailable } from "@/lib/manager/legal-documents";
 import { managerPasswordIssues } from "@/lib/manager/password-policy";
-import { temporaryPasswordMatchesFingerprint } from "@/lib/manager/temporary-password";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
 import { accountSetupComplete, getCurrentManagerSetupProfile, linkedManagerStore, managerAccountSetupSchema, managerOnboardingComplete, normalizeSAPhone, slugForStoreName, storeRegistrationSchema } from "@/lib/manager/onboarding";
@@ -47,18 +46,28 @@ export async function completeManagerAccountSetupAction(_prev: SetupActionState,
       privacyAccepted: checkbox(formData, "privacyAccepted")
     });
     const mustChangePassword = profile.temporary_password_active === true;
+    const currentTemporaryPassword = text(formData, "currentTemporaryPassword");
     const permanentPassword = text(formData, "permanentPassword");
     const confirmPermanentPassword = text(formData, "confirmPermanentPassword");
     if (mustChangePassword) {
       const passwordIssues = managerPasswordIssues(permanentPassword, confirmPermanentPassword);
       if (passwordIssues.length) throw new Error(passwordIssues[0]);
-      if (temporaryPasswordMatchesFingerprint(permanentPassword, profile.temporary_password_fingerprint)) {
+      if (!currentTemporaryPassword) throw new Error("Enter the temporary password used to sign in.");
+      if (currentTemporaryPassword === permanentPassword) {
         throw new Error("Choose a new password that is different from your temporary password.");
       }
       const supabase = await createSupabaseServerClient();
       if (!supabase) throw new Error("Supabase is not configured.");
+      if (!user.email) throw new Error("Manager authentication is unavailable.");
+      const { data: verification, error: verificationError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentTemporaryPassword
+      });
+      if (verificationError || verification.user?.id !== user.id) {
+        throw new Error("The temporary password is incorrect.");
+      }
       const { error: passwordError } = await supabase.auth.updateUser({ password: permanentPassword });
-      if (passwordError) throw new Error(passwordError.message);
+      if (passwordError) throw new Error("The permanent password could not be saved.");
     }
 
     const acceptedAt = new Date().toISOString();
@@ -82,12 +91,21 @@ export async function completeManagerAccountSetupAction(_prev: SetupActionState,
       user_id: user.id,
       auth_user_id: user.id
     };
-    const { data: updatedProfile, error } = await admin.from("staff_profiles").update(mustChangePassword ? {
-      ...profileUpdate,
-      temporary_password_active: false,
-      temporary_password_fingerprint: null,
-      password_changed_at: acceptedAt
-    } : profileUpdate).eq("id", profile.id).eq("role", "manager").select("id, store_id").single();
+    const completion = mustChangePassword
+      ? await admin.rpc("complete_manual_manager_account_setup", {
+          p_auth_user_id: user.id,
+          p_full_name: parsed.fullName,
+          p_surname: parsed.surname,
+          p_mobile_number: normalizeSAPhone(parsed.phoneNumber),
+          p_physical_address: parsed.physicalAddress,
+          p_city: parsed.city,
+          p_province: parsed.province,
+          p_postal_code: parsed.postalCode,
+          p_terms_version: LEGAL_DOCUMENTS.terms.version,
+          p_privacy_policy_version: LEGAL_DOCUMENTS.privacy.version
+        })
+      : await admin.from("staff_profiles").update(profileUpdate).eq("id", profile.id).eq("role", "manager").select("id, store_id").single();
+    const { data: updatedProfile, error } = completion;
     if (error) throw new Error(error.message);
     if (!updatedProfile) throw new Error("Manager profile could not be updated.");
   } catch (error) {

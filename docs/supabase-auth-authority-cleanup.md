@@ -65,5 +65,6 @@ genuine inactivity, but it is not a server authorization authority. Exact
 server-side rejection at precisely 20 minutes depends on the approved Supabase
 session configuration and its refresh/JWT behavior.
 
-The legacy manager temporary-password compatibility path remains until database
-records can be checked and confirmed migrated.
+Manual manager registration now requires trusted Supabase app metadata and a
+compulsory temporary-password replacement during onboarding. Manager email
+invitation activation has been retired; receptionist invitations remain active.

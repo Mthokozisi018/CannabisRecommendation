@@ -9,8 +9,8 @@ const activeManager: AccountFlowProfile = {
   stores: null
 };
 
-describe("manager invitation and onboarding account states", () => {
-  it("allows an active newly invited manager without a store to enter onboarding", () => {
+describe("manual manager onboarding account states", () => {
+  it("allows an active newly registered manager without a store to enter onboarding", () => {
     expect(decideAccountAccess(activeManager)).toEqual({ allowed: true });
     expect(managerLoginDestination({
       accountSetupComplete: false,

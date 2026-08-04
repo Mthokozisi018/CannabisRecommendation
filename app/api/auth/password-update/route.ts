@@ -12,21 +12,14 @@ const schema = z.object({
 }).strict();
 const privateHeaders = { "Cache-Control": "private, no-store, max-age=0", "Vary": "Cookie, Authorization" };
 
-async function hasPendingInvitationSession(user: User) {
+async function hasPendingStaffInvitationSession(user: User) {
   const admin = createSupabaseAdminClient();
   if (!admin) throw new Error("Supabase admin client is not configured.");
 
-  const managerInvitationId = typeof user.user_metadata?.invitation_id === "string"
-    ? user.user_metadata.invitation_id
-    : null;
   const staffInvitationId = typeof user.user_metadata?.staff_invitation_id === "string"
     ? user.user_metadata.staff_invitation_id
     : null;
   const checks = [];
-  if (managerInvitationId) {
-    checks.push(admin.from("manager_invitations").select("id", { count: "exact", head: true })
-      .eq("id", managerInvitationId).eq("auth_user_id", user.id).eq("status", "pending"));
-  }
   if (staffInvitationId) {
     checks.push(admin.from("staff_invitations").select("id", { count: "exact", head: true })
       .eq("id", staffInvitationId).eq("auth_user_id", user.id).in("status", ["pending", "accepted"]));
@@ -51,9 +44,9 @@ export async function POST(request: Request) {
     if (!supabase) return NextResponse.json({ error: "Password reset is unavailable." }, { status: 503, headers: privateHeaders });
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return NextResponse.json({ error: "Password reset session is invalid or expired." }, { status: 401, headers: privateHeaders });
-    if (await hasPendingInvitationSession(userData.user)) {
+    if (await hasPendingStaffInvitationSession(userData.user)) {
       return NextResponse.json({
-        error: "This is a first-time invitation session. Open the latest invitation link to create the account password."
+        error: "This is a first-time staff invitation session. Complete staff onboarding before using password recovery."
       }, { status: 409, headers: privateHeaders });
     }
     const { error } = await supabase.auth.updateUser({ password: parsed.data.password });

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -28,29 +28,64 @@ describe("critical repository security contracts", () => {
     expect(migration).toContain("for update");
   });
 
-  it("keeps manager invitations bound to the invited auth user and manager setup scope", () => {
+  it("bootstraps only server-marked manual managers and retires manager invitation activation", () => {
+    const registration = source("lib/manual-manager-registration.ts");
+    const dashboardSession = source("lib/dashboard-session.ts");
+    const migration = source("supabase/migrations/20260804120000_manual_manager_registration.sql");
     const adminActions = source("app/dashboard/admin/actions.ts");
-    const statusRoute = source("app/api/manager/invitation/status/route.ts");
-    const completionRoute = source("app/api/manager/invitation/create-password/route.ts");
-    const migration = source("supabase/migrations/20260729123000_secure_manager_invitation_completion.sql");
-    const triggerCleanup = source("supabase/migrations/20260804110000_remove_legacy_manager_invitation_trigger.sql");
 
-    expect(adminActions).toContain('data: { invited_role: "manager", invitation_id: invitationId }');
-    expect(adminActions).toContain(".eq(\"status\", \"pending\")");
-    expect(statusRoute).toContain('user.user_metadata?.invited_role !== "manager"');
-    expect(statusRoute).toContain("user.user_metadata?.invitation_id !== invitationId.data");
-    expect(statusRoute).toContain(".eq(\"auth_user_id\", user.id)");
-    expect(completionRoute).toContain("metadataInvitationId !== parsed.data.invitationId");
-    expect(completionRoute).toContain('user.user_metadata?.invited_role !== "manager"');
-    expect(completionRoute).toContain("localFallbackWhenConfiguredProviderFails: true");
-    expect(migration).toContain("v_invitation.auth_user_id is distinct from v_user_id");
-    expect(migration).toContain("lower(v_invitation.email) <> v_user_email");
-    expect(migration).toContain("auth.jwt() -> 'user_metadata' ->> 'invitation_id'");
-    expect(migration).toContain("on conflict (auth_user_id) do update");
-    expect(triggerCleanup).toContain("drop trigger if exists staff_profiles_mark_invitation_accepted");
-    expect(triggerCleanup).toContain("drop function if exists public.mark_manager_invitation_accepted()");
-    expect(completionRoute).toContain("manager_invitation_completion_failed");
-    expect(completionRoute).toContain("Your password was saved, but account activation could not finish.");
+    expect(registration).toContain("user.app_metadata");
+    expect(registration).not.toContain("user.user_metadata");
+    expect(migration).toContain("auth_user.raw_app_meta_data ->> 'greenchoice_role'");
+    expect(migration).toContain("auth_user.raw_app_meta_data ->> 'greenchoice_registration'");
+    expect(migration).toContain("auth_user.email_confirmed_at is null");
+    expect(migration).toContain("auth_user.banned_until");
+    expect(migration).toContain("existing_profile.role <> 'manager'");
+    expect(migration).toContain("sole_admin_count <> 1");
+    expect(migration).toContain("temporary_password_active");
+    expect(migration).toContain("manual_manager_profile_initialized");
+    expect(migration).toContain("revoke execute on function public.complete_manager_invitation(uuid) from authenticated");
+    expect(dashboardSession).toContain("bootstrapManualManagerProfile");
+    expect(adminActions).not.toContain("inviteUserByEmail");
+    expect(existsSync(resolve(process.cwd(), "app/dashboard/admin/invite-manager/page.tsx"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), "app/dashboard/admin/invitations/page.tsx"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), "app/manager/invitation/set-password/page.tsx"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), "app/api/manager/invitation/create-password/route.ts"))).toBe(false);
+  });
+
+  it("requires the current temporary password before completing manager account setup", () => {
+    const action = source("app/manager/setup/actions.ts");
+    const migration = source("supabase/migrations/20260804120000_manual_manager_registration.sql");
+    const verificationIndex = action.indexOf("supabase.auth.signInWithPassword");
+    const passwordUpdateIndex = action.indexOf("supabase.auth.updateUser");
+    const completionIndex = action.indexOf('admin.rpc("complete_manual_manager_account_setup"');
+
+    expect(action).toContain('text(formData, "currentTemporaryPassword")');
+    expect(verificationIndex).toBeGreaterThan(-1);
+    expect(passwordUpdateIndex).toBeGreaterThan(verificationIndex);
+    expect(completionIndex).toBeGreaterThan(passwordUpdateIndex);
+    expect(migration).toContain("target_profile.temporary_password_active is not true");
+    expect(migration).toContain("temporary_password_active = false");
+    expect(migration).toContain("manual_manager_account_setup_completed");
+  });
+
+  it("allows only the sole administrator to mark an existing Auth user for manager onboarding", () => {
+    const action = source("app/dashboard/admin/actions.ts");
+    const form = source("components/admin/ConnectManagerForm.tsx");
+
+    expect(action).toContain("connectManualManagerAction");
+    expect(action).toContain("await requireAdminUser()");
+    expect(action).toContain("activeAdminIds.length !== 1");
+    expect(action).toContain("auth.admin.listUsers");
+    expect(action).toContain("auth.admin.updateUserById");
+    expect(action).toContain("...existingMetadata");
+    expect(action).toContain('greenchoice_role: "manager"');
+    expect(action).toContain('greenchoice_registration: "manual"');
+    expect(action).toContain("authUser.id === soleAdmin.id");
+    expect(action).toContain("staff_profiles");
+    expect(action).toContain("admin_authorized_manual_manager");
+    expect(action).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(form).not.toContain("password");
   });
 
   it("keeps incomplete manager onboarding distinct from deliberate access restriction", () => {

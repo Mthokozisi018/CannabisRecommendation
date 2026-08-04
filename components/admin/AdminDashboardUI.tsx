@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, CreditCard, Mail, Send, ShieldCheck, Sparkles, Store, UserPlus, UsersRound } from "lucide-react";
+import { CheckCircle2, CreditCard, Link2, Send, ShieldCheck, Sparkles, Store, UserPlus, UsersRound } from "lucide-react";
 import { GlassPanel } from "@/components/GreenChoiceDashboard";
 import type { AdminStats } from "@/lib/admin/data";
 
@@ -17,16 +17,10 @@ const adminCards = [
     icon: Store
   },
   {
-    href: "/dashboard/admin/invitations",
-    title: "Pending Invitations",
-    text: "View and manage pending manager invitations.",
-    icon: Mail
-  },
-  {
-    href: "/dashboard/admin/invite-manager",
-    title: "Invite Manager",
-    text: "Invite a new manager to create and manage their store.",
-    icon: UserPlus
+    href: "/dashboard/admin/connect-manager",
+    title: "Connect Manager",
+    text: "Connect a confirmed Supabase Auth user to manager onboarding.",
+    icon: Link2
   },
   {
     href: "/dashboard/admin/payments",
@@ -40,7 +34,6 @@ const statItems = [
   ["totalStores", "Total Stores", Store],
   ["totalManagers", "Total Managers", UsersRound],
   ["totalReceptionists", "Total Receptionists", UserPlus],
-  ["pendingInvitations", "Pending Invitations", Mail],
   ["activeSubscriptions", "Active Subscriptions", CreditCard]
 ] as const;
 
@@ -78,7 +71,7 @@ export function AdminDashboardHome({ stats }: { stats: AdminStats }) {
         <p className="mt-4 text-xl text-white/75">Platform overview and management.</p>
       </section>
 
-      <section className="grid gap-7 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-7 md:grid-cols-2 xl:grid-cols-4">
         {adminCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -100,7 +93,7 @@ export function AdminDashboardHome({ stats }: { stats: AdminStats }) {
         })}
       </section>
 
-      <GlassPanel className="mt-10 grid gap-5 md:grid-cols-5">
+      <GlassPanel className="mt-10 grid gap-5 md:grid-cols-4">
         {statItems.map(([key, label, Icon]) => (
           <div key={key} className="flex items-center justify-center gap-5 border-lime-400/25 py-4 md:border-r last:md:border-r-0">
             <Icon className="text-lime-400" size={36} />

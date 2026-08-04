@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { decideAccountAccess, type AccountAccessDecision, type AccountAccessDenialReason } from "@/lib/account-flow";
 import { STORE } from "@/lib/data";
 import { normalizeRole } from "@/lib/authorization";
+import { bootstrapManualManagerProfile } from "@/lib/manual-manager-registration";
 import { getSessionState, updateSessionState } from "@/lib/session";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { profileRoleToStaffRole } from "@/lib/staff-profile";
@@ -177,7 +178,11 @@ const getDashboardSessionCached = cache(async (): Promise<DashboardSession | nul
 });
 
 async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>, user: User): Promise<DashboardSession | null> {
-  const profile = await readProfileForUser(supabase, user);
+  let profile = await readProfileForUser(supabase, user);
+
+  if (!profile && await bootstrapManualManagerProfile(supabase, user)) {
+    profile = await readProfileForUser(supabase, user);
+  }
 
   if (!profile || profileAccountStatus(profile) === "deleted") {
     await supabase.auth.signOut();

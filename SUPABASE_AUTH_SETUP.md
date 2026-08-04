@@ -88,21 +88,15 @@ supabase db push
 
 Only run `supabase db push` after confirming the linked project is the intended GreenChoice project.
 
-## Manager invitation email template
+## Manual manager registration
 
-Supabase Auth sends `inviteUserByEmail` messages from the remote Supabase project, so the production email design is controlled in the Supabase Dashboard.
+Manager accounts are created directly in Supabase Authentication and do not use
+email invitations. Follow `docs/manual-manager-registration.md`, then use the
+administrator dashboard's **Connect Manager** action to assign the protected
+GreenChoice app metadata. Do not place authorization fields in user metadata.
 
-To use the GreenChoice branded manager invitation email:
-
-1. Open Supabase Dashboard > Authentication > Email Templates.
-2. Select the **Invite user** template.
-3. Set the subject to:
-   `You've been invited to manage a GreenChoice store`
-4. Paste the HTML from:
-   `supabase/templates/invite-user.html`
-5. Keep the button link as `{{ .ConfirmationURL }}`. Supabase replaces it with the secure invitation confirmation URL and preserves the app redirect configured by `inviteUserByEmail`.
-
-The invite link opens the GreenChoice temporary credentials page. That page displays the invited email and one server-generated temporary password once, then signs out the invite session so the manager must log in manually.
+The shared **Invite user** email template remains available for manager-created
+receptionist invitations.
 
 For local testing from another device, set `.env.local` to your computer LAN URL, for example:
 
@@ -117,7 +111,7 @@ Then add these in Supabase Dashboard > Authentication > URL Configuration:
 Site URL: http://192.168.x.x:3001
 Redirect URLs:
 http://192.168.x.x:3001/**
-http://192.168.x.x:3001/manager/invitation/set-password
+http://192.168.x.x:3001/staff/invitation/onboarding
 ```
 
 For same-computer local testing, `http://127.0.0.1:3001` works only on that computer. Phones and tablets need the LAN URL because their own `127.0.0.1` is not the development machine.

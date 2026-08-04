@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { configuredApplicationUrl } from "@/lib/app-url";
 import { reportServerException } from "@/lib/logger";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { requireAdminUser } from "@/lib/admin/data";
@@ -10,16 +9,9 @@ import { assertRateLimit, verifyOrigin } from "@/lib/security";
 
 export type AdminActionState = { ok: boolean; message: string };
 
-type SafeInviteError = Error & {
-  status?: number;
-  code?: string;
-};
-
-const inviteSchema = z.object({
-  email: z.string().trim().email("Please enter a valid manager email.").transform((value) => value.toLowerCase())
+const connectManagerSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid manager email address.").max(320)
 });
-
-const invitationIdSchema = z.object({ invitationId: z.string().uuid() });
 const storeAccessSchema = z.object({
   storeId: z.string().uuid(),
   accessStatus: z.enum(["active", "restricted"])
@@ -55,251 +47,92 @@ function text(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
-function invitationExpiry() {
-  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-}
-
-function isMissingExpiresAt(error: { message?: string } | null) {
-  return Boolean(error?.message?.includes("expires_at"));
-}
-
-function isEmailRateLimitError(error: { message?: string } | null) {
-  return Boolean(error?.message && /rate limit/i.test(error.message));
-}
-
-function isInviteEmailProviderError(error: unknown) {
-  return error instanceof Error && error.message === "Error sending invite email" && (error as SafeInviteError).code === "unexpected_failure";
-}
-
-function inviteAuthError(error: { name?: string; message: string; status?: number; code?: string }) {
-  return Object.assign(new Error(error.message), {
-    name: error.name ?? "SupabaseAuthError",
-    status: error.status,
-    code: error.code
-  }) as SafeInviteError;
-}
-
 function adminActionMessage(error: unknown) {
-  if (error instanceof z.ZodError) return error.issues[0]?.message ?? "Please enter a valid manager email.";
-  if (error instanceof Error && isEmailRateLimitError(error)) {
-    return "Supabase email rate limit has been reached. Please wait before sending another invitation, or configure a custom SMTP provider.";
-  }
-  if (isInviteEmailProviderError(error)) {
-    return "Supabase could not send the invite email. Check the Supabase Auth email/SMTP provider settings, then try again.";
-  }
+  if (error instanceof z.ZodError) return error.issues[0]?.message ?? "Invalid administrator request.";
   return error instanceof Error ? error.message : "Unable to complete this action. Please try again.";
 }
 
-function completedManagerFilter(query: ReturnType<ReturnType<typeof adminClient>["from"]>) {
-  return query
-    .select("id, email, role, account_status, is_active")
-    .eq("role", "manager")
-    .or("account_status.eq.active,and(account_status.is.null,is_active.eq.true)");
-}
-
-async function getCompletedManagerByEmail(email: string) {
-  const { data, error } = await completedManagerFilter(adminClient().from("staff_profiles")).ilike("email", email).maybeSingle();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-async function getAcceptedManagerInvitationByEmail(email: string) {
-  const { data, error } = await adminClient()
-    .from("manager_invitations")
-    .select("id")
-    .ilike("email", email)
-    .eq("status", "accepted")
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-function managerInvitationRedirect(invitationId: string) {
-  const redirectBase = process.env.MANAGER_INVITE_REDIRECT_TO || `${configuredApplicationUrl()}/manager/invitation/set-password`;
-  return `${redirectBase}${redirectBase.includes("?") ? "&" : "?"}invitation_id=${encodeURIComponent(invitationId)}`;
-}
-
-async function sendManagerInvite(email: string, invitationId: string) {
-  const redirectTo = managerInvitationRedirect(invitationId);
-  const { data, error } = await adminClient().auth.admin.inviteUserByEmail(email, {
-    redirectTo,
-    data: { invited_role: "manager", invitation_id: invitationId }
-  });
-  if (!error) {
-    if (!data.user?.id) throw new Error("Manager invitation could not be bound to an Auth user.");
-    return data.user.id;
+async function authUserByEmail(email: string) {
+  const admin = adminClient();
+  for (let page = 1; page <= 50; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new Error("Supabase Auth users could not be checked.");
+    const match = data.users.find((user) => user.email?.trim().toLowerCase() === email);
+    if (match) return match;
+    if (data.users.length < 200) break;
   }
-
-  if (isEmailRateLimitError(error)) throw new Error(adminActionMessage(error));
-  throw inviteAuthError(error);
+  return null;
 }
 
-async function deleteUnboundManagerInviteAuthUser(authUserId: string | null, invitationId: string) {
-  if (!authUserId) return;
-  try {
-    const admin = adminClient();
-    const [{ data: authData }, profileResult] = await Promise.all([
-      admin.auth.admin.getUserById(authUserId),
-      admin.from("staff_profiles").select("id").eq("auth_user_id", authUserId).maybeSingle()
-    ]);
-    const user = authData.user;
-    if (!profileResult.error && !profileResult.data &&
-        user?.user_metadata?.invited_role === "manager" &&
-        user.user_metadata?.invitation_id === invitationId) {
-      await admin.auth.admin.deleteUser(authUserId);
-    }
-  } catch {
-    // Invitation cleanup must not hide the original bind/send failure.
-  }
-}
-
-async function resendManagerInvite(email: string, invitationId: string) {
-  const { error } = await adminClient().auth.resend({
-    type: "signup",
-    email,
-    options: { emailRedirectTo: managerInvitationRedirect(invitationId) }
-  });
-  if (error) throw inviteAuthError(error);
-}
-
-export async function inviteManagerAction(_prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
+export async function connectManualManagerAction(_prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
   try {
     await verifyOrigin();
-    const staff = await requireAdminUser();
-    await assertRateLimit(`admin:manager-invite:${staff.id}`, 10, 60 * 60_000);
-    const parsed = inviteSchema.parse({ email: text(formData, "email") });
+    const soleAdmin = await requireAdminUser();
+    await assertRateLimit(`admin:connect-manual-manager:${soleAdmin.id}`, 20, 60 * 60_000);
+    const parsed = connectManagerSchema.parse({ email: text(formData, "email") });
     const admin = adminClient();
 
-    const [existingManager, acceptedInvite] = await Promise.all([
-      getCompletedManagerByEmail(parsed.email),
-      getAcceptedManagerInvitationByEmail(parsed.email)
-    ]);
-    if (existingManager || acceptedInvite) return { ok: false, message: "A manager account with this email already exists." };
-
-    const { data: existingInvite, error: inviteReadError } = await admin
-      .from("manager_invitations")
-      .select("id")
-      .ilike("email", parsed.email)
-      .eq("status", "pending")
-      .maybeSingle();
-    if (inviteReadError) throw new Error(inviteReadError.message);
-    if (existingInvite) {
-      return {
-        ok: false,
-        message: "This manager already has a pending invitation. You can resend or revoke it from Pending Invitations."
-      };
+    const { data: activeAdmins, error: adminError } = await admin
+      .from("staff_profiles")
+      .select("auth_user_id, user_id")
+      .eq("role", "admin")
+      .or("account_status.eq.active,and(account_status.is.null,is_active.eq.true)");
+    if (adminError) throw new Error("Administrator identity could not be verified.");
+    const activeAdminIds = (activeAdmins ?? []).map((profile) => profile.auth_user_id ?? profile.user_id).filter(Boolean);
+    if (activeAdminIds.length !== 1 || activeAdminIds[0] !== soleAdmin.id) {
+      throw new Error("Sole administrator validation failed.");
     }
 
-    const expiresAt = invitationExpiry();
-    let { data: invitation, error: invitationError } = await admin
-      .from("manager_invitations")
-      .insert({ email: parsed.email, status: "pending", invited_by: staff.id, last_sent_at: new Date().toISOString(), expires_at: expiresAt })
-      .select("id")
-      .single();
-    if (isMissingExpiresAt(invitationError)) {
-      const retry = await admin
-        .from("manager_invitations")
-        .insert({ email: parsed.email, status: "pending", invited_by: staff.id, last_sent_at: new Date().toISOString() })
-        .select("id")
-        .single();
-      invitation = retry.data;
-      invitationError = retry.error;
+    const authUser = await authUserByEmail(parsed.email);
+    if (!authUser) throw new Error("No Supabase Auth user exists for this email.");
+    if (authUser.id === soleAdmin.id || parsed.email === process.env.ADMIN_EMAIL?.trim().toLowerCase()) {
+      throw new Error("The GreenChoice administrator cannot be converted into a manager.");
     }
-    if (invitationError) throw new Error(invitationError.message);
-    if (!invitation) throw new Error("Manager invitation was not created.");
-
-    let authUserId: string | null = null;
-    try {
-      authUserId = await sendManagerInvite(parsed.email, invitation.id);
-      const { error: bindError } = await admin
-        .from("manager_invitations")
-        .update({ auth_user_id: authUserId })
-        .eq("id", invitation.id)
-        .eq("status", "pending");
-      if (bindError) throw new Error(bindError.message);
-    } catch (error) {
-      await admin.from("manager_invitations").update({ status: "revoked", revoked_at: new Date().toISOString() }).eq("id", invitation.id);
-      await deleteUnboundManagerInviteAuthUser(authUserId, invitation.id);
-      throw error;
+    if (!authUser.email_confirmed_at) throw new Error("Confirm this Supabase Auth user before connecting the manager.");
+    if (authUser.banned_until && new Date(authUser.banned_until) > new Date()) {
+      throw new Error("A banned Supabase Auth user cannot be connected as a manager.");
     }
 
-    await audit("admin_invited_manager", invitation.id, { email: parsed.email, expiresAt });
+    const { data: conflicts, error: conflictError } = await admin
+      .from("staff_profiles")
+      .select("id, role, auth_user_id, user_id, email")
+      .or(`auth_user_id.eq.${authUser.id},user_id.eq.${authUser.id},email.ilike.${parsed.email}`);
+    if (conflictError) throw new Error("Existing GreenChoice profiles could not be checked.");
+    if ((conflicts ?? []).length > 0) {
+      const role = conflicts?.[0]?.role;
+      throw new Error(role === "manager"
+        ? "This Auth user is already connected to a GreenChoice manager profile."
+        : "This Auth user or email is already connected to another GreenChoice role.");
+    }
+
+    const existingMetadata = authUser.app_metadata ?? {};
+    const alreadyConnected = existingMetadata.greenchoice_role === "manager" &&
+      existingMetadata.greenchoice_registration === "manual";
+    if (!alreadyConnected) {
+      const { error: updateError } = await admin.auth.admin.updateUserById(authUser.id, {
+        app_metadata: {
+          ...existingMetadata,
+          greenchoice_role: "manager",
+          greenchoice_registration: "manual"
+        }
+      });
+      if (updateError) throw new Error("The manager authorization marker could not be saved.");
+    }
+
+    await audit(alreadyConnected ? "admin_confirmed_manual_manager_authorization" : "admin_authorized_manual_manager", authUser.id, {
+      targetAuthUserId: authUser.id,
+      registration: "manual_supabase",
+      result: "success"
+    });
     revalidatePath("/dashboard/admin");
-    revalidatePath("/dashboard/admin/invitations");
-    return { ok: true, message: "Manager invitation sent successfully." };
+    return {
+      ok: true,
+      message: alreadyConnected
+        ? "This Supabase Auth user is already connected for manager onboarding."
+        : "Manager connected successfully. They can now sign in and complete onboarding."
+    };
   } catch (error) {
-    await reportServerException("admin_invite_manager_failed", error);
-    return { ok: false, message: adminActionMessage(error) };
-  }
-}
-
-export async function resendInvitationAction(_prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
-  try {
-    await verifyOrigin();
-    const staff = await requireAdminUser();
-    await assertRateLimit(`admin:manager-invite-resend:${staff.id}`, 10, 60 * 60_000);
-    const parsed = invitationIdSchema.parse({ invitationId: text(formData, "invitationId") });
-    const admin = adminClient();
-    const { data: invitation, error } = await admin.from("manager_invitations").select("id, email, status").eq("id", parsed.invitationId).single();
-    if (error || !invitation || invitation.status !== "pending") throw new Error("Pending invitation not found.");
-
-    const expiresAt = invitationExpiry();
-    await resendManagerInvite(invitation.email, invitation.id);
-    let { error: updateError } = await admin.from("manager_invitations").update({
-      last_sent_at: new Date().toISOString(),
-      expires_at: expiresAt
-    }).eq("id", invitation.id);
-    if (isMissingExpiresAt(updateError)) {
-      const retry = await admin.from("manager_invitations").update({
-        last_sent_at: new Date().toISOString()
-      }).eq("id", invitation.id);
-      updateError = retry.error;
-    }
-    if (updateError) throw new Error(updateError.message);
-    await audit("admin_resent_invitation", invitation.id, { email: invitation.email, expiresAt });
-    revalidatePath("/dashboard/admin");
-    revalidatePath("/dashboard/admin/invitations");
-    return { ok: true, message: "Invitation resent successfully." };
-  } catch (error) {
-    await reportServerException("admin_resend_invitation_failed", error);
-    return { ok: false, message: adminActionMessage(error) };
-  }
-}
-
-export async function revokeInvitationAction(_prev: AdminActionState, formData: FormData): Promise<AdminActionState> {
-  try {
-    await verifyOrigin();
-    const staff = await requireAdminUser();
-    await assertRateLimit(`admin:manager-invite-revoke:${staff.id}`, 30, 60 * 60_000);
-    const parsed = invitationIdSchema.parse({ invitationId: text(formData, "invitationId") });
-    const admin = adminClient();
-    const { data: invitation, error } = await admin
-      .from("manager_invitations")
-      .select("id, email, status, auth_user_id")
-      .eq("id", parsed.invitationId)
-      .single();
-    if (error || !invitation || invitation.status !== "pending") throw new Error("Pending invitation not found.");
-
-    const { error: updateError } = await admin.from("manager_invitations").update({ status: "revoked", revoked_at: new Date().toISOString() }).eq("id", invitation.id);
-    if (updateError) throw new Error(updateError.message);
-    if (invitation.auth_user_id) {
-      const [{ data: authData }, profileResult] = await Promise.all([
-        admin.auth.admin.getUserById(invitation.auth_user_id),
-        admin.from("staff_profiles").select("id").eq("auth_user_id", invitation.auth_user_id).maybeSingle()
-      ]);
-      const user = authData.user;
-      if (!profileResult.error && !profileResult.data &&
-          user?.user_metadata?.invited_role === "manager" &&
-          user.user_metadata?.invitation_id === invitation.id) {
-        await admin.auth.admin.deleteUser(invitation.auth_user_id);
-      }
-    }
-    await audit("admin_revoked_invitation", invitation.id, { email: invitation.email });
-    revalidatePath("/dashboard/admin");
-    revalidatePath("/dashboard/admin/invitations");
-    return { ok: true, message: "Invitation revoked successfully." };
-  } catch (error) {
-    await reportServerException("admin_revoke_invitation_failed", error);
+    await reportServerException("admin_connect_manual_manager_failed", error);
     return { ok: false, message: adminActionMessage(error) };
   }
 }
@@ -358,7 +191,6 @@ export async function deleteStoreAction(_prev: AdminActionState, formData: FormD
     revalidatePath("/dashboard/admin");
     revalidatePath("/dashboard/admin/stores");
     revalidatePath("/dashboard/admin/payments");
-    revalidatePath("/dashboard/admin/invitations");
     revalidatePath("/dashboard/manager");
     revalidatePath("/dashboard/manager/products");
     revalidatePath("/dashboard/manager/inventory");

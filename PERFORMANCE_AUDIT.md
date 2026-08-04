@@ -187,7 +187,6 @@ Largest client files:
 | 389 | `components/manager/ManagerForms.tsx` |
 | 370 | `components/manager/ManagerOnboarding.tsx` |
 | 227 | `app/login/LoginForm.tsx` |
-| 207 | `app/manager/invitation/set-password/password-form.tsx` |
 | 119 | `components/admin/DeleteStoreButton.tsx` |
 
 Important notes:
