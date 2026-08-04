@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideAccountAccess, managerLoginDestination, type AccountFlowProfile } from "@/lib/account-flow";
+import { decideAccountAccess, managerLoginDestination, receptionistLoginDestination, type AccountFlowProfile } from "@/lib/account-flow";
 
 const activeManager: AccountFlowProfile = {
   role: "manager",
@@ -58,5 +58,10 @@ describe("manual manager onboarding account states", () => {
       is_active: true,
       store_id: null
     })).toMatchObject({ allowed: false, reason: "store_unassigned" });
+  });
+
+  it("sends a receptionist to setup until their account is complete", () => {
+    expect(receptionistLoginDestination({ accountSetupComplete: false })).toBe("/staff/setup/account");
+    expect(receptionistLoginDestination({ accountSetupComplete: true })).toBe("/dashboard/receptionist");
   });
 });

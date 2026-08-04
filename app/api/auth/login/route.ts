@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { managerLoginDestination } from "@/lib/account-flow";
+import { managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
 import { decideDashboardAccess, getDashboardSessionForVerifiedUser } from "@/lib/dashboard-session";
 import { logServerEvent, reportServerException } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       ? "/dashboard/admin"
       : session.isManager
         ? managerLoginDestination(session)
-        : "/dashboard/receptionist";
+        : receptionistLoginDestination(session);
 
     await logServerEvent("info", "login_ready_for_redirect", {
       authUserId: session.authUserId,

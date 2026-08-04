@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { configuredApplicationUrl } from "@/lib/app-url";
 import { invalidateManagerStaffCache, invalidateStoreDisplayCache } from "@/lib/cache/redis";
 import { requireActiveManager, requireAdminClient } from "@/lib/manager/auth";
 import { edibleThcDatabaseFields, type ManagerInventoryProduct } from "@/lib/manager/data";
 import { categoryAllowsCultivationType, categoryAllowsProductImageOnCreate, VAPE_PRODUCT_TYPES, VAPE_STRAIN_TYPES } from "@/lib/manager/options";
-import { inventoryAddSchema, productEditSchema, productFormSchema, staffActionSchema, staffCreateSchema, staffInviteSchema, staffResetPasswordSchema, type InventoryAddInput, type ProductEditInput, type ProductFormInput } from "@/lib/manager/validation";
+import { managerPasswordIssues } from "@/lib/manager/password-policy";
+import { inventoryAddSchema, productEditSchema, productFormSchema, staffActionSchema, staffCreateSchema, staffResetPasswordSchema, type InventoryAddInput, type ProductEditInput, type ProductFormInput } from "@/lib/manager/validation";
 import { normalizeProductImage, productImageObjectPath, type NormalizedProductImage } from "@/lib/product-image-upload";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
 import { requireAssignedStoreId } from "@/lib/store-scope";
@@ -18,7 +18,7 @@ export type ManagerActionState = { ok: boolean; message: string; createdProduct?
 
 const productImageBucket = "product-images";
 const missingProductDatabaseMessage = "Product database tables are not set up yet. Please apply Supabase migrations.";
-const missingStaffDatabaseMessage = "Staff invitation database tables are not set up yet. Please apply Supabase migrations.";
+const missingStaffDatabaseMessage = "Receptionist account database functions are not set up yet. Please apply Supabase migrations.";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -150,18 +150,18 @@ function selectedProductMatchesFilters(product: { category: string | null; subca
       (categoryAllowsCultivationType(parsed.category) && product.cultivation_type === parsed.cultivationType));
 }
 
-function staffInvitationActionMessage(error: unknown) {
-  if (error instanceof z.ZodError) return error.issues[0]?.message ?? "Enter a valid receptionist email address.";
-  if (!(error instanceof Error)) return "Unable to send staff invitation.";
+function staffAccountActionMessage(error: unknown) {
+  if (error instanceof z.ZodError) return error.issues[0]?.message ?? "Enter valid receptionist account details.";
+  if (!(error instanceof Error)) return "Unable to create the receptionist account.";
   const lower = error.message.toLowerCase();
   if (lower.includes("schema cache") || lower.includes("could not find the table") || lower.includes("does not exist")) {
     return missingStaffDatabaseMessage;
   }
+  if (lower.includes("receptionist_slot_limit_reached")) return "This store has reached its receptionist limit (5 / 5).";
+  if (lower.includes("already registered") || lower.includes("already exists") || lower.includes("duplicate") || lower.includes("unique")) {
+    return "That email is already attached to a GreenChoice or Supabase Auth account.";
+  }
   return error.message;
-}
-
-function invitationExpiry() {
-  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 async function verifyManagerPassword(password: string) {
@@ -175,29 +175,19 @@ async function verifyManagerPassword(password: string) {
   }
 }
 
-async function sendStaffInvite(email: string, invitationId: string, existingAuthUserId?: string | null) {
-  const redirectBase = process.env.STAFF_INVITE_REDIRECT_TO || `${configuredApplicationUrl()}/staff/invitation/onboarding`;
-  const redirectTo = `${redirectBase}${redirectBase.includes("?") ? "&" : "?"}invitation_id=${encodeURIComponent(invitationId)}`;
-  if (existingAuthUserId) {
-    const { error } = await requireAdminClient().auth.resend({
-      type: "signup",
-      email,
-      options: { emailRedirectTo: redirectTo }
-    });
-    if (error) throw new Error(error.message);
-    return existingAuthUserId;
+async function authUserByEmail(email: string) {
+  const admin = requireAdminClient();
+  for (let page = 1; page <= 50; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new Error("Supabase Auth users could not be checked.");
+    const match = data.users.find((candidate) => candidate.email?.trim().toLowerCase() === email);
+    if (match) return match;
+    if (data.users.length < 200) break;
   }
-  const { data, error } = await requireAdminClient().auth.admin.inviteUserByEmail(email, {
-    redirectTo,
-    data: { invited_role: "receptionist", staff_invitation_id: invitationId }
-  });
-  if (error) throw new Error(error.message);
-  if (!data.user?.id) throw new Error("Supabase Auth did not return the invited user.");
-  return data.user.id;
+  return null;
 }
 
-async function deleteUnboundStaffInviteAuthUser(authUserId: string | null, invitationId: string) {
-  if (!authUserId) return;
+async function deleteUnboundManagerCreatedReceptionist(authUserId: string) {
   try {
     const admin = requireAdminClient();
     const [{ data: authData }, profileResult] = await Promise.all([
@@ -206,12 +196,12 @@ async function deleteUnboundStaffInviteAuthUser(authUserId: string | null, invit
     ]);
     const user = authData.user;
     if (!profileResult.error && !profileResult.data &&
-        user?.user_metadata?.invited_role === "receptionist" &&
-        user.user_metadata?.staff_invitation_id === invitationId) {
+        user?.app_metadata?.greenchoice_role === "receptionist" &&
+        user.app_metadata?.greenchoice_registration === "manager_created") {
       await admin.auth.admin.deleteUser(authUserId);
     }
   } catch {
-    // Invitation cleanup must not hide the original bind/send failure.
+    // Cleanup must not hide the original profile-creation failure.
   }
 }
 
@@ -583,103 +573,60 @@ export async function addInventoryStockAction(_prev: ManagerActionState, formDat
 }
 
 export async function createStaffAccountAction(_prev: ManagerActionState, formData: FormData): Promise<ManagerActionState> {
-  try {
-    await verifyOrigin();
-    const { user } = await requireActiveManager();
-    await assertRateLimit(`manager:staff-direct-create:${user.id}`, 3, 60 * 60_000);
-    staffCreateSchema.parse({
-      firstName: text(formData, "firstName"),
-      surname: text(formData, "surname"),
-      email: text(formData, "email"),
-      mobileNumber: text(formData, "mobileNumber"),
-      physicalAddress: text(formData, "physicalAddress"),
-      password: text(formData, "password"),
-      confirmPassword: text(formData, "confirmPassword")
-    });
-    return { ok: false, message: "Direct receptionist creation is disabled. Send a secure staff invitation instead." };
-  } catch (error) {
-    return { ok: false, message: error instanceof z.ZodError ? error.issues[0]?.message ?? "Invalid staff details." : "Direct receptionist creation is disabled. Send a secure staff invitation instead." };
-  }
-}
-
-export async function inviteReceptionistAction(_prev: ManagerActionState, formData: FormData): Promise<ManagerActionState> {
+  let createdAuthUserId: string | null = null;
   try {
     await verifyOrigin();
     const { supabase, user, profile: managerProfile } = await requireActiveManager();
-    await assertRateLimit(`manager:staff-invite:${user.id}`, 10, 60 * 60_000);
+    await assertRateLimit(`manager:staff-direct-create:${user.id}`, 10, 60 * 60_000);
     const storeId = requireAssignedStoreId(managerProfile, "Manager");
-    const admin = requireAdminClient();
-    const parsed = staffInviteSchema.parse({
-      email: text(formData, "email")
+    const parsed = staffCreateSchema.parse({
+      email: text(formData, "email"),
+      password: text(formData, "password"),
+      confirmPassword: text(formData, "confirmPassword")
     });
+    const passwordIssues = managerPasswordIssues(parsed.password, parsed.confirmPassword);
+    if (passwordIssues.length) throw new Error(passwordIssues[0]);
+    if (parsed.email === user.email?.trim().toLowerCase()) throw new Error("You cannot create a receptionist account with your manager email address.");
 
-    if (parsed.email === user.email?.toLowerCase()) throw new Error("You cannot invite your own manager email address.");
-
+    const admin = requireAdminClient();
     const { data: existingStaff, error: staffReadError } = await admin
       .from("staff_profiles")
       .select("id")
       .ilike("email", parsed.email)
-      .neq("account_status", "deleted")
       .maybeSingle();
-    if (staffReadError) throw new Error(staffReadError.message);
-    if (existingStaff) throw new Error("That email is already attached to a staff account.");
+    if (staffReadError) throw new Error("Existing GreenChoice accounts could not be checked.");
+    if (existingStaff || await authUserByEmail(parsed.email)) {
+      throw new Error("That email is already attached to a GreenChoice or Supabase Auth account.");
+    }
 
-    const expiresAt = invitationExpiry();
-    const { data: reservationData, error: reservationError } = await supabase.rpc("reserve_receptionist_invitation", {
-      p_email: parsed.email,
-      p_expires_at: expiresAt
+    const { data: authData, error: authError } = await admin.auth.admin.createUser({
+      email: parsed.email,
+      password: parsed.password,
+      email_confirm: true,
+      app_metadata: {
+        greenchoice_role: "receptionist",
+        greenchoice_registration: "manager_created",
+        greenchoice_store_id: storeId,
+        greenchoice_manager_id: user.id
+      }
     });
-    if (reservationError) throw new Error(reservationError.message);
-    const reservation = Array.isArray(reservationData) ? reservationData[0] : reservationData;
-    if (reservation?.result_code === "limit_reached") {
-      return { ok: false, message: `This store has reached its receptionist limit (${reservation.slot_count ?? 5} / ${reservation.slot_limit ?? 5}).` };
-    }
-    if (!reservation?.invitation_id) throw new Error("Staff invitation was not created.");
-    const invitationId = String(reservation.invitation_id);
-    const resend = reservation.created === false;
-    let existingInvitationAuthUserId: string | null = null;
-    if (resend) {
-      const { data: existingInvitation, error: existingInvitationError } = await admin
-        .from("staff_invitations")
-        .select("auth_user_id")
-        .eq("id", invitationId)
-        .eq("store_id", storeId)
-        .maybeSingle<{ auth_user_id: string | null }>();
-      if (existingInvitationError) throw new Error(existingInvitationError.message);
-      existingInvitationAuthUserId = existingInvitation?.auth_user_id ?? null;
-    }
+    if (authError || !authData.user?.id) throw new Error(authError?.message ?? "Supabase Auth did not create the receptionist account.");
+    createdAuthUserId = authData.user.id;
 
-    let invitedAuthUserId: string | null = null;
-    try {
-      await audit("manager_staff_invitation_email_requested", "staff_invitations", invitationId, { email: parsed.email, storeId, result: "requested", resend });
-      invitedAuthUserId = await sendStaffInvite(parsed.email, invitationId, existingInvitationAuthUserId);
-      const { error: bindError } = await admin
-        .from("staff_invitations")
-        .update({
-          auth_user_id: invitedAuthUserId,
-          status: "pending",
-          expires_at: expiresAt,
-          last_sent_at: new Date().toISOString(),
-          failed_at: null,
-          email_delivery_result: "sent"
-        })
-        .eq("id", invitationId)
-        .eq("store_id", storeId);
-      if (bindError) throw new Error(bindError.message);
-      await audit("manager_staff_invitation_email_sent", "staff_invitations", invitationId, { email: parsed.email, storeId, result: "sent", resend });
-    } catch (error) {
-      await admin.from("staff_invitations").update({ status: "failed", failed_at: new Date().toISOString(), email_delivery_result: "failed" }).eq("id", invitationId).eq("store_id", storeId);
-      await audit("manager_staff_invitation_email_failed", "staff_invitations", invitationId, { email: parsed.email, storeId, result: "failed", resend });
-      if (!existingInvitationAuthUserId) await deleteUnboundStaffInviteAuthUser(invitedAuthUserId, invitationId);
-      throw error;
-    }
+    const { data: profileData, error: profileError } = await supabase.rpc("create_manager_receptionist_profile", {
+      p_auth_user_id: createdAuthUserId,
+      p_email: parsed.email
+    });
+    if (profileError) throw new Error(profileError.message);
+    const profileResult = Array.isArray(profileData) ? profileData[0] : profileData;
+    if (!profileResult?.profile_id) throw new Error("The receptionist profile was not created.");
 
-    await audit(resend ? "manager_resent_staff_invitation" : "manager_created_staff_invitation", "staff_invitations", invitationId, { email: parsed.email, storeId, intendedRole: "receptionist", expiresAt, result: resend ? "resent" : "created" });
     await invalidateManagerStaffCache(storeId);
     revalidatePath("/dashboard/manager/staff");
-    return { ok: true, message: resend ? "Invitation resent. The invited person can use the newest email link." : "Invitation sent. The invited person becomes staff only after completing secure onboarding." };
+    return { ok: true, message: "Account created. Give the receptionist their email and temporary password securely; they must replace it at first login." };
   } catch (error) {
-    return { ok: false, message: staffInvitationActionMessage(error) };
+    if (createdAuthUserId) await deleteUnboundManagerCreatedReceptionist(createdAuthUserId);
+    return { ok: false, message: staffAccountActionMessage(error) };
   }
 }
 

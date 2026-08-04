@@ -36,7 +36,7 @@ describe("Supabase Auth ownership contracts", () => {
     expect(recoveryPage).toContain('redirectType !== "recovery"');
     expect(recoveryPage).toContain('hash.get("type") === "recovery"');
     expect(recoveryPage).not.toContain("supabase.auth.getSession()");
-    expect(recoveryUpdate).toContain("hasPendingStaffInvitationSession");
+    expect(recoveryUpdate).not.toContain("staff_invitations");
     expect(recoveryUpdate).toContain('redirectTo: "/login"');
     expect(recoveryUpdate).not.toContain('.from("staff_profiles").update');
   });
@@ -51,34 +51,35 @@ describe("Supabase Auth ownership contracts", () => {
     expect(update).not.toContain("restrictedPathForSession");
   });
 
-  it("uses manual manager registration while preserving receptionist invitations", () => {
+  it("uses manual manager registration and direct receptionist account creation", () => {
     const managerBootstrap = source("lib/manual-manager-registration.ts");
-    const receptionistInvite = source("app/dashboard/manager/actions.ts");
-    const receptionistCompletion = source("app/staff/invitation/actions.ts");
+    const receptionistCreate = source("app/dashboard/manager/actions.ts");
+    const receptionistCompletion = source("app/staff/setup/actions.ts");
 
     expect(managerBootstrap).toContain('rpc("bootstrap_manual_manager_profile"');
     expect(managerBootstrap).not.toContain("user_metadata");
-    expect(receptionistInvite).toContain("auth.admin.inviteUserByEmail");
-    expect(receptionistInvite).toContain("deleteUnboundStaffInviteAuthUser");
-    expect(receptionistInvite).toContain("if (bindError) throw new Error(bindError.message)");
+    expect(receptionistCreate).toContain("auth.admin.createUser");
+    expect(receptionistCreate).toContain("deleteUnboundManagerCreatedReceptionist");
+    expect(receptionistCreate).toContain('rpc("create_manager_receptionist_profile"');
+    expect(receptionistCreate).not.toContain("inviteUserByEmail");
     expect(receptionistCompletion).toContain("supabase.auth.updateUser");
-    expect(receptionistCompletion).toContain('rpc("complete_staff_onboarding"');
+    expect(receptionistCompletion).toContain('rpc("complete_manager_created_receptionist_setup"');
   });
 
   it("retains distributed limits on GreenChoice business actions", () => {
     expect(source("app/dashboard/receptionist/actions.ts")).toContain("assertRateLimit");
     expect(source("app/dashboard/manager/actions.ts")).toContain("assertRateLimit");
     expect(source("app/dashboard/admin/actions.ts")).toContain("assertRateLimit");
-    expect(source("app/staff/invitation/actions.ts")).toContain("assertRateLimit");
+    expect(source("app/staff/setup/actions.ts")).toContain("assertRateLimit");
   });
 
   it("keeps manager and receptionist onboarding bound to current Supabase users", () => {
     const managerOnboarding = source("lib/manager/onboarding.ts");
-    const receptionistOnboarding = source("app/staff/invitation/actions.ts");
+    const receptionistOnboarding = source("app/staff/setup/actions.ts");
     expect(managerOnboarding).toContain("supabase.auth.getUser()");
     expect(managerOnboarding).toContain('redirect("/dashboard/restricted/manager" as never)');
-    expect(receptionistOnboarding).toContain("invitation.auth_user_id !== user.id");
-    expect(receptionistOnboarding).toContain("metadataInvitationId !== parsed.invitationId");
+    expect(receptionistOnboarding).toContain('requireDashboardRoleSession(["employee_receptionist"])');
+    expect(receptionistOnboarding).toContain("session.authUserId");
   });
 
   it("has no second server-side session table, cookie, heartbeat route, or validity guard", () => {
@@ -144,7 +145,7 @@ describe("Supabase Auth ownership contracts", () => {
     expect(loginForm).toContain("window.location.replace");
   });
 
-  it("exchanges each recovery or staff-invitation code only once per mounted flow", () => {
+  it("exchanges each recovery code only once per mounted flow", () => {
     const updatePassword = source("app/update-password/page.tsx");
     expect(updatePassword).toContain("exchangedCodeRef");
     expect(updatePassword).toContain("exchangePromiseRef");
@@ -155,6 +156,6 @@ describe("Supabase Auth ownership contracts", () => {
     expect(updatePassword).toContain("Promise.resolve(false)");
     expect(updatePassword).toContain('method="post"');
     expect(updatePassword).toContain("!isReady || isSubmitting");
-    expect(source("components/staff/StaffInvitationSessionGate.tsx")).toContain("preparedInvitationRef");
+    expect(existsSync(resolve(process.cwd(), "components/staff/StaffInvitationSessionGate.tsx"))).toBe(false);
   });
 });

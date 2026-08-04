@@ -3,6 +3,7 @@ import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/sup
 import { decideDashboardAccess, getDashboardSession, restrictedPathForSession } from "@/lib/dashboard-session";
 import { logServerEvent } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
+import { managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
 
 export const dynamic = "force-dynamic";
 const privateHeaders = { "Cache-Control": "private, no-store, max-age=0", "Vary": "Cookie, Authorization" };
@@ -60,7 +61,11 @@ export async function GET() {
   return NextResponse.json({
     allowed: true,
     role: session.role,
-    redirectTo: session.isAdmin ? "/dashboard/admin" : session.isManager ? "/dashboard/manager" : "/dashboard/receptionist"
+    redirectTo: session.isAdmin
+      ? "/dashboard/admin"
+      : session.isManager
+        ? managerLoginDestination(session)
+        : receptionistLoginDestination(session)
   }, { headers: privateHeaders });
 }
 

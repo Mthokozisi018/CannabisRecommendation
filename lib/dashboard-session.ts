@@ -138,6 +138,14 @@ function accountSetupComplete(profile: DashboardStaffProfile) {
   const legalAccepted = Boolean(profile.terms_accepted_at && profile.privacy_policy_accepted_at && profile.terms_version && profile.privacy_policy_version);
   const baseComplete = profile.account_setup_complete === true || profile.profile_setup_complete === true;
   if (!legalAccepted || !baseComplete) return false;
+  if (profile.role === "receptionist") {
+    return Boolean(
+      profile.first_name &&
+        profile.surname &&
+        (profile.phone_number || profile.mobile_number) &&
+        profile.password_changed_at
+    );
+  }
   if (profile.onboarding_complete_seen_at) return true;
   return Boolean(
     profile.full_name &&
@@ -229,7 +237,7 @@ async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<ty
 
   const accountDone = accountSetupComplete(profile);
   const storeDone = profile.role === "manager" ? storeSetupComplete(profile) : Boolean(assignedStoreId || profile.role === "admin");
-  const onboardingComplete = profile.role === "manager" ? accountDone && storeDone : true;
+  const onboardingComplete = profile.role === "manager" ? accountDone && storeDone : profile.role === "receptionist" ? accountDone : true;
   const name = displayName(profile, user);
   const storeAccessStatus = activeMembership.storeAccessStatus ?? "restricted";
   const storeId = activeMembership.storeId;
@@ -337,5 +345,11 @@ export async function requireCompletedManagerDashboardSession() {
   if (!session.accountSetupComplete) redirect("/manager/setup/account" as never);
   if (!session.storeSetupComplete) redirect("/manager/setup/store" as never);
   if (!session.onboardingCompleteSeen) redirect("/manager/setup/complete" as never);
+  return session;
+}
+
+export async function requireCompletedReceptionistDashboardSession() {
+  const session = await requireUnrestrictedDashboardSession("receptionist");
+  if (session.isReceptionist && !session.accountSetupComplete) redirect("/staff/setup/account" as never);
   return session;
 }

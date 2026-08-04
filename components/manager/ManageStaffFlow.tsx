@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useActionState, useState } from "react";
-import { ArrowLeft, LockKeyhole, LogOut, Mail, Send, ShieldCheck, Sprout, User, UserPlus, UserRoundX, UsersRound, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, LockKeyhole, LogOut, Mail, ShieldCheck, Sprout, User, UserPlus, UserRoundCheck, UserRoundX, UsersRound, X } from "lucide-react";
 import { logoutGreenChoiceStaffAction } from "@/app/actions";
-import { inviteReceptionistAction, updateStaffStatusAction, type ManagerActionState } from "@/app/dashboard/manager/actions";
+import { createStaffAccountAction, updateStaffStatusAction, type ManagerActionState } from "@/app/dashboard/manager/actions";
 import { PendingNotice, PendingSpinner } from "@/components/manager/forms/shared";
 import type { ManagerReceptionistAccount, ReceptionistSlotUsage } from "@/lib/manager/data";
 
 const initialState: ManagerActionState = { ok: false, message: "" };
-const manageStaffPanelClass = "rounded-2xl border border-lime-400/34 bg-[linear-gradient(145deg,rgba(2,6,3,0.58),rgba(4,10,6,0.48))] p-6 shadow-[0_22px_78px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.06),inset_0_0_0_999px_rgba(0,0,0,0.03)] backdrop-blur-md";
+const manageStaffPanelClass = "rounded-2xl border border-[#5e9f38] bg-[#050b07] p-6 shadow-[0_22px_78px_rgba(0,0,0,0.42)]";
 
 function StaffShell({ children, mode }: { children: React.ReactNode; mode: "accounts" | "invite" }) {
   return (
@@ -27,11 +26,11 @@ function StaffShell({ children, mode }: { children: React.ReactNode; mode: "acco
 function TopActions({ invite = false }: { invite?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <Link href={invite ? "/dashboard/manager/staff" : "/dashboard/manager"} className="inline-flex h-11 items-center gap-2 rounded-full border border-lime-400/35 bg-black/48 px-5 text-sm font-bold text-white shadow-[0_0_24px_rgba(123,220,52,0.16)] backdrop-blur-md transition hover:border-lime-300 hover:text-lime-200">
+      <Link href={invite ? "/dashboard/manager/staff" : "/dashboard/manager"} className="inline-flex h-12 items-center gap-2 rounded-full border border-[#73c642] bg-[#050806] px-5 text-sm font-bold text-white shadow-[0_0_24px_rgba(123,220,52,0.16)] transition hover:border-lime-300 hover:text-lime-200">
         <ArrowLeft size={18} />
         {invite ? "Back to Manage Staff" : "Back"}
       </Link>
-      <div className="inline-flex h-12 items-center rounded-full border border-lime-400/30 bg-black/54 px-3 shadow-[0_0_28px_rgba(123,220,52,0.16)] backdrop-blur-md">
+      <div className="inline-flex h-12 items-center rounded-full border border-[#73c642] bg-[#050806] px-3 shadow-[0_0_28px_rgba(123,220,52,0.16)]">
         <Link href="/account/team" className="inline-flex h-9 items-center gap-3 rounded-full px-3 text-sm font-bold text-white transition hover:bg-white/8">
           <User size={18} className="text-lime-300" />
           Manager profile
@@ -73,6 +72,14 @@ function StatusPill({ status }: { status: string }) {
       {active ? "Active" : restricted ? "Restricted" : "Deactivated"}
     </span>
   );
+}
+
+function AccountStatusPill({ account }: { account: ManagerReceptionistAccount }) {
+  if (normalizedStatus(account) !== "active") return <StatusPill status={normalizedStatus(account)} />;
+  if (account.temporary_password_active || !account.account_setup_complete) {
+    return <span className="inline-flex h-8 items-center rounded-lg bg-[#3a3211] px-3 text-sm font-bold text-amber-100">Setup required</span>;
+  }
+  return <StatusPill status={normalizedStatus(account)} />;
 }
 
 function StaffActionButton({ account, action, label, tone, icon }: { account: ManagerReceptionistAccount; action: "grant" | "restrict" | "deactivate"; label: string; tone: "lime" | "amber" | "red"; icon: React.ReactNode }) {
@@ -154,7 +161,7 @@ function AccountsTable({ accounts }: { accounts: ManagerReceptionistAccount[] })
               <td className="px-3 py-3 text-sm font-semibold">
                 <span className="block truncate">{displayName(account)}</span>
               </td>
-              <td className="px-3 py-3 align-middle"><StatusPill status={normalizedStatus(account)} /></td>
+              <td className="px-3 py-3 align-middle"><AccountStatusPill account={account} /></td>
               <td className="px-3 py-3 align-middle">
                 <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
                   <StaffActionButton account={account} action="grant" label="Access Granted" tone="lime" icon={<LockKeyhole size={19} />} />
@@ -166,7 +173,7 @@ function AccountsTable({ accounts }: { accounts: ManagerReceptionistAccount[] })
           ))}
         </tbody>
       </table>
-      {accounts.length === 0 ? <p className="px-3 py-5 text-center text-xs text-white/86">No completed receptionist staff accounts found for your store.</p> : null}
+      {accounts.length === 0 ? <p className="px-3 py-5 text-center text-xs text-white/86">No receptionist accounts found for your store.</p> : null}
     </div>
   );
 }
@@ -188,7 +195,7 @@ export function ManageStaffAccountsScreen({ accounts, slotUsage }: { accounts: M
           </div>
           <Link aria-disabled={isFull} href={isFull ? "/dashboard/manager/staff" : "/dashboard/manager/staff/new"} className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg px-4 text-xs font-extrabold text-white shadow-[0_12px_28px_rgba(110,220,25,0.2)] transition ${isFull ? "cursor-not-allowed bg-white/12 text-white/45" : "bg-[linear-gradient(135deg,#94e31f,#62c610)] hover:brightness-110"}`}>
             <UserPlus size={17} />
-            {isFull ? `Receptionist slots ${slotUsage.used} / ${slotUsage.limit}` : `Invite Receptionist ${slotUsage.used} / ${slotUsage.limit}`}
+            {isFull ? `Receptionist slots ${slotUsage.used} / ${slotUsage.limit}` : `Create Receptionist Account ${slotUsage.used} / ${slotUsage.limit}`}
           </Link>
         </div>
         <div className={`${manageStaffPanelClass} mt-4 p-4`}>
@@ -208,48 +215,73 @@ export function ManageStaffAccountsScreen({ accounts, slotUsage }: { accounts: M
   );
 }
 
-export function InviteStaffScreen({ slotUsage }: { slotUsage: ReceptionistSlotUsage }) {
-  const [state, formAction, pending] = useActionState(inviteReceptionistAction, initialState);
+export function CreateStaffScreen({ slotUsage }: { slotUsage: ReceptionistSlotUsage }) {
+  const [state, formAction, pending] = useActionState(createStaffAccountAction, initialState);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isFull = slotUsage.used >= slotUsage.limit;
+  const steps = [
+    { label: "Enter Account Details", icon: <KeyRound size={25} /> },
+    { label: "Account Created", icon: <CheckCircle2 size={25} /> },
+    { label: "Receptionist Setup", icon: <UserRoundCheck size={25} /> },
+    { label: "Account Active", icon: <ShieldCheck size={25} /> }
+  ];
   return (
     <StaffShell mode="invite">
       <TopActions invite />
       <section className="mx-auto mt-1 max-w-[820px] text-center">
         <Brand centered />
         <h1 className="mt-2 text-[24px] font-extrabold leading-tight sm:text-[28px]">Create a New <span className="text-[#72d943]">Staff Account</span></h1>
-        <p className="mt-1 text-sm text-white/90">Invite a new receptionist to join your store. Slots used: {slotUsage.used} / {slotUsage.limit}.</p>
-        <section className="mx-auto mt-2.5 max-w-[760px] rounded-2xl border border-lime-400/24 bg-[#07100d]/78 px-4 py-2.5 shadow-[0_14px_42px_rgba(0,0,0,0.28)] backdrop-blur-md">
-          <div className="mx-auto max-w-[690px] overflow-hidden rounded-xl">
-            <Image
-              src="/images/manager/badges-for-onboarding.png"
-              alt="Enter Email, Invitation Sent, Onboarding, Account Active"
-              width={1536}
-              height={864}
-              priority
-              className="h-[118px] w-full object-cover object-[center_45%] sm:h-[132px]"
-            />
+        <p className="mt-1 text-sm text-white/90">Create a receptionist for your assigned store. Slots used: {slotUsage.used} / {slotUsage.limit}.</p>
+        <section className="mx-auto mt-3 max-w-[760px] rounded-xl border border-[#6fbd3f] bg-[#050b07] px-4 py-4 shadow-[0_14px_42px_rgba(0,0,0,0.38)]">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {steps.map((step, index) => (
+              <div key={step.label} className="flex min-h-[86px] flex-col items-center justify-center gap-2 rounded-lg border border-[#497d2c] bg-[#09120c] px-2 py-3 text-lime-300">
+                {step.icon}
+                <span className="text-center text-xs font-extrabold leading-4"><span className="text-white/65">{index + 1}. </span>{step.label}</span>
+              </div>
+            ))}
           </div>
         </section>
-        <section className="mx-auto mt-2.5 max-w-[760px] rounded-2xl border border-lime-400/24 bg-[#07100d]/78 p-3.5 text-left shadow-[0_14px_42px_rgba(0,0,0,0.28)] backdrop-blur-md">
-          <h2 className="text-base font-extrabold">Email Address</h2>
-          <p className="mt-1 text-xs text-white/86">Enter the email address of the person you want to invite.</p>
-          <form action={formAction} className="mt-3 grid gap-2.5">
-            <label className="flex h-10 items-center gap-3 rounded-lg border border-lime-400/55 bg-black/36 px-3 text-white/70 focus-within:border-lime-300">
-              <Mail size={18} />
-              <input required name="email" type="email" placeholder="e.g. name@domain.com" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/52" />
+        <section className="mx-auto mt-3 max-w-[760px] rounded-xl border border-[#6fbd3f] bg-[#050b07] p-4 text-left shadow-[0_14px_42px_rgba(0,0,0,0.38)] sm:p-5">
+          <h2 className="text-lg font-extrabold">Receptionist Account Details</h2>
+          <p className="mt-1 text-xs text-white/80">The role and store are assigned securely from your manager account.</p>
+          <form action={formAction} className="mt-4 grid gap-3">
+            <label className="text-xs font-bold text-white">
+              Email Address
+              <span className="mt-1.5 flex h-12 items-center gap-3 rounded-lg border border-[#6fbd3f] bg-[#020604] px-3 text-white/75 focus-within:border-lime-300">
+                <Mail size={18} />
+                <input required name="email" type="email" autoComplete="email" placeholder="e.g. name@domain.com" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/45" />
+              </span>
             </label>
-            <p className="inline-flex items-center gap-2 text-xs text-white/86"><LockKeyhole size={16} /> They will receive an email with a secure link to complete their onboarding.</p>
-            <PendingNotice active={pending} text="Inviting staff..." />
-            {!pending && state.message ? <p className={`rounded-lg px-4 py-3 text-sm ${state.ok ? "border border-lime-300/30 bg-lime-500/10 text-lime-100" : "border border-red-300/30 bg-red-500/10 text-red-100"}`}>{state.message}</p> : null}
-            <button type="submit" disabled={pending || state.ok || isFull} aria-busy={pending} className="inline-flex h-10 items-center justify-center gap-2.5 rounded-lg bg-[linear-gradient(135deg,#94e31f,#62c610)] text-sm font-extrabold text-black shadow-[0_14px_30px_rgba(110,220,25,0.2)] transition hover:brightness-110 disabled:opacity-60">
-              {pending ? <PendingSpinner /> : <Send size={18} />}
-              {isFull ? "Receptionist Limit Reached" : pending ? "Inviting staff..." : state.ok ? "Invitation Sent" : "Send Invitation"}
+            <label className="text-xs font-bold text-white">
+              Temporary Password
+              <span className="mt-1.5 flex h-12 items-center gap-3 rounded-lg border border-[#6fbd3f] bg-[#020604] px-3 text-white/75 focus-within:border-lime-300">
+                <LockKeyhole size={18} />
+                <input required name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={256} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
+                <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide temporary password" : "Show temporary password"} className="grid size-9 place-items-center rounded-full text-white hover:bg-[#152019] hover:text-lime-200">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+              </span>
+            </label>
+            <label className="text-xs font-bold text-white">
+              Confirm Temporary Password
+              <span className="mt-1.5 flex h-12 items-center gap-3 rounded-lg border border-[#6fbd3f] bg-[#020604] px-3 text-white/75 focus-within:border-lime-300">
+                <LockKeyhole size={18} />
+                <input required name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={256} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
+                <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? "Hide confirmed password" : "Show confirmed password"} className="grid size-9 place-items-center rounded-full text-white hover:bg-[#152019] hover:text-lime-200">{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+              </span>
+            </label>
+            <p className="rounded-lg border border-[#497d2c] bg-[#09120c] px-3 py-2.5 text-xs leading-5 text-white/85">Use at least 12 characters with uppercase, lowercase, number, and symbol characters.</p>
+            <PendingNotice active={pending} text="Creating account..." />
+            {!pending && state.message ? <p role="alert" className={`rounded-lg border px-4 py-3 text-sm ${state.ok ? "border-[#6fbd3f] bg-[#0b1b0e] text-lime-100" : "border-[#a74747] bg-[#220b0b] text-red-100"}`}>{state.message}</p> : null}
+            <button type="submit" disabled={pending || state.ok || isFull} aria-busy={pending} className="inline-flex h-14 items-center justify-center gap-2.5 rounded-lg border border-[#b8ff6d] bg-[#7de01e] px-6 text-base font-extrabold text-black shadow-[0_14px_30px_rgba(110,220,25,0.24)] transition hover:bg-[#91ed31] disabled:opacity-60">
+              {pending ? <PendingSpinner /> : <UserPlus size={20} />}
+              {isFull ? "Receptionist Limit Reached" : pending ? "Creating account..." : state.ok ? "Account Created" : "Create Account"}
             </button>
           </form>
         </section>
-        <div className="mx-auto mt-2.5 flex max-w-[760px] items-center gap-3 rounded-2xl border border-lime-400/24 bg-[#07100d]/78 px-4 py-2.5 text-left backdrop-blur-md">
+        <div className="mx-auto mt-3 flex max-w-[760px] items-center gap-3 rounded-xl border border-[#6fbd3f] bg-[#050b07] px-4 py-3 text-left">
           <ShieldCheck size={28} className="shrink-0 text-lime-300" />
-          <p className="text-xs leading-5"><span className="font-extrabold text-lime-300">Important to know:</span> Invited staff are <span className="font-extrabold text-lime-300">not staff yet.</span> They only become staff once they complete onboarding and their account is activated.</p>
+          <p className="text-xs leading-5"><span className="font-extrabold text-lime-300">First login required:</span> The receptionist is assigned to your store now, but cannot use POS until they replace the temporary password and finish account setup.</p>
         </div>
       </section>
     </StaffShell>

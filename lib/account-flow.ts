@@ -65,3 +65,7 @@ export function managerLoginDestination(session: {
   if (!session.onboardingCompleteSeen) return "/manager/setup/complete";
   return "/dashboard/manager";
 }
+
+export function receptionistLoginDestination(session: { accountSetupComplete: boolean }) {
+  return session.accountSetupComplete ? "/dashboard/receptionist" : "/staff/setup/account";
+}

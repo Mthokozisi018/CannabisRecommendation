@@ -7,25 +7,27 @@ function source(path: string) {
 }
 
 describe("critical repository security contracts", () => {
-  it("requires the exact authenticated invitation identity and transactional completion", () => {
-    const action = source("app/staff/invitation/actions.ts");
-    const gate = source("components/staff/StaffInvitationSessionGate.tsx");
-    const page = source("app/staff/invitation/onboarding/page.tsx");
-    const migration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");
+  it("creates receptionist accounts under the authenticated manager store lock", () => {
+    const action = source("app/dashboard/manager/actions.ts");
+    const setupAction = source("app/staff/setup/actions.ts");
+    const migration = source("supabase/migrations/20260804140000_direct_receptionist_accounts.sql");
 
-    expect(action).toContain("supabase.auth.getUser()");
-    expect(action).toContain("invitation.auth_user_id !== user.id");
-    expect(action).toContain("metadataInvitationId !== parsed.invitationId");
-    expect(gate).toContain("staff_invitation_id !== invitationId");
-    expect(page).toContain("invitation.auth_user_id === userId");
-    expect(page).toContain("invitation.email.toLowerCase() === userEmail.toLowerCase()");
-    expect(page).toContain("manager.store_id !== invitation.store_id");
-    expect(migration).toContain("invitation_row.auth_user_id is distinct from caller_id");
-    expect(migration).toContain("invitation_row.completed_at is not null");
-    expect(migration).toContain("invitation_row.store_id");
-    expect(migration).toContain("invitation_row.invited_by");
-    expect(migration).toContain("where id = p_invitation_id");
-    expect(migration).toContain("for update");
+    expect(action).toContain("auth.admin.createUser");
+    expect(action).toContain('greenchoice_role: "receptionist"');
+    expect(action).toContain('greenchoice_registration: "manager_created"');
+    expect(action).toContain('rpc("create_manager_receptionist_profile"');
+    expect(action).toContain("deleteUnboundManagerCreatedReceptionist");
+    expect(action).not.toContain("inviteUserByEmail");
+    expect(setupAction).toContain("supabase.auth.updateUser");
+    expect(setupAction).toContain('rpc("complete_manager_created_receptionist_setup"');
+    expect(migration).toContain("pg_advisory_xact_lock");
+    expect(migration).toContain("manager_profile.store_id");
+    expect(migration).toContain("greenchoice_manager_id");
+    expect(migration).toContain("occupied_slots >= 5");
+    expect(migration).toContain("temporary_password_active = false");
+    expect(migration).toContain("revoke all on function public.reserve_receptionist_invitation");
+    expect(existsSync(resolve(process.cwd(), "app/staff/invitation/onboarding/page.tsx"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), "components/staff/StaffInvitationSessionGate.tsx"))).toBe(false);
   });
 
   it("bootstraps only server-marked manual managers and retires manager invitation activation", () => {
@@ -126,6 +128,8 @@ describe("critical repository security contracts", () => {
     expect(accountFlow).toContain('return "/dashboard/manager"');
     expect(loginRoute).toContain("managerLoginDestination(session)");
     expect(loginFormRoute).toContain("managerLoginDestination(session)");
+    expect(loginRoute).toContain("receptionistLoginDestination(session)");
+    expect(loginFormRoute).toContain("receptionistLoginDestination(session)");
     expect(accountFlow).not.toContain("Your password was changed successfully");
   });
 
@@ -181,13 +185,13 @@ describe("critical repository security contracts", () => {
 
   it("keeps manager audit scope server-derived and reactivation slot checks database-authoritative", () => {
     const actions = source("app/dashboard/manager/actions.ts");
-    const migration = source("supabase/migrations/20260729129000_atomic_receptionist_status_and_slot_enforcement.sql");
+    const migration = source("supabase/migrations/20260804140000_direct_receptionist_accounts.sql");
 
     expect(actions).toContain('requireAssignedStoreId(profile, "Manager")');
     expect(actions).toContain('rpc("update_receptionist_account_status"');
     expect(migration).toContain("perform 1");
     expect(migration).toContain("for update");
-    expect(migration).toContain("v_used_slots >= 5");
+    expect(migration).toContain("other_occupied_slots >= 5");
     expect(migration).toContain("denial_reason := 'receptionist_slot_limit_reached'");
   });
 });

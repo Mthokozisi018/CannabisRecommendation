@@ -177,6 +177,8 @@ export type ManagerReceptionistAccount = {
   physical_address: string | null;
   account_status: "active" | "restricted" | "deactivated" | "deleted" | null;
   is_active: boolean | null;
+  account_setup_complete: boolean | null;
+  temporary_password_active: boolean | null;
   created_at: string;
 };
 
@@ -212,11 +214,10 @@ export async function listCompletedReceptionistAccounts(): Promise<ManagerRecept
 
   const { data, error } = await supabase
     .from("staff_profiles")
-    .select("id, first_name, surname, full_name, email, physical_address, account_status, is_active, created_at")
+    .select("id, first_name, surname, full_name, email, physical_address, account_status, is_active, account_setup_complete, temporary_password_active, created_at")
     .eq("store_id", storeId)
     .eq("role", "receptionist")
     .not("auth_user_id", "is", null)
-    .eq("profile_setup_complete", true)
     .neq("account_status", "deleted")
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);

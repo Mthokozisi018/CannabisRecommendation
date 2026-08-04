@@ -120,4 +120,4 @@ an approved production migration window.
 - `/dashboard/receptionist`
 - `/manager/setup/account`
 - `/manager/setup/store`
-- `/staff/invitation/onboarding`
+- `/staff/setup/account`
