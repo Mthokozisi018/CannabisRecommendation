@@ -32,6 +32,7 @@ describe("critical repository security contracts", () => {
     const registration = source("lib/manual-manager-registration.ts");
     const dashboardSession = source("lib/dashboard-session.ts");
     const migration = source("supabase/migrations/20260804120000_manual_manager_registration.sql");
+    const emptyProfileMigration = source("supabase/migrations/20260804130000_empty_manual_manager_onboarding_profile.sql");
     const adminActions = source("app/dashboard/admin/actions.ts");
 
     expect(registration).toContain("user.app_metadata");
@@ -44,6 +45,10 @@ describe("critical repository security contracts", () => {
     expect(migration).toContain("sole_admin_count <> 1");
     expect(migration).toContain("temporary_password_active");
     expect(migration).toContain("manual_manager_profile_initialized");
+    expect(emptyProfileMigration).toContain("full_name = null");
+    expect(emptyProfileMigration).toContain("profile.auth_user_id = auth_user.id");
+    expect(emptyProfileMigration).toContain("coalesce(auth_user.raw_app_meta_data ->> 'greenchoice_registration', '') = 'manual'");
+    expect(emptyProfileMigration).toContain("null,\n    'manager'");
     expect(migration).toContain("revoke execute on function public.complete_manager_invitation(uuid) from authenticated");
     expect(dashboardSession).toContain("bootstrapManualManagerProfile");
     expect(source("app/api/auth/login/route.ts")).toContain("This account has not been authorized for GreenChoice");
@@ -54,20 +59,40 @@ describe("critical repository security contracts", () => {
     expect(existsSync(resolve(process.cwd(), "app/api/manager/invitation/create-password/route.ts"))).toBe(false);
   });
 
-  it("requires the current temporary password before completing manager account setup", () => {
+  it("uses the authenticated manager session to replace the temporary password", () => {
     const action = source("app/manager/setup/actions.ts");
+    const form = source("components/manager/ManagerOnboarding.tsx");
     const migration = source("supabase/migrations/20260804120000_manual_manager_registration.sql");
-    const verificationIndex = action.indexOf("supabase.auth.signInWithPassword");
     const passwordUpdateIndex = action.indexOf("supabase.auth.updateUser");
     const completionIndex = action.indexOf('admin.rpc("complete_manual_manager_account_setup"');
 
-    expect(action).toContain('text(formData, "currentTemporaryPassword")');
-    expect(verificationIndex).toBeGreaterThan(-1);
-    expect(passwordUpdateIndex).toBeGreaterThan(verificationIndex);
+    expect(action).not.toContain("currentTemporaryPassword");
+    expect(action).not.toContain("supabase.auth.signInWithPassword");
+    expect(form).not.toContain("Current Temporary Password");
+    expect(form).not.toContain('name="currentTemporaryPassword"');
+    expect(passwordUpdateIndex).toBeGreaterThan(-1);
     expect(completionIndex).toBeGreaterThan(passwordUpdateIndex);
+    expect(action).toContain("Your secure sign-in session has expired");
     expect(migration).toContain("target_profile.temporary_password_active is not true");
     expect(migration).toContain("temporary_password_active = false");
     expect(migration).toContain("manual_manager_account_setup_completed");
+  });
+
+  it("keeps first-time manager account registration empty, compact, and actionable", () => {
+    const onboarding = source("lib/manager/onboarding.ts");
+    const form = source("components/manager/ManagerOnboarding.tsx");
+    const accountPage = source("app/manager/setup/account/page.tsx");
+
+    expect(onboarding).toContain("export function managerAccountInitialValues()");
+    expect(onboarding).toContain('fullName: ""');
+    expect(onboarding).toContain('physicalAddress: ""');
+    expect(onboarding).toContain('.eq("auth_user_id", user.id)');
+    expect(accountPage).toContain("managerAccountInitialValues()");
+    expect(form).toContain('autoComplete="off"');
+    expect(form).toContain("Step 1 of 3 · Account registration");
+    expect(form).not.toContain("<aside");
+    expect(form).not.toContain("!formValid || !legalDocuments.available");
+    expect(form).toContain('role="alert"');
   });
 
   it("allows only the sole administrator to mark an existing Auth user for manager onboarding", () => {

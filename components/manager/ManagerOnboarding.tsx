@@ -37,19 +37,19 @@ function GreenChoiceMark() {
   );
 }
 
-function Shell({ children, heading, accent, body }: { children: ReactNode; heading: string; accent: string; body: string }) {
+function Shell({ children, heading, accent, body, compact = false }: { children: ReactNode; heading: string; accent: string; body: string; compact?: boolean }) {
   return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-[#010403] px-4 py-8 text-white sm:px-6 lg:px-8">
+    <main className={`relative isolate min-h-screen overflow-hidden bg-[#010403] px-4 text-white sm:px-6 lg:px-8 ${compact ? "py-5" : "py-8"}`}>
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(0,0,0,.9),rgba(0,0,0,.58),rgba(0,0,0,.86)),url('/images/backgrounds/manager-dashboard-wallpaper.png')] bg-cover bg-center opacity-95" />
       <div aria-hidden="true" className="absolute inset-x-0 bottom-0 -z-10 h-72 bg-[linear-gradient(0deg,rgba(110,205,32,.2),transparent)]" />
 
       <section className="mx-auto w-full max-w-[1320px]">
-        <GreenChoiceMark />
-        <header className="mt-7 text-center">
-          <h1 className="text-balance text-4xl font-black tracking-normal sm:text-5xl">
+        {compact ? null : <GreenChoiceMark />}
+        <header className={`text-center ${compact ? "mt-1" : "mt-7"}`}>
+          <h1 className={`text-balance font-black tracking-normal ${compact ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl"}`}>
             {heading} <span className="text-lime-400">{accent}</span>
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-balance text-lg leading-8 text-white/72 sm:text-xl">{body}</p>
+          <p className={`mx-auto max-w-2xl text-balance text-white/72 ${compact ? "mt-2 text-base leading-6" : "mt-5 text-lg leading-8 sm:text-xl"}`}>{body}</p>
         </header>
         {children}
       </section>
@@ -86,7 +86,7 @@ function Progress({ current }: { current: 1 | 2 | 3 }) {
   );
 }
 
-function Field({ label, name, placeholder, icon, type = "text", className = "", defaultValue = "", minLength, maxLength, pattern, inputMode, autoComplete, trailing }: {
+function Field({ label, name, placeholder, icon, type = "text", className = "", defaultValue = "", minLength, maxLength, pattern, inputMode, autoComplete, trailing, solid = false }: {
   label: string;
   name: string;
   placeholder: string;
@@ -100,11 +100,12 @@ function Field({ label, name, placeholder, icon, type = "text", className = "", 
   inputMode?: "text" | "tel" | "numeric";
   autoComplete?: string;
   trailing?: ReactNode;
+  solid?: boolean;
 }) {
   return (
     <label className={`block ${className}`}>
       <span className="font-semibold text-white">{label}</span>
-      <span className="mt-3 flex h-14 items-center gap-3 rounded-lg border border-white/16 bg-black/35 px-4 text-white/55 transition focus-within:border-lime-300/85">
+      <span className={`mt-2 flex h-12 items-center gap-3 rounded-lg border px-4 text-white/55 transition ${solid ? "border-[#466757] bg-[#020806] focus-within:border-[#9ee66b]" : "border-white/16 bg-black/35 focus-within:border-lime-300/85"}`}>
         <span className="text-lime-400">{icon}</span>
         <input name={name} type={type} required defaultValue={defaultValue} placeholder={placeholder} minLength={minLength} maxLength={maxLength} pattern={pattern} inputMode={inputMode} autoComplete={autoComplete} className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/42" />
         {trailing}
@@ -113,7 +114,7 @@ function Field({ label, name, placeholder, icon, type = "text", className = "", 
   );
 }
 
-function PhoneField({ label, name, defaultValue = "" }: { label: string; name: string; defaultValue?: string }) {
+function PhoneField({ label, name, defaultValue = "", solid = false }: { label: string; name: string; defaultValue?: string; solid?: boolean }) {
   return (
     <Field
       label={label}
@@ -122,15 +123,16 @@ function PhoneField({ label, name, defaultValue = "" }: { label: string; name: s
       placeholder="e.g. 071 123 4567"
       icon={<Phone size={21} />}
       inputMode="tel"
+      solid={solid}
     />
   );
 }
 
-function ProvinceField({ defaultValue = "" }: { defaultValue?: string }) {
+function ProvinceField({ defaultValue = "", solid = false }: { defaultValue?: string; solid?: boolean }) {
   return (
     <label className="block">
       <span className="font-semibold text-white">Province</span>
-      <span className="mt-3 flex h-14 items-center gap-3 rounded-lg border border-white/16 bg-black/35 px-4 text-white/55 transition focus-within:border-lime-300/85">
+      <span className={`mt-2 flex h-12 items-center gap-3 rounded-lg border px-4 text-white/55 transition ${solid ? "border-[#466757] bg-[#020806] focus-within:border-[#9ee66b]" : "border-white/16 bg-black/35 focus-within:border-lime-300/85"}`}>
         <Map size={21} className="text-lime-400" />
         <select name="province" required defaultValue={defaultValue} className="min-w-0 flex-1 bg-transparent text-base text-white outline-none">
           <option value="" className="bg-[#07100d]">Select province</option>
@@ -155,60 +157,52 @@ function SectionTitle({ icon, title, body }: { icon: ReactNode; title: string; b
   );
 }
 
-export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustChangePassword }: { legalDocuments: LegalDocumentsStatus; initialValues: ManagerAccountInitialValues; mustChangePassword: boolean }) {
+export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustChangePassword, accountEmail }: { legalDocuments: LegalDocumentsStatus; initialValues: ManagerAccountInitialValues; mustChangePassword: boolean; accountEmail: string }) {
   const [state, formAction, pending] = useActionState(completeManagerAccountSetupAction, initialState);
-  const [formValid, setFormValid] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-
-  function updateValidity(event: FormEvent<HTMLFormElement>) {
-    setFormValid(event.currentTarget.checkValidity());
-  }
+  const values = state.accountValues ?? initialValues;
 
   return (
-    <Shell heading="Manager" accent="Onboarding" body="Complete your personal details and required agreements before registering your store.">
-      <Progress current={1} />
-      <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_300px]">
-        <form action={formAction} onInput={updateValidity} onChange={updateValidity} className="rounded-[22px] border border-lime-400/55 bg-[linear-gradient(145deg,rgba(6,13,11,.9),rgba(0,0,0,.88))] p-6 shadow-[0_30px_120px_rgba(0,0,0,.52)] sm:p-8">
-          <SectionTitle icon={<UserRound size={34} />} title="Account Registration" body={mustChangePassword ? "Fill in your details and replace the temporary password." : "Fill in your personal details and accept the required agreements."} />
+    <Shell compact heading="Manager" accent="Onboarding" body="Complete your account details before registering your store.">
+      <div className="mx-auto mt-4 max-w-5xl">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span className="font-bold text-lime-300">Step 1 of 3 · Account registration</span>
+          <span className="min-w-0 break-all text-left text-white/70 sm:text-right">Signed in as {accountEmail}</span>
+        </div>
+        <form key={state.revision ?? "initial"} action={formAction} autoComplete="off" className="rounded-lg border border-[#65c83d] bg-[#06100c] p-5 shadow-[0_24px_80px_rgba(0,0,0,.5)] sm:p-6">
+          <div className="flex items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-full border border-[#65c83d] bg-[#0a1811] text-lime-300"><UserRound size={23} /></span>
+            <div>
+              <h2 className="text-xl font-black text-white">Account Registration</h2>
+              <p className="mt-1 text-sm text-white/68">Enter your own information. All fields start empty for a new manager.</p>
+            </div>
+          </div>
 
-          <div className="mt-8">
-            <h3 className="text-xl font-black text-lime-400">Personal Information</h3>
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              <Field label="Full Name" name="fullName" defaultValue={initialValues.fullName} placeholder="Enter your full name" icon={<UserRound size={21} />} minLength={2} />
-              <Field label="Surname" name="surname" defaultValue={initialValues.surname} placeholder="Enter your surname" icon={<UserRound size={21} />} minLength={2} />
+          <div className="mt-5">
+            <h3 className="text-lg font-black text-lime-400">Personal Information</h3>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <Field solid label="Full Name" name="fullName" defaultValue={values.fullName} placeholder="Enter your full name" icon={<UserRound size={21} />} minLength={2} autoComplete="off" />
+              <Field solid label="Surname" name="surname" defaultValue={values.surname} placeholder="Enter your surname" icon={<UserRound size={21} />} minLength={2} autoComplete="off" />
             </div>
-            <div className="mt-5 grid gap-5">
-              <PhoneField label="Phone Number" name="phoneNumber" defaultValue={initialValues.phoneNumber} />
-              <Field label="Physical Address" name="physicalAddress" defaultValue={initialValues.physicalAddress} placeholder="Enter your street address" icon={<MapPin size={21} />} minLength={5} />
+            <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
+              <PhoneField solid label="Phone Number" name="phoneNumber" defaultValue={values.phoneNumber} />
+              <Field solid label="Physical Address" name="physicalAddress" defaultValue={values.physicalAddress} placeholder="Enter your street address" icon={<MapPin size={21} />} minLength={5} autoComplete="off" />
             </div>
-            <div className="mt-5 grid gap-5 md:grid-cols-3">
-              <Field label="City / Town" name="city" defaultValue={initialValues.city} placeholder="Enter city" icon={<Building2 size={21} />} minLength={2} />
-              <ProvinceField defaultValue={initialValues.province} />
-              <Field label="Postal Code" name="postalCode" defaultValue={initialValues.postalCode} placeholder="e.g. 0001" icon={<Mail size={21} />} pattern="[0-9]{4}" inputMode="numeric" />
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <Field solid label="City / Town" name="city" defaultValue={values.city} placeholder="Enter city" icon={<Building2 size={21} />} minLength={2} autoComplete="off" />
+              <ProvinceField solid defaultValue={values.province} />
+              <Field solid label="Postal Code" name="postalCode" defaultValue={values.postalCode} placeholder="e.g. 0001" icon={<Mail size={21} />} pattern="[0-9]{4}" inputMode="numeric" autoComplete="off" />
             </div>
           </div>
 
           {mustChangePassword ? (
-            <section className="mt-8 border-t border-white/12 pt-6">
-              <h3 className="text-xl font-black text-lime-400">Create Your New Password (Required)</h3>
-              <p className="mt-3 text-white/62">For your security, you must create a new password that only you know.</p>
-              <div className="mt-5 grid gap-5">
+            <section className="mt-5 border-t border-[#315140] pt-5">
+              <h3 className="text-lg font-black text-lime-400">Create Your Permanent Password</h3>
+              <p className="mt-1 text-sm text-white/68">Your authenticated session will be used to replace the temporary password securely.</p>
+              <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <Field
-                  label="Current Temporary Password"
-                  name="currentTemporaryPassword"
-                  type={showCurrentPassword ? "text" : "password"}
-                  placeholder="Enter the temporary password"
-                  icon={<LockKeyhole size={21} />}
-                  autoComplete="current-password"
-                  trailing={
-                    <button type="button" onClick={() => setShowCurrentPassword((value) => !value)} className="grid size-9 place-items-center rounded-full text-lime-300 transition hover:bg-lime-400/10" aria-label={showCurrentPassword ? "Hide temporary password" : "Show temporary password"}>
-                      {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  }
-                />
-                <Field
+                  solid
                   label="New Password"
                   name="permanentPassword"
                   type={showPassword ? "text" : "password"}
@@ -223,6 +217,7 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
                   }
                 />
                 <Field
+                  solid
                   label="Confirm New Password"
                   name="confirmPermanentPassword"
                   type={showConfirmPassword ? "text" : "password"}
@@ -237,9 +232,9 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
                   }
                 />
               </div>
-              <div className="mt-5 rounded-lg border border-lime-400/20 bg-lime-400/10 p-5">
-                <p className="font-semibold text-white">Password must contain:</p>
-                <div className="mt-4 grid gap-3 text-sm text-white/74 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-3 rounded-lg border border-[#466757] bg-[#091812] p-3">
+                <p className="text-sm font-semibold text-white">Password must contain:</p>
+                <div className="mt-2 grid gap-2 text-xs text-white/74 sm:grid-cols-2 lg:grid-cols-3">
                   {["At least 12 characters", "At least 1 uppercase letter", "At least 1 lowercase letter", "At least 1 number", "At least 1 special character", "Passwords match"].map((item) => (
                     <span key={item} className="flex items-center gap-2"><CheckCircle2 size={16} className="text-lime-400" />{item}</span>
                   ))}
@@ -248,18 +243,18 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
             </section>
           ) : null}
 
-          <section className="mt-8">
-            <h3 className="text-xl font-black text-lime-400">Terms & Policies</h3>
-            <div className="mt-4 grid gap-3">
-              <label className="flex min-h-14 items-center gap-4 rounded-lg border border-white/14 bg-black/28 px-4 text-white">
-                <input name="termsAccepted" type="checkbox" required disabled={!legalDocuments.available} className="size-5 accent-lime-500 disabled:opacity-50" />
+          <section className="mt-5">
+            <h3 className="text-lg font-black text-lime-400">Terms & Policies</h3>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <label className="flex min-h-12 items-center gap-3 rounded-lg border border-[#466757] bg-[#020806] px-3 text-white">
+                <input name="termsAccepted" type="checkbox" required defaultChecked={state.accountValues?.termsAccepted ?? false} disabled={!legalDocuments.available} className="size-5 accent-lime-500 disabled:opacity-50" />
                 <span className="min-w-0 flex-1">I agree to the <span className="font-bold text-lime-300">Terms of Service</span></span>
-                <a href={legalDocuments.termsHref} target="_blank" rel="noopener noreferrer" className="rounded-md border border-lime-400/55 px-3 py-2 text-sm font-bold text-lime-300 transition hover:bg-lime-400/10">View</a>
+                <a href={legalDocuments.termsHref} target="_blank" rel="noopener noreferrer" className="rounded-md border border-[#65c83d] bg-[#0a1811] px-3 py-2 text-sm font-bold text-lime-300 transition hover:bg-[#11251a]">View</a>
               </label>
-              <label className="flex min-h-14 items-center gap-4 rounded-lg border border-white/14 bg-black/28 px-4 text-white">
-                <input name="privacyAccepted" type="checkbox" required disabled={!legalDocuments.available} className="size-5 accent-lime-500 disabled:opacity-50" />
+              <label className="flex min-h-12 items-center gap-3 rounded-lg border border-[#466757] bg-[#020806] px-3 text-white">
+                <input name="privacyAccepted" type="checkbox" required defaultChecked={state.accountValues?.privacyAccepted ?? false} disabled={!legalDocuments.available} className="size-5 accent-lime-500 disabled:opacity-50" />
                 <span className="min-w-0 flex-1">I agree to the <span className="font-bold text-lime-300">Privacy Policy</span></span>
-                <a href={legalDocuments.privacyHref} target="_blank" rel="noopener noreferrer" className="rounded-md border border-lime-400/55 px-3 py-2 text-sm font-bold text-lime-300 transition hover:bg-lime-400/10">View</a>
+                <a href={legalDocuments.privacyHref} target="_blank" rel="noopener noreferrer" className="rounded-md border border-[#65c83d] bg-[#0a1811] px-3 py-2 text-sm font-bold text-lime-300 transition hover:bg-[#11251a]">View</a>
               </label>
             </div>
             {!legalDocuments.available ? (
@@ -269,31 +264,12 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
             ) : null}
           </section>
 
-          {state.message ? <p className="mt-6 rounded-lg border border-red-300/25 bg-red-500/10 px-4 py-3 text-red-100">{state.message}</p> : null}
-          <button disabled={pending || !formValid || !legalDocuments.available} className="mt-7 inline-flex min-h-16 w-full items-center justify-center gap-4 rounded-lg bg-[linear-gradient(135deg,#c8ff15,#76d719)] px-6 text-xl font-black text-black shadow-[0_18px_50px_rgba(157,255,24,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
+          {state.message ? <p role="alert" className="mt-4 rounded-lg border border-[#d56a6a] bg-[#2a1010] px-4 py-3 text-red-100">{state.message}</p> : null}
+          <button disabled={pending || !legalDocuments.available} className="mt-5 inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-lg bg-[linear-gradient(135deg,#c8ff15,#76d719)] px-6 text-lg font-black text-black shadow-[0_12px_34px_rgba(157,255,24,0.22)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
             {pending ? "Saving..." : "Continue to Store Registration"}
             <ArrowRight size={28} />
           </button>
         </form>
-
-        <aside className="rounded-[22px] border border-lime-400/55 bg-[linear-gradient(145deg,rgba(6,13,11,.88),rgba(0,0,0,.86))] p-7 shadow-[0_24px_90px_rgba(0,0,0,.45)]">
-          <span className="grid size-16 place-items-center rounded-full border border-lime-400/45 bg-lime-400/10 text-lime-300">
-            <ShieldCheck size={34} />
-          </span>
-          <p className="mt-8 text-lg font-black text-lime-300">Step 1 of 3</p>
-          <h2 className="mt-4 text-2xl font-black text-white">Account Registration</h2>
-          <p className="mt-6 text-lg leading-8 text-white/68">Add the personal and legal information required for your manager account.</p>
-          {mustChangePassword ? (
-            <>
-              <div className="my-8 h-px bg-lime-400/20" />
-              <p className="flex items-start gap-3 text-lg font-black text-lime-300"><LockKeyhole size={25} />Replace temporary password</p>
-              <p className="mt-5 leading-8 text-white/66">Create a permanent password that only you know before continuing.</p>
-            </>
-          ) : null}
-          <div className="my-8 h-px bg-lime-400/20" />
-          <p className="flex items-start gap-3 text-lg font-black text-lime-300"><ShieldCheck size={25} />Your information is safe</p>
-          <p className="mt-5 leading-8 text-white/66">We use secure account checks to protect your data and keep your account ready for store access.</p>
-        </aside>
       </div>
     </Shell>
   );

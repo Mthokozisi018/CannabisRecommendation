@@ -27,9 +27,10 @@ describe("Supabase Auth ownership contracts", () => {
     const recoveryPage = source("app/update-password/page.tsx");
     const recoveryUpdate = source("app/api/auth/password-update/route.ts");
 
-    expect(managerSetup).toContain("currentTemporaryPassword");
-    expect(managerSetup).toContain("supabase.auth.signInWithPassword");
+    expect(managerSetup).not.toContain("currentTemporaryPassword");
+    expect(managerSetup).not.toContain("supabase.auth.signInWithPassword");
     expect(managerSetup).toContain("supabase.auth.updateUser");
+    expect(managerSetup).toContain("Your secure sign-in session has expired");
     expect(managerSetup).toContain('rpc("complete_manual_manager_account_setup"');
     expect(recoveryRequest).toContain("/update-password?flow=recovery");
     expect(recoveryPage).toContain('redirectType !== "recovery"');
