@@ -34,6 +34,18 @@ const product: ReceptionistProduct = {
   lowStockThreshold: 2
 };
 
+const flowerProduct: ReceptionistProduct = {
+  ...product,
+  id: "product-2",
+  name: "Flower Product",
+  categoryName: "Flower",
+  categorySlug: "flower",
+  subcategory: "Indoor",
+  cultivationType: "Indoor",
+  imageUrl: "/flower.png",
+  sizeLabel: "1 g"
+};
+
 describe("Receptionist POS click feedback", () => {
   it("makes the product card an accessible click target while isolating nested buttons", () => {
     const markup = renderToStaticMarkup(createElement(ProductCard, { product, onAddToCart: () => undefined, onOpenDescription: () => undefined }));
@@ -42,17 +54,18 @@ describe("Receptionist POS click feedback", () => {
     expect(markup).toContain('role="button"');
     expect(markup).toContain('tabindex="0"');
     expect(markup).toContain(`aria-label="View ${product.name} information"`);
-    expect(markup).toContain("More Info");
     expect(card).toContain("event.stopPropagation()");
     expect(card).toContain("onKeyDown={handleCardKeyDown}");
     expect(card).toContain("touch-manipulation");
     expect(card).toContain('{addFeedback ? "Added" : "Add to cart"}');
   });
 
-  it("renders the product information affordance as a solid gold five-point star", () => {
+  it("renders the product information affordance as a solid gold five-point star for non-accessories", () => {
+    const markup = renderToStaticMarkup(createElement(ProductCard, { product: flowerProduct, onAddToCart: () => undefined, onOpenDescription: () => undefined }));
     const card = source("components/receptionist/pos/ProductCard.tsx");
     const css = source("app/globals.css");
 
+    expect(markup).toContain("More Info");
     expect(card).toContain("gc-pos-product-info-button");
     expect(card).toContain("<span>More Info</span>");
     expect(card).toContain("openDescription();");
@@ -61,6 +74,13 @@ describe("Receptionist POS click feedback", () => {
     expect(css).toContain("clip-path: polygon(50% 0%, 61% 34%, 98% 34%, 68% 55%, 79% 91%, 50% 69%, 21% 91%, 32% 55%, 2% 34%, 39% 34%)");
     expect(css).toContain("background: #f4b400");
     expect(css).toContain("width: clamp(2.85rem, 7vw, 3.2rem)");
+  });
+
+  it("does not render the More Info star on accessories", () => {
+    const markup = renderToStaticMarkup(createElement(ProductCard, { product, onAddToCart: () => undefined, onOpenDescription: () => undefined }));
+
+    expect(markup).not.toContain("More Info");
+    expect(markup).not.toContain("gc-pos-product-info-button");
   });
 
   it("uses one non-blocking notification slot with auto-dismiss timers", () => {

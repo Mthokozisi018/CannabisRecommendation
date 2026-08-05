@@ -73,6 +73,7 @@ export const ProductCard = memo(function ProductCard({
   const compactStrainCard = isFlowerOrPreRollCategory(product);
   const flowerCard = isFlowerCategory(product);
   const edibleCard = product.categorySlug === "edibles" || product.categoryName === "Edibles";
+  const accessoryCard = product.categorySlug === "accessories" || product.categoryName === "Accessories";
   const regularCard = !compactStrainCard && !edibleCard;
   const productImage = getPOSProductImage(product);
   const solidShading = visualStyle === "solid-shading";
@@ -125,14 +126,16 @@ export const ProductCard = memo(function ProductCard({
         {/* Product images can be Supabase URLs or local placeholders. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={productImage} alt={`${product.name} product image`} className="absolute inset-0 size-full object-contain p-2 drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105" />
-        <button
-          onClick={(event) => { stopNestedClick(event); openDescription(); }}
-          className="gc-pos-product-info-button absolute grid place-items-center text-center"
-          style={productInfoStarStyle}
-          aria-label={`View ${product.name} information`}
-        >
-          <span>More Info</span>
-        </button>
+        {accessoryCard ? null : (
+          <button
+            onClick={(event) => { stopNestedClick(event); openDescription(); }}
+            className="gc-pos-product-info-button absolute grid place-items-center text-center"
+            style={productInfoStarStyle}
+            aria-label={`View ${product.name} information`}
+          >
+            <span>More Info</span>
+          </button>
+        )}
         <span className="gc-pos-product-category-badge absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
       </div>
       <div className={compactStrainCard ? "space-y-1" : ""}>
