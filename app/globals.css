@@ -270,11 +270,11 @@ input[type="number"]::-webkit-inner-spin-button {
     height: auto;
     padding: 0.52rem;
     background: #f4b400;
-    font-size: 0.36rem;
+    font-size: 0.4rem;
   }
 
   .gc-pos-product-info-button span {
-    max-width: 1.3rem;
+    max-width: 1.35rem;
   }
 
   .gc-pos-product-category-badge {
