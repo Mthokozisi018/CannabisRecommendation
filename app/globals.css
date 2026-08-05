@@ -46,6 +46,43 @@ input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
 }
 
+.gc-pos-product-info-button {
+  top: 0;
+  right: 0;
+  z-index: 20;
+  width: clamp(2.85rem, 7vw, 3.2rem);
+  aspect-ratio: 1;
+  padding: 0.62rem;
+  border: 0;
+  clip-path: polygon(50% 0%, 61% 34%, 98% 34%, 68% 55%, 79% 91%, 50% 69%, 21% 91%, 32% 55%, 2% 34%, 39% 34%);
+  background: #f4b400;
+  color: #1f1300;
+  font-size: 0.42rem;
+  font-weight: 1000;
+  line-height: 0.95;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+  filter: drop-shadow(0 0.3rem 0.45rem rgba(0, 0, 0, 0.48));
+  transition:
+    background-color 140ms ease,
+    filter 140ms ease,
+    transform 140ms ease;
+}
+
+.gc-pos-product-info-button:hover {
+  background: #ffd24a;
+  filter: drop-shadow(0 0.4rem 0.6rem rgba(0, 0, 0, 0.5));
+}
+
+.gc-pos-product-info-button:active {
+  transform: scale(0.95);
+}
+
+.gc-pos-product-info-button span {
+  display: block;
+  max-width: 1.45rem;
+  pointer-events: none;
+}
+
 :focus-visible {
   outline: 2px solid #9bf2b5;
   outline-offset: 2px;
@@ -227,12 +264,17 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 
   .gc-pos-product-info-button {
-    right: 0.25rem;
-    top: 0.25rem;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-color: #d7e6dc;
-    background: #030806;
+    right: 0;
+    top: 0;
+    width: clamp(2.45rem, 16vw, 2.7rem);
+    height: auto;
+    padding: 0.52rem;
+    background: #f4b400;
+    font-size: 0.36rem;
+  }
+
+  .gc-pos-product-info-button span {
+    max-width: 1.3rem;
   }
 
   .gc-pos-product-category-badge {

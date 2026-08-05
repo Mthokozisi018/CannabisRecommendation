@@ -42,10 +42,25 @@ describe("Receptionist POS click feedback", () => {
     expect(markup).toContain('role="button"');
     expect(markup).toContain('tabindex="0"');
     expect(markup).toContain(`aria-label="View ${product.name} information"`);
+    expect(markup).toContain("More Info");
     expect(card).toContain("event.stopPropagation()");
     expect(card).toContain("onKeyDown={handleCardKeyDown}");
     expect(card).toContain("touch-manipulation");
     expect(card).toContain('{addFeedback ? "Added" : "Add to cart"}');
+  });
+
+  it("renders the product information affordance as a solid gold five-point star", () => {
+    const card = source("components/receptionist/pos/ProductCard.tsx");
+    const css = source("app/globals.css");
+
+    expect(card).toContain("gc-pos-product-info-button");
+    expect(card).toContain("<span>More Info</span>");
+    expect(card).toContain("openDescription();");
+    expect(card).not.toContain("Info size=");
+    expect(css).toContain(".gc-pos-product-info-button");
+    expect(css).toContain("clip-path: polygon(50% 0%, 61% 34%, 98% 34%, 68% 55%, 79% 91%, 50% 69%, 21% 91%, 32% 55%, 2% 34%, 39% 34%)");
+    expect(css).toContain("background: #f4b400");
+    expect(css).toContain("width: clamp(2.85rem, 7vw, 3.2rem)");
   });
 
   it("uses one non-blocking notification slot with auto-dismiss timers", () => {

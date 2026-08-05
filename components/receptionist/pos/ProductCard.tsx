@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, type KeyboardEvent, type MouseEvent } from "react";
-import { Cookie, Info, Package } from "lucide-react";
+import { memo, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
+import { Cookie, Package } from "lucide-react";
 import { Money } from "@/components/GreenChoiceDashboard";
 import type { ReceptionistProduct } from "@/lib/receptionist/products";
 import { ProductBadges } from "@/components/receptionist/pos/ProductBadges";
@@ -49,6 +49,12 @@ function EdibleThcBadges({ product }: { product: ReceptionistProduct }) {
     </div>
   );
 }
+
+const productInfoStarStyle = {
+  clipPath: "polygon(50% 0%, 61% 34%, 98% 34%, 68% 55%, 79% 91%, 50% 69%, 21% 91%, 32% 55%, 2% 34%, 39% 34%)",
+  backgroundColor: "#f4b400",
+  color: "#1f1300"
+} satisfies CSSProperties;
 
 export const ProductCard = memo(function ProductCard({
   product,
@@ -119,8 +125,13 @@ export const ProductCard = memo(function ProductCard({
         {/* Product images can be Supabase URLs or local placeholders. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={productImage} alt={`${product.name} product image`} className="absolute inset-0 size-full object-contain p-2 drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105" />
-        <button onClick={(event) => { stopNestedClick(event); openDescription(); }} className="gc-pos-product-info-button absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/80 bg-black/35 text-white" aria-label={`View ${product.name} information`}>
-          <Info size={17} />
+        <button
+          onClick={(event) => { stopNestedClick(event); openDescription(); }}
+          className="gc-pos-product-info-button absolute grid place-items-center text-center"
+          style={productInfoStarStyle}
+          aria-label={`View ${product.name} information`}
+        >
+          <span>More Info</span>
         </button>
         <span className="gc-pos-product-category-badge absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
       </div>
