@@ -44,4 +44,14 @@ describe("authentication and dashboard performance contracts", () => {
     expect(proxy).toContain("placeholder-images/");
     expect(proxy).toContain(".*\\\\.(?:png|jpg|jpeg|webp|svg|gif|ico|pdf|css|js|map|txt)$");
   });
+
+  it("accepts exact Vercel preview origins without weakening production origin checks", () => {
+    const security = source("lib/security.ts");
+
+    expect(security).toContain('process.env.VERCEL_ENV !== "preview"');
+    expect(security).toContain("process.env.VERCEL_URL");
+    expect(security).toContain("process.env.VERCEL_BRANCH_URL");
+    expect(security).toContain('previewUrl.hostname.endsWith(".vercel.app")');
+    expect(security).toContain('new Set(configured).has(normalizedOrigin)');
+  });
 });
