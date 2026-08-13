@@ -316,8 +316,6 @@ export async function requireDashboardSession() {
   return session;
 }
 
-
-
 export async function requireDashboardRoleSession(roles: AccountRole[]) {
   const session = await getDashboardSession();
   if (!session) redirect("/login");

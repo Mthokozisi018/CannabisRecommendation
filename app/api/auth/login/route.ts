@@ -102,4 +102,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is temporarily unavailable." }, { status: 503, headers: privateHeaders });
   }
 }
-
