@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { refreshSupabaseSession } from "@/lib/supabase/proxy";
 
 const legacyRoutePrefixes = [
   "/account",
@@ -8,6 +9,17 @@ const legacyRoutePrefixes = [
   "/products",
   "/register",
   "/dashboard/owner"
+];
+
+const supabaseSessionPrefixes = [
+  "/dashboard",
+  "/manager/",
+  "/staff/",
+  "/update-password",
+  "/api/auth/access-decision",
+  "/api/auth/complete-manager-invitation",
+  "/api/auth/password-update",
+  "/api/manager/invitation"
 ];
 
 function attachCsrfCookie(response: NextResponse, request: NextRequest) {
@@ -109,9 +121,20 @@ async function protectedDashboardResponse(request: NextRequest, requestId: strin
   const { pathname } = request.nextUrl;
   if (!pathname.startsWith("/dashboard/manager") && !pathname.startsWith("/dashboard/receptionist")) return null;
 
-  const headers = requestHeadersWithSecurityContext(request, requestId, nonce);
-  const response = NextResponse.next({ request: { headers } });
+  const response = await nextResponseWithSession(request, requestId, nonce);
   return secureResponse(response, request, requestId, nonce);
+}
+
+function shouldRefreshSupabaseSession(pathname: string) {
+  return supabaseSessionPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
+}
+
+async function nextResponseWithSession(request: NextRequest, requestId: string, nonce: string) {
+  const createResponse = () => NextResponse.next({
+    request: { headers: requestHeadersWithSecurityContext(request, requestId, nonce) }
+  });
+  if (!shouldRefreshSupabaseSession(request.nextUrl.pathname)) return createResponse();
+  return refreshSupabaseSession(request, createResponse);
 }
 
 export async function proxy(request: NextRequest) {
@@ -127,12 +150,11 @@ export async function proxy(request: NextRequest) {
   const dashboardResponse = await protectedDashboardResponse(request, requestId, nonce);
   if (dashboardResponse) return dashboardResponse;
 
-  const response = NextResponse.next({
-    request: { headers: requestHeadersWithSecurityContext(request, requestId, nonce) }
-  });
+  const response = await nextResponseWithSession(request, requestId, nonce);
   return secureResponse(response, request, requestId, nonce);
 }
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|images/|placeholder-images/|backgrounds/|legal/|.*\\.(?:png|jpg|jpeg|webp|svg|gif|ico|pdf|css|js|map|txt)$).*)"]
 };
+

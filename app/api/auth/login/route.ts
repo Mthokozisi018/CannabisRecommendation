@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     }
     await logServerEvent("info", "login_supabase_session_created", { authUserId: data.user.id });
 
-    const session = await getDashboardSessionForVerifiedUser(data.user);
+    const session = await getDashboardSessionForVerifiedUser(data.user, supabase);
     if (!session) {
       await supabase.auth.signOut();
       await logServerEvent("warn", "login_access_denied", { reason: "missing_profile" });
@@ -102,3 +102,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication is temporarily unavailable." }, { status: 503, headers: privateHeaders });
   }
 }
+
