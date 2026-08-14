@@ -1,5 +1,6 @@
 import "server-only";
 import crypto from "node:crypto";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 type RateLimitInput = {
   namespace: string;
@@ -73,13 +74,10 @@ function localRateLimit(key: string, input: RateLimitInput): RateLimitResult {
   };
 }
 
-async function distributedRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
+async function redisRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
   const endpoint = process.env.RATE_LIMIT_REDIS_REST_URL?.replace(/\/$/, "");
   const token = process.env.RATE_LIMIT_REDIS_REST_TOKEN;
-  if (!endpoint || !token) {
-    if (process.env.NODE_ENV === "production") throw new RateLimitUnavailableError();
-    return localRateLimit(key, input);
-  }
+  if (!endpoint || !token) throw new RateLimitUnavailableError();
 
   const response = await fetch(`${endpoint}/pipeline`, {
     method: "POST",
@@ -114,6 +112,49 @@ async function distributedRateLimit(key: string, input: RateLimitInput): Promise
     retryAfterSeconds: allowed ? 0 : Math.max(1, Math.ceil(ttlMs / 1000)),
     resetAt: now + ttlMs
   };
+}
+
+async function databaseRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) throw new RateLimitUnavailableError();
+
+  const { data, error } = await admin.rpc("consume_request_rate_limit", {
+    p_key_hash: key,
+    p_limit: input.limit,
+    p_window_ms: input.windowMs
+  });
+  if (error) throw new RateLimitUnavailableError();
+
+  const row = (Array.isArray(data) ? data[0] : data) as { request_count?: unknown; reset_at?: unknown } | null;
+  const count = Number(row?.request_count);
+  const resetAt = typeof row?.reset_at === "string" ? Date.parse(row.reset_at) : Number.NaN;
+  if (!Number.isFinite(count) || !Number.isFinite(resetAt)) throw new RateLimitUnavailableError();
+
+  const allowed = count <= input.limit;
+  return {
+    allowed,
+    limit: input.limit,
+    remaining: Math.max(0, input.limit - count),
+    retryAfterSeconds: allowed ? 0 : Math.max(1, Math.ceil((resetAt - Date.now()) / 1000)),
+    resetAt
+  };
+}
+
+async function distributedRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
+  const endpoint = process.env.RATE_LIMIT_REDIS_REST_URL?.replace(/\/$/, "");
+  const token = process.env.RATE_LIMIT_REDIS_REST_TOKEN;
+  if (process.env.NODE_ENV !== "production" && (!endpoint || !token)) {
+    return localRateLimit(key, input);
+  }
+
+  if (endpoint && token) {
+    try {
+      return await redisRateLimit(key, input);
+    } catch {
+      // Supabase provides a second distributed, atomic limiter when Redis is unavailable.
+    }
+  }
+  return databaseRateLimit(key, input);
 }
 
 export async function consumeRateLimit(input: RateLimitInput) {
