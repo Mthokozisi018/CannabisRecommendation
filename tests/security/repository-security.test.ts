@@ -90,7 +90,13 @@ describe("critical repository security contracts", () => {
     expect(source("lib/security.ts")).toContain('if (!origin) throw new Error("Request origin is required.")');
     expect(source("lib/app-url.ts")).toContain("The production application URL is not configured");
     expect(source("lib/environment.ts")).toContain("RATE_LIMIT_REDIS_REST_URL");
-    expect(source("lib/rate-limit.ts")).toContain("if (process.env.NODE_ENV === \"production\") throw new RateLimitUnavailableError()");
+    expect(source("lib/rate-limit.ts")).toContain('admin.rpc("consume_request_rate_limit"');
+    expect(source("lib/rate-limit.ts")).toContain("if (!admin) throw new RateLimitUnavailableError()");
+    const fallbackMigration = source("supabase/migrations/20260814135000_add_database_rate_limit_fallback.sql");
+    expect(fallbackMigration).toContain("security definer");
+    expect(fallbackMigration).toContain("set search_path = pg_catalog, public");
+    expect(fallbackMigration).toContain("to service_role");
+    expect(fallbackMigration).toContain("from public, anon, authenticated");
   });
 
   it("keeps manager audit scope server-derived and reactivation slot checks database-authoritative", () => {
