@@ -11,11 +11,14 @@ const privateHeaders = { "Cache-Control": "private, no-store, max-age=0", "Vary"
 
 export async function POST(request: Request) {
   let createdUserId: string | null = null;
+  let stage = "request-validation";
   try {
     if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
       return NextResponse.json({ error: "Invalid request." }, { status: 415, headers: privateHeaders });
     }
+    stage = "origin-verification";
     await verifyOrigin();
+    stage = "payload-validation";
     const parsed = customerRegistrationSchema.safeParse(await request.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Check your registration details." }, { status: 400, headers: privateHeaders });
@@ -30,6 +33,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: idResult.message }, { status: 400, headers: privateHeaders });
     }
 
+    stage = "rate-limit";
     const rateLimit = await requireRateLimit({
       namespace: "customer-register",
       identifiers: [trustedClientIp(request.headers), parsed.data.email, phoneNumber],
@@ -43,7 +47,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Customer registration is temporarily unavailable." }, { status: 503, headers: responseHeaders });
     }
 
+    stage = "identity-fingerprint";
     const idFingerprint = customerIdFingerprint(parsed.data.southAfricanId);
+    stage = "duplicate-check";
     const { data: duplicate, error: duplicateError } = await admin
       .from("customer_profiles")
       .select("user_id")
@@ -55,6 +61,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "A GreenChoice customer account already exists for these details. Use account recovery instead of creating another account." }, { status: 409, headers: responseHeaders });
     }
 
+    stage = "auth-sign-up";
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
@@ -69,6 +76,7 @@ export async function POST(request: Request) {
     createdUserId = signUpData.user.id;
     const now = new Date().toISOString();
 
+    stage = "customer-profile";
     const { error: profileError } = await admin.from("customer_profiles").insert({
       user_id: createdUserId,
       first_name: parsed.data.firstName,
@@ -90,6 +98,7 @@ export async function POST(request: Request) {
     });
     if (profileError) throw profileError;
 
+    stage = "customer-related-records";
     const [{ error: addressError }, { error: preferenceError }, { error: consentError }] = await Promise.all([
       admin.from("customer_addresses").insert({
         user_id: createdUserId,
@@ -120,6 +129,14 @@ export async function POST(request: Request) {
       message: "Your GreenChoice customer account has been created. Keep your email and password safe—you will need them whenever you sign in."
     }, { status: 201, headers: responseHeaders });
   } catch (error) {
+    const errorDetails = typeof error === "object" && error !== null
+      ? error as { name?: unknown; code?: unknown }
+      : null;
+    console.error("[customer-register] failed", {
+      stage,
+      errorName: typeof errorDetails?.name === "string" ? errorDetails.name : "UnknownError",
+      errorCode: typeof errorDetails?.code === "string" ? errorDetails.code : undefined
+    });
     if (createdUserId) {
       const admin = createSupabaseAdminClient();
       await admin?.auth.admin.deleteUser(createdUserId).catch(() => undefined);
@@ -133,4 +150,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "We could not create the customer account. Please try again." }, { status: 500, headers: privateHeaders });
   }
 }
-
