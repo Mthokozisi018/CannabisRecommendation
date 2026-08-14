@@ -34,7 +34,7 @@ create table if not exists public.customer_profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint customer_profiles_email_normalized check (email = lower(btrim(email))),
-  constraint customer_profiles_phone_normalized check (phone_number ~ '^\\+27[0-9]{9}$'),
+  constraint customer_profiles_phone_normalized check (phone_number ~ '^\+27[0-9]{9}$'),
   constraint customer_profiles_email_unique unique (email),
   constraint customer_profiles_phone_unique unique (phone_number),
   constraint customer_profiles_id_fingerprint_unique unique (id_fingerprint)
