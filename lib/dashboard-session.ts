@@ -54,7 +54,7 @@ export type DashboardStaffProfile = {
 };
 
 export type DashboardSession = {
-  user: User;
+  user: Pick<User, "id" | "email">;
   authUserId: string;
   staffProfileId: string;
   email: string;
@@ -154,7 +154,7 @@ export async function auditAccessDenied(session: DashboardSession, action: strin
   });
 }
 
-function displayName(profile: DashboardStaffProfile, user: User) {
+function displayName(profile: DashboardStaffProfile, user: Pick<User, "id" | "email">) {
   const fullName = profile.full_name?.trim();
   const profileName = [profile.first_name, profile.surname].map((value) => value?.trim()).filter(Boolean).join(" ");
   return fullName || profileName || profile.email || user.email || "Staff";
@@ -182,7 +182,9 @@ function storeSetupComplete(profile: DashboardStaffProfile) {
   return profile.store_setup_complete === true && Boolean(profile.store_id && store?.store_information_confirmed_at && store.store_information_confirmed_by);
 }
 
-async function readProfileForUser(supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>, user: User) {
+type SupabaseServerClient = NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>;
+
+async function readProfileForUser(supabase: SupabaseServerClient, user: Pick<User, "id">) {
   const { data, error } = await supabase
     .from("staff_profiles")
     .select(DASHBOARD_PROFILE_SELECT)
@@ -197,14 +199,17 @@ const getDashboardSessionCached = cache(async (): Promise<DashboardSession | nul
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
 
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
-  if (!user) return null;
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (error || !claims?.sub) return null;
 
-  return buildDashboardSession(supabase, user);
+  return buildDashboardSession(supabase, {
+    id: claims.sub,
+    email: typeof claims.email === "string" ? claims.email : undefined
+  });
 });
 
-async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>, user: User): Promise<DashboardSession | null> {
+async function buildDashboardSession(supabase: SupabaseServerClient, user: Pick<User, "id" | "email">): Promise<DashboardSession | null> {
   const profile = await readProfileForUser(supabase, user);
 
   if (!profile || profileAccountStatus(profile) === "deleted") {
@@ -299,8 +304,8 @@ export async function getDashboardSession() {
   return getDashboardSessionCached();
 }
 
-export async function getDashboardSessionForVerifiedUser(user: User) {
-  const supabase = await createSupabaseServerClient();
+export async function getDashboardSessionForVerifiedUser(user: User, verifiedClient?: SupabaseServerClient) {
+  const supabase = verifiedClient ?? await createSupabaseServerClient();
   if (!supabase) return null;
   return buildDashboardSession(supabase, user);
 }

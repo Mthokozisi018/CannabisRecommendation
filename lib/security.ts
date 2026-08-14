@@ -26,6 +26,27 @@ export function verifyCsrfToken(token: string | null, signature: string | null) 
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
+function vercelPreviewOrigins() {
+  if (process.env.VERCEL_ENV !== "preview") return [];
+
+  return [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .map((value) => {
+      const previewUrl = new URL(value.includes("://") ? value : `https://${value}`);
+      if (
+        previewUrl.protocol !== "https:" ||
+        !previewUrl.hostname.endsWith(".vercel.app") ||
+        previewUrl.username ||
+        previewUrl.password ||
+        previewUrl.port
+      ) {
+        throw new Error("Vercel preview origin configuration is invalid.");
+      }
+      return previewUrl.origin;
+    });
+}
+
 export async function verifyOrigin() {
   const headerStore = await headers();
   const origin = headerStore.get("origin");
@@ -34,7 +55,8 @@ export async function verifyOrigin() {
   const configured = [
     process.env.APP_URL,
     process.env.NEXT_PUBLIC_APP_URL,
-    ...(process.env.ALLOWED_ORIGINS?.split(",") ?? [])
+    ...(process.env.ALLOWED_ORIGINS?.split(",") ?? []),
+    ...vercelPreviewOrigins()
   ]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value))
