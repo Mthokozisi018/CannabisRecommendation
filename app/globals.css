@@ -6,6 +6,10 @@
   color-scheme: dark;
 }
 
+.customer-app {
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
 }

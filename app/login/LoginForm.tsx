@@ -11,6 +11,8 @@ function fieldErrorFromSearch(error: string | null) {
   if (error === "unauthorized") return "You are not authorized to access that dashboard.";
   if (error === "unavailable") return "GreenChoice authentication is not reachable. Check the Supabase configuration.";
   if (error === "session-expired") return "Your session expired because of inactivity. Please sign in again.";
+  if (error === "verification") return "The verification link is invalid or expired. Request a new verification email.";
+  if (error === "customer-account") return "Sign in with your customer account to continue.";
   if (error) return "Invalid email or password.";
   return "";
 }
@@ -104,7 +106,7 @@ export function LoginForm() {
       <LoadingOverlay active={isSubmitting} />
       <form onSubmit={handleSubmit} className="mt-9 grid gap-6">
         {message ? <p className="rounded-xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-center text-sm text-red-100">{message}</p> : null}
-        <LoginField name="email" label="Email Address" icon={<Mail size={24} strokeWidth={2.2} />} placeholder="Enter your work email" type="email" value={email} onChange={setEmail} />
+        <LoginField name="email" label="Email Address" icon={<Mail size={24} strokeWidth={2.2} />} placeholder="Enter your email address" type="email" value={email} onChange={setEmail} />
         <LoginField
           name="password"
           label="Password"
