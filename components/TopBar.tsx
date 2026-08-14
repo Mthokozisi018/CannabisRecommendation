@@ -7,7 +7,11 @@ import { staffToAccountContext } from "@/lib/authorization";
 import { visibleNavItems } from "@/lib/account-data";
 
 function shouldRenderGlobalTopBar(pathname: string) {
-  return pathname !== "/login" && !pathname.startsWith("/customer") && !pathname.startsWith("/auth/") && !pathname.startsWith("/dashboard/manager") && !pathname.startsWith("/dashboard/receptionist");
+  return !["/login", "/forgot-account", "/forgot-password", "/update-password"].includes(pathname)
+    && !pathname.startsWith("/customer")
+    && !pathname.startsWith("/auth/")
+    && !pathname.startsWith("/dashboard/manager")
+    && !pathname.startsWith("/dashboard/receptionist");
 }
 
 export async function TopBar() {
