@@ -1,0 +1,88 @@
+name: Production gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GREENCHOICE_ENV: staging
+      EXPECTED_SUPABASE_PROJECT_REF: aaaaaaaaaaaaaaaaaaaa
+      NEXT_PUBLIC_SUPABASE_URL: https://aaaaaaaaaaaaaaaaaaaa.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-public-anonymous-key-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-server-secret-placeholder-000000000000
+      APP_URL: https://greenchoice-ci.example.invalid
+      NEXT_PUBLIC_APP_URL: https://greenchoice-ci.example.invalid
+      ALLOWED_ORIGINS: https://greenchoice-ci.example.invalid
+      MANAGER_INVITE_REDIRECT_TO: https://greenchoice-ci.example.invalid/manager/invitation/set-password
+      STAFF_INVITE_REDIRECT_TO: https://greenchoice-ci.example.invalid/staff/invitation/onboarding
+      CSRF_SECRET: ci-csrf-secret-placeholder-00000000000000
+      SESSION_SIGNING_SECRET: ci-session-secret-placeholder-00000000000
+      STAFF_SESSION_SIGNING_SECRET: ci-staff-session-placeholder-0000000000
+      GREENCHOICE_PASSWORD_FINGERPRINT_SECRET: ci-password-fingerprint-placeholder-00000
+      RATE_LIMIT_KEY_SECRET: ci-rate-limit-key-placeholder-0000000000
+      RATE_LIMIT_REDIS_REST_URL: https://redis-ci.example.invalid
+      RATE_LIMIT_REDIS_REST_TOKEN: ci-redis-token-placeholder-000000000000
+      UPSTASH_REDIS_REST_URL: https://redis-cache-ci.example.invalid
+      UPSTASH_REDIS_REST_TOKEN: ci-upstash-cache-token-placeholder-000000
+      SESSION_INACTIVITY_MINUTES: "20"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Use pinned npm
+        run: npm install --global npm@11.9.0
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Scan repository for committed secrets
+        run: npm run scan:secrets
+
+      - name: Validate forward migrations
+        run: npm run validate:migrations
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript
+        run: npm run typecheck
+
+      - name: Run unit and integration tests
+        run: npx vitest run tests/unit tests/integration --reporter=default --reporter=junit --outputFile.junit=reports/unit.xml
+
+      - name: Run security tests
+        run: npx vitest run tests/security --reporter=default --reporter=junit --outputFile.junit=reports/security.xml
+
+      - name: Audit production dependencies
+        run: npm run audit:production
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-reports
+          path: reports
+          if-no-files-found: warn
+          retention-days: 14
