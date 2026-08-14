@@ -2,6 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+const { createSupabaseAdminClientMock } = vi.hoisted(() => ({
+  createSupabaseAdminClientMock: vi.fn()
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createSupabaseAdminClient: createSupabaseAdminClientMock
+}));
+
 import {
   consumeRateLimit,
   RateLimitUnavailableError,
@@ -13,6 +21,7 @@ describe("application rate limiter", () => {
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("RATE_LIMIT_REDIS_REST_URL", "");
     vi.stubEnv("RATE_LIMIT_REDIS_REST_TOKEN", "");
+    createSupabaseAdminClientMock.mockReturnValue(null);
     resetLocalRateLimitsForTests();
   });
 
@@ -62,5 +71,32 @@ describe("application rate limiter", () => {
       limit: 2,
       windowMs: 60_000
     })).rejects.toBeInstanceOf(RateLimitUnavailableError);
+  });
+
+  it("uses the atomic database limiter when Redis is unavailable", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_KEY_SECRET", "a-production-test-secret-that-is-long-enough");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_URL", "https://redis.example.invalid");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_TOKEN", "a-test-token-that-is-long-enough-for-production");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+    const rpc = vi.fn().mockResolvedValue({
+      data: [{ request_count: 1, reset_at: new Date(Date.now() + 60_000).toISOString() }],
+      error: null
+    });
+    createSupabaseAdminClientMock.mockReturnValue({ rpc });
+
+    const result = await consumeRateLimit({
+      namespace: "database-fallback",
+      identifiers: ["anonymous"],
+      limit: 2,
+      windowMs: 60_000
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(1);
+    expect(rpc).toHaveBeenCalledWith("consume_request_rate_limit", expect.objectContaining({
+      p_limit: 2,
+      p_window_ms: 60_000
+    }));
   });
 });
