@@ -82,8 +82,11 @@ function secureResponse(response: NextResponse, request: NextRequest, requestId:
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/manager/") ||
     pathname.startsWith("/staff/") ||
+    pathname.startsWith("/customer") ||
+    pathname.startsWith("/auth/") ||
     pathname === "/login" ||
     pathname === "/forgot-password" ||
+    pathname === "/forgot-account" ||
     pathname === "/update-password"
   ) {
     response.headers.set("Cache-Control", "private, no-store, max-age=0");

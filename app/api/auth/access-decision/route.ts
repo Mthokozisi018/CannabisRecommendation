@@ -3,6 +3,7 @@ import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/sup
 import { decideDashboardAccess, getDashboardSession, restrictedPathForSession } from "@/lib/dashboard-session";
 import { logServerEvent } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
+import { getCustomerSession } from "@/lib/customer/auth";
 
 export const dynamic = "force-dynamic";
 const privateHeaders = { "Cache-Control": "private, no-store, max-age=0", "Vary": "Cookie, Authorization" };
@@ -22,6 +23,10 @@ async function auditAccess(action: string, details: Record<string, unknown>, rec
 }
 
 export async function GET() {
+  const customer = await getCustomerSession();
+  if (customer?.profile.status === "active") {
+    return NextResponse.json({ allowed: true, role: "customer", redirectTo: "/customer" }, { headers: privateHeaders });
+  }
   const session = await getDashboardSession();
   if (!session) {
     await auditAccess("access_denied_missing_session", { reason: "missing_session" });
