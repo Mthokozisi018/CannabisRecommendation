@@ -99,6 +99,21 @@ describe("critical repository security contracts", () => {
     expect(fallbackMigration).toContain("from public, anon, authenticated");
   });
 
+  it("keeps customer tables private while granting the server role required access", () => {
+    const customerMigration = source("supabase/migrations/20260814090000_customer_portal.sql");
+    const serverGrantMigration = source("supabase/migrations/20260814140000_grant_customer_server_access.sql");
+
+    expect(customerMigration).toContain("alter table public.customer_profiles enable row level security");
+    expect(customerMigration).not.toContain("to anon");
+    expect(serverGrantMigration).toContain("grant select, insert, update, delete");
+    expect(serverGrantMigration).toContain("public.customer_profiles");
+    expect(serverGrantMigration).toContain("public.customer_addresses");
+    expect(serverGrantMigration).toContain("public.customer_preferences");
+    expect(serverGrantMigration).toContain("public.customer_consents");
+    expect(serverGrantMigration).toContain("to service_role");
+    expect(serverGrantMigration).not.toContain("to anon");
+  });
+
   it("keeps manager audit scope server-derived and reactivation slot checks database-authoritative", () => {
     const actions = source("app/dashboard/manager/actions.ts");
     const migration = source("supabase/migrations/20260729129000_atomic_receptionist_status_and_slot_enforcement.sql");
