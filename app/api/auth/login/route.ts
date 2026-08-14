@@ -4,6 +4,7 @@ import { managerLoginDestination, receptionistLoginDestination } from "@/lib/acc
 import { decideDashboardAccess, getDashboardSessionForVerifiedUser } from "@/lib/dashboard-session";
 import { logServerEvent, reportServerException } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
+import { managerCreatedTemporaryAuthPassword } from "@/lib/manager/temporary-password";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,25 @@ export async function POST(request: Request) {
     if (!supabase) {
       return NextResponse.json({ error: "Authentication is temporarily unavailable." }, { status: 503, headers: privateHeaders });
     }
-    const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+    const admin = createSupabaseAdminClient();
+    let { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+    if ((error || !data.user) && admin) {
+      const { data: pendingProfile, error: pendingProfileError } = await admin
+        .from("staff_profiles")
+        .select("id")
+        .ilike("email", parsed.data.email)
+        .eq("role", "receptionist")
+        .eq("temporary_password_active", true)
+        .eq("account_setup_complete", false)
+        .maybeSingle();
+
+      if (!pendingProfileError && pendingProfile) {
+        ({ data, error } = await supabase.auth.signInWithPassword({
+          email: parsed.data.email,
+          password: managerCreatedTemporaryAuthPassword(parsed.data.email, parsed.data.password)
+        }));
+      }
+    }
     if (error || !data.user) {
       await logServerEvent("warn", "login_failed", { reason: "invalid_credentials" });
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401, headers: privateHeaders });
@@ -59,7 +78,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const admin = createSupabaseAdminClient();
     if (admin) {
       const { error: auditError } = await admin.from("audit_logs").insert({
         user_id: session.authUserId,
