@@ -80,25 +80,25 @@ function ManagerActionCard({ href, icon: Icon, title, tone }: Omit<ManagerCard, 
   return (
     <Link
       href={href as never}
-      prefetch={false}
+      prefetch
       aria-label={title}
-      className={`group relative flex h-[230px] w-full max-w-[176px] flex-col items-center justify-between overflow-hidden rounded-[18px] border px-5 py-8 text-center text-white backdrop-blur-xl transition duration-300 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-[252px] sm:max-w-[190px] lg:h-[270px] lg:max-w-[200px] ${styles.card}`}
+      className={`gc-manager-action-card group relative flex h-[230px] w-full max-w-[176px] flex-col items-center justify-between overflow-hidden rounded-[18px] border px-5 py-8 text-center text-white backdrop-blur-xl transition duration-300 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-[252px] sm:max-w-[190px] lg:h-[270px] lg:max-w-[200px] ${styles.card}`}
     >
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,255,255,0.11),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.11),transparent_30%,rgba(255,255,255,0.03))]" />
       <span className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-white/8" />
 
-      <span className={`relative grid size-[78px] place-items-center rounded-full border bg-black/24 ${styles.iconRing} sm:size-[86px]`}>
+      <span className={`gc-manager-action-icon relative grid size-[78px] place-items-center rounded-full border bg-black/24 ${styles.iconRing} sm:size-[86px]`}>
         <Icon aria-hidden="true" className={styles.icon} size={42} strokeWidth={1.75} />
       </span>
 
-      <span className="relative flex min-h-[64px] flex-col items-center justify-center">
-        <span className="block max-w-[150px] text-[1.08rem] font-extrabold leading-tight text-white drop-shadow-[0_5px_18px_rgba(0,0,0,0.5)] sm:text-[1.16rem]">
+      <span className="gc-manager-action-label-wrap relative flex min-h-[64px] flex-col items-center justify-center">
+        <span className="gc-manager-action-label block max-w-[150px] text-[1.08rem] font-extrabold leading-tight text-white drop-shadow-[0_5px_18px_rgba(0,0,0,0.5)] sm:text-[1.16rem]">
           {title}
         </span>
-        <span className={`mt-5 block h-0.5 w-9 rounded-full ${styles.underline}`} />
+        <span className={`gc-manager-action-underline mt-5 block h-0.5 w-9 rounded-full ${styles.underline}`} />
       </span>
 
-      <span className={`relative grid size-9 place-items-center rounded-full border transition duration-300 group-hover:translate-x-1 ${styles.arrow}`}>
+      <span className={`gc-manager-action-arrow relative grid size-9 place-items-center rounded-full border transition duration-300 group-hover:translate-x-1 ${styles.arrow}`}>
         <ArrowRight aria-hidden="true" size={18} strokeWidth={2.6} />
       </span>
     </Link>
@@ -113,7 +113,7 @@ export function ManagerDashboardActions({
   titleOverrides?: Partial<Record<ManagerActionKey, string>>;
 }) {
   return (
-    <nav aria-label="Manager dashboard actions" className="mx-auto mt-8 grid w-full max-w-[884px] grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:gap-5">
+    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[884px] grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:gap-5">
       {cards.map(({ key, ...card }) => (
         <ManagerActionCard
           key={key}

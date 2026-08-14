@@ -5,6 +5,11 @@ import { managerAccountInitialValues, requireManagerSetupStep } from "@/lib/mana
 export const dynamic = "force-dynamic";
 
 export default async function ManagerAccountSetupPage() {
-  const { profile } = await requireManagerSetupStep("account");
-  return <ManagerAccountSetupForm legalDocuments={getLegalDocumentStatus()} initialValues={managerAccountInitialValues(profile)} mustChangePassword={profile.temporary_password_active === true} />;
+  const { user, profile } = await requireManagerSetupStep("account");
+  return <ManagerAccountSetupForm
+    legalDocuments={getLegalDocumentStatus()}
+    initialValues={managerAccountInitialValues()}
+    mustChangePassword={profile.temporary_password_active === true}
+    accountEmail={user.email ?? profile.email}
+  />;
 }

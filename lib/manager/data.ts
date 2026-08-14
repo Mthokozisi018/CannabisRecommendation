@@ -1,5 +1,13 @@
 import "server-only";
-import { cacheGet, cacheSet, GREENCHOICE_CACHE_TTLS_SECONDS, lowStockSummaryCacheKey, managerProductsCacheKey } from "@/lib/cache/redis";
+import {
+  cacheGet,
+  cacheSet,
+  GREENCHOICE_CACHE_TTLS_SECONDS,
+  lowStockSummaryCacheKey,
+  managerProductsCacheKey,
+  managerStaffAccountsCacheKey,
+  receptionistSlotUsageCacheKey
+} from "@/lib/cache/redis";
 import { categoryAllowsCultivationType, categoryIdFor, categorySlug, PRODUCT_CATEGORIES, VAPE_PRODUCT_TYPES } from "@/lib/manager/options";
 import { requireActiveManager } from "@/lib/manager/auth";
 import { requireAssignedStoreId } from "@/lib/store-scope";
@@ -169,6 +177,8 @@ export type ManagerReceptionistAccount = {
   physical_address: string | null;
   account_status: "active" | "restricted" | "deactivated" | "deleted" | null;
   is_active: boolean | null;
+  account_setup_complete: boolean | null;
+  temporary_password_active: boolean | null;
   created_at: string;
 };
 
@@ -178,30 +188,42 @@ export type ReceptionistSlotUsage = {
 };
 
 export async function getReceptionistSlotUsage(): Promise<ReceptionistSlotUsage> {
-  const { supabase } = await requireActiveManager();
+  const { supabase, profile } = await requireActiveManager();
+  const storeId = requireAssignedStoreId(profile, "Manager");
+  const cacheKey = receptionistSlotUsageCacheKey(storeId);
+  const cached = await cacheGet<ReceptionistSlotUsage>(cacheKey);
+  if (cached) return cached;
+
   const { data, error } = await supabase.rpc("get_receptionist_slot_usage");
   if (error) throw new Error(error.message);
   const row = Array.isArray(data) ? data[0] : data;
-  return {
+  const usage = {
     used: Number(row?.slot_count ?? 0),
     limit: Number(row?.slot_limit ?? 5)
   };
+  await cacheSet(cacheKey, usage, GREENCHOICE_CACHE_TTLS_SECONDS.receptionistSlotUsage);
+  return usage;
 }
 
 export async function listCompletedReceptionistAccounts(): Promise<ManagerReceptionistAccount[]> {
   const { supabase, profile } = await requireActiveManager();
   const storeId = requireAssignedStoreId(profile, "Manager");
+  const cacheKey = managerStaffAccountsCacheKey(storeId);
+  const cached = await cacheGet<ManagerReceptionistAccount[]>(cacheKey);
+  if (cached) return cached;
+
   const { data, error } = await supabase
     .from("staff_profiles")
-    .select("id, first_name, surname, full_name, email, physical_address, account_status, is_active, created_at")
+    .select("id, first_name, surname, full_name, email, physical_address, account_status, is_active, account_setup_complete, temporary_password_active, created_at")
     .eq("store_id", storeId)
     .eq("role", "receptionist")
     .not("auth_user_id", "is", null)
-    .eq("profile_setup_complete", true)
     .neq("account_status", "deleted")
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as ManagerReceptionistAccount[];
+  const accounts = (data ?? []) as ManagerReceptionistAccount[];
+  await cacheSet(cacheKey, accounts, GREENCHOICE_CACHE_TTLS_SECONDS.managerStaffAccounts);
+  return accounts;
 }
 
 export function legacyProductFields(input: {

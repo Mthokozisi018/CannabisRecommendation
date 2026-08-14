@@ -2,15 +2,17 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
+import { decideAccountAccess, type AccountAccessDecision, type AccountAccessDenialReason } from "@/lib/account-flow";
 import { STORE } from "@/lib/data";
 import { normalizeRole } from "@/lib/authorization";
+import { bootstrapManualManagerProfile } from "@/lib/manual-manager-registration";
 import { getSessionState, updateSessionState } from "@/lib/session";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { profileRoleToStaffRole } from "@/lib/staff-profile";
 import type { AccountRole, StaffDTO, StaffRole, StoreAccessStatus, StoreMembershipDTO } from "@/lib/types";
 
 const DASHBOARD_PROFILE_SELECT =
-  "id, auth_user_id, user_id, store_id, email, full_name, first_name, surname, physical_address, city, province, postal_code, mobile_number, phone_number, role, is_active, account_status, account_setup_complete, profile_setup_complete, store_setup_complete, onboarding_completed_at, onboarding_complete_seen_at, temporary_password_active, password_changed_at, terms_accepted_at, privacy_policy_accepted_at, terms_version, privacy_policy_version, stores(id, slug, name, store_access_status, store_information_confirmed_at, store_information_confirmed_by)";
+  "id, auth_user_id, user_id, store_id, email, full_name, first_name, surname, physical_address, city, province, postal_code, country, mobile_number, phone_number, alternative_phone, employee_id, role, is_active, account_status, account_setup_complete, profile_setup_complete, store_setup_complete, onboarding_completed_at, onboarding_complete_seen_at, temporary_password_active, password_changed_at, terms_accepted_at, privacy_policy_accepted_at, terms_version, privacy_policy_version, stores(id, slug, name, store_access_status, store_information_confirmed_at, store_information_confirmed_by)";
 
 type DashboardStoreRow = {
   id: string;
@@ -34,8 +36,11 @@ export type DashboardStaffProfile = {
   city?: string | null;
   province?: string | null;
   postal_code?: string | null;
+  country?: string | null;
   mobile_number?: string | null;
   phone_number?: string | null;
+  alternative_phone?: string | null;
+  employee_id?: string | null;
   role: "admin" | "manager" | "receptionist";
   is_active?: boolean | null;
   account_status?: "active" | "restricted" | "deactivated" | "deleted" | null;
@@ -81,11 +86,8 @@ export type DashboardSession = {
   profile: DashboardStaffProfile;
 };
 
-export type DashboardAccessDenialReason = "missing_profile" | "account_restricted" | "account_inactive" | "account_deleted" | "store_unassigned" | "store_restricted";
-
-export type DashboardAccessDecision =
-  | { allowed: true }
-  | { allowed: false; reason: DashboardAccessDenialReason; message: string };
+export type DashboardAccessDenialReason = AccountAccessDenialReason;
+export type DashboardAccessDecision = AccountAccessDecision;
 
 function profileStore(profile: DashboardStaffProfile) {
   return Array.isArray(profile.stores) ? profile.stores[0] ?? null : profile.stores ?? null;
@@ -95,37 +97,8 @@ function profileAccountStatus(profile: DashboardStaffProfile): DashboardSession[
   return profile.account_status ?? (profile.is_active ? "active" : "deactivated");
 }
 
-function accessStatusForStore(profile: DashboardStaffProfile): StoreAccessStatus {
-  const store = profileStore(profile);
-  return store?.store_access_status ?? "restricted";
-}
-
 export function decideDashboardAccess(profile: DashboardStaffProfile | null | undefined): DashboardAccessDecision {
-  if (!profile) {
-    return { allowed: false, reason: "missing_profile", message: "No staff profile found. Contact your administrator." };
-  }
-
-  const accountStatus = profileAccountStatus(profile);
-  if (accountStatus === "restricted") {
-    return { allowed: false, reason: "account_restricted", message: "Your password was changed successfully, but this account currently has restricted access. Please contact your store administrator or GreenChoice support." };
-  }
-  if (accountStatus === "deleted") {
-    return { allowed: false, reason: "account_deleted", message: "This account is no longer available. Please contact your administrator." };
-  }
-  if (accountStatus !== "active") {
-    return { allowed: false, reason: "account_inactive", message: "Your account is inactive. Please contact your manager." };
-  }
-
-  if (profile.role !== "admin") {
-    if (!profile.store_id) {
-      return { allowed: false, reason: "store_unassigned", message: "Your account is not assigned to an active store. Please contact your administrator." };
-    }
-    if (accessStatusForStore(profile) !== "active") {
-      return { allowed: false, reason: "store_restricted", message: "Your password was changed successfully, but this account currently has restricted access. Please contact your store administrator or GreenChoice support." };
-    }
-  }
-
-  return { allowed: true };
+  return decideAccountAccess(profile);
 }
 
 export function restrictedPathForSession(session: Pick<DashboardSession, "isManager" | "isReceptionist"> | null | undefined) {
@@ -165,6 +138,14 @@ function accountSetupComplete(profile: DashboardStaffProfile) {
   const legalAccepted = Boolean(profile.terms_accepted_at && profile.privacy_policy_accepted_at && profile.terms_version && profile.privacy_policy_version);
   const baseComplete = profile.account_setup_complete === true || profile.profile_setup_complete === true;
   if (!legalAccepted || !baseComplete) return false;
+  if (profile.role === "receptionist") {
+    return Boolean(
+      profile.first_name &&
+        profile.surname &&
+        (profile.phone_number || profile.mobile_number) &&
+        profile.password_changed_at
+    );
+  }
   if (profile.onboarding_complete_seen_at) return true;
   return Boolean(
     profile.full_name &&
@@ -205,7 +186,11 @@ const getDashboardSessionCached = cache(async (): Promise<DashboardSession | nul
 });
 
 async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>, user: User): Promise<DashboardSession | null> {
-  const profile = await readProfileForUser(supabase, user);
+  let profile = await readProfileForUser(supabase, user);
+
+  if (!profile && await bootstrapManualManagerProfile(supabase, user)) {
+    profile = await readProfileForUser(supabase, user);
+  }
 
   if (!profile || profileAccountStatus(profile) === "deleted") {
     await supabase.auth.signOut();
@@ -252,7 +237,7 @@ async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<ty
 
   const accountDone = accountSetupComplete(profile);
   const storeDone = profile.role === "manager" ? storeSetupComplete(profile) : Boolean(assignedStoreId || profile.role === "admin");
-  const onboardingComplete = profile.role === "manager" ? accountDone && storeDone : true;
+  const onboardingComplete = profile.role === "manager" ? accountDone && storeDone : profile.role === "receptionist" ? accountDone : true;
   const name = displayName(profile, user);
   const storeAccessStatus = activeMembership.storeAccessStatus ?? "restricted";
   const storeId = activeMembership.storeId;
@@ -360,5 +345,11 @@ export async function requireCompletedManagerDashboardSession() {
   if (!session.accountSetupComplete) redirect("/manager/setup/account" as never);
   if (!session.storeSetupComplete) redirect("/manager/setup/store" as never);
   if (!session.onboardingCompleteSeen) redirect("/manager/setup/complete" as never);
+  return session;
+}
+
+export async function requireCompletedReceptionistDashboardSession() {
+  const session = await requireUnrestrictedDashboardSession("receptionist");
+  if (session.isReceptionist && !session.accountSetupComplete) redirect("/staff/setup/account" as never);
   return session;
 }

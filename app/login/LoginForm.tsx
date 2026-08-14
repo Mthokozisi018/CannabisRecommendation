@@ -6,7 +6,7 @@ import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 function fieldErrorFromSearch(error: string | null) {
-  if (error === "staff") return "No staff profile found. Contact your administrator.";
+  if (error === "staff") return "This account has not been authorized for GreenChoice. Contact the administrator.";
   if (error === "inactive") return "Your account is inactive. Please contact your manager.";
   if (error === "unauthorized") return "You are not authorized to access that dashboard.";
   if (error === "unavailable") return "GreenChoice authentication is not reachable. Check the Supabase configuration.";
@@ -26,9 +26,9 @@ function LoginField({ label, icon, name, placeholder, type = "text", value, onCh
   trailing?: React.ReactNode;
 }) {
   return (
-    <label className="block text-sm font-semibold text-white/95">
+    <label className="gc-login-field block text-sm font-semibold text-white/95">
       {label}
-      <span className="mt-2 flex h-14 items-center gap-4 rounded-xl border border-white/22 bg-[#111719]/70 px-5 text-white/48 shadow-[inset_0_0_0_1px_rgba(130,170,142,0.08)] transition focus-within:border-[#72d654]/75 focus-within:bg-[#12191b]/90">
+      <span className="gc-login-input-shell mt-2 flex h-14 items-center gap-4 rounded-xl border border-white/22 bg-[#111719]/70 px-5 text-white/48 shadow-[inset_0_0_0_1px_rgba(130,170,142,0.08)] transition focus-within:border-[#72d654]/75 focus-within:bg-[#12191b]/90">
         <span className="text-[#72d654]">{icon}</span>
         <input name={name} type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/42" />
         {trailing}
@@ -46,19 +46,6 @@ export function LoginForm() {
   const [message, setMessage] = useState(fieldErrorFromSearch(searchParams.get("error")));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlightRef = useRef(false);
-
-  async function confirmServerSession() {
-    const response = await fetch("/api/auth/access-decision", {
-      method: "GET",
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Accept": "application/json" }
-    });
-    const result = await response.json().catch(() => ({})) as { allowed?: boolean; message?: string; reason?: string };
-    if (!response.ok || result.allowed !== true) {
-      throw new Error(result.message || (result.reason === "missing_session" ? "Your sign-in succeeded, but this browser did not finish saving the session. Refresh the page and sign in again." : "GreenChoice could not confirm your dashboard access."));
-    }
-  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,7 +77,6 @@ export function LoginForm() {
         return;
       }
 
-      await confirmServerSession();
       window.location.replace(loginResult.redirectTo ?? "/dashboard");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "GreenChoice authentication is not reachable. Check the Supabase configuration.");
@@ -102,7 +88,7 @@ export function LoginForm() {
   return (
     <>
       <LoadingOverlay active={isSubmitting} />
-      <form onSubmit={handleSubmit} className="mt-9 grid gap-6">
+      <form method="post" action="/api/auth/login-form" onSubmit={handleSubmit} className="gc-login-form mt-9 grid gap-6">
         {message ? <p className="rounded-xl border border-red-300/25 bg-red-500/10 px-4 py-3 text-center text-sm text-red-100">{message}</p> : null}
         <LoginField name="email" label="Email Address" icon={<Mail size={24} strokeWidth={2.2} />} placeholder="Enter your work email" type="email" value={email} onChange={setEmail} />
         <LoginField

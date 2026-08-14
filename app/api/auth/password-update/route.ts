@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auditAccessDenied, decideDashboardAccess, getDashboardSession, restrictedPathForSession } from "@/lib/dashboard-session";
+import { auditAccessDenied, decideDashboardAccess, getDashboardSession } from "@/lib/dashboard-session";
 import { managerPasswordIssues } from "@/lib/manager/password-policy";
 import { verifyOrigin } from "@/lib/security";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -30,16 +30,15 @@ export async function POST(request: Request) {
 
     const session = await getDashboardSession();
     const decision = decideDashboardAccess(session?.profile);
-    const restricted = !decision.allowed;
     if (!decision.allowed && session) {
       await auditAccessDenied(session, "password_reset_completed_restricted_account", decision.reason);
     }
-    const redirectTo = restricted ? restrictedPathForSession(session) : "/login";
-    const message = restricted
-      ? "Your password was changed successfully, but this account currently has restricted access. Please contact your store administrator or GreenChoice support."
-      : "Password updated successfully. Please log in again.";
     await supabase.auth.signOut();
-    return NextResponse.json({ updated: true, restricted, message, redirectTo }, { headers: privateHeaders });
+    return NextResponse.json({
+      updated: true,
+      message: "Password updated successfully. Please log in again.",
+      redirectTo: "/login"
+    }, { headers: privateHeaders });
   } catch {
     return NextResponse.json({ error: "Password reset is unavailable." }, { status: 503, headers: privateHeaders });
   }

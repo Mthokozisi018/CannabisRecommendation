@@ -127,7 +127,8 @@ Commands:
 Required for dry-run counts and execution:
   SUPABASE_DB_URL or DATABASE_URL       Direct Postgres connection URL.
   NEXT_PUBLIC_SUPABASE_URL              Supabase project URL.
-  SUPABASE_SERVICE_ROLE_KEY             Supabase service role key.
+  SUPABASE_SECRET_KEY or
+  SUPABASE_SERVICE_ROLE_KEY             Supabase backend admin key.
 
 Required only for --execute:
   ADMIN_INITIAL_PASSWORD or ADMIN_PASSWORD
@@ -177,6 +178,10 @@ function requiredEnv(name) {
   return value;
 }
 
+function requiredSupabaseAdminKey() {
+  return configuredValue("SUPABASE_SECRET_KEY") || requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+}
+
 function adminEmail() {
   return requiredEnv("ADMIN_EMAIL").toLowerCase();
 }
@@ -186,7 +191,7 @@ function adminPassword() {
 }
 
 function createAdminClient() {
-  return createClient(requiredEnv("NEXT_PUBLIC_SUPABASE_URL"), requiredEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+  return createClient(requiredEnv("NEXT_PUBLIC_SUPABASE_URL"), requiredSupabaseAdminKey(), {
     auth: { autoRefreshToken: false, persistSession: false }
   });
 }
@@ -246,7 +251,7 @@ async function ensureAdminAuthUser(admin, email, execute) {
 
 async function fetchRestSchema() {
   const url = `${requiredEnv("NEXT_PUBLIC_SUPABASE_URL").replace(/\/$/, "")}/rest/v1/`;
-  const key = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const key = requiredSupabaseAdminKey();
   const response = await fetch(url, {
     headers: {
       apikey: key,

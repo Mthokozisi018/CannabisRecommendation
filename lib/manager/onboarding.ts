@@ -104,15 +104,15 @@ function profileStore(profile: ManagerSetupProfile) {
   return Array.isArray(profile.stores) ? profile.stores[0] ?? null : profile.stores;
 }
 
-export function managerAccountInitialValues(profile: ManagerSetupProfile): ManagerAccountInitialValues {
+export function managerAccountInitialValues(): ManagerAccountInitialValues {
   return {
-    fullName: profile.full_name ?? profile.first_name ?? "",
-    surname: profile.surname ?? "",
-    physicalAddress: profile.physical_address ?? "",
-    phoneNumber: profile.phone_number ?? profile.mobile_number ?? "",
-    city: profile.city ?? "",
-    province: profile.province ?? "",
-    postalCode: profile.postal_code ?? ""
+    fullName: "",
+    surname: "",
+    physicalAddress: "",
+    phoneNumber: "",
+    city: "",
+    province: "",
+    postalCode: ""
   };
 }
 
@@ -162,7 +162,7 @@ const getCurrentManagerSetupProfileCached = cache(async () => {
   const { data: profile, error } = await admin
     .from("staff_profiles")
     .select("id, auth_user_id, user_id, email, full_name, first_name, surname, physical_address, city, province, postal_code, mobile_number, phone_number, role, is_active, account_status, store_id, account_setup_complete, profile_setup_complete, store_setup_complete, onboarding_completed_at, onboarding_complete_seen_at, temporary_password_active, temporary_password_fingerprint, password_changed_at, terms_accepted_at, privacy_policy_accepted_at, terms_version, privacy_policy_version, stores(id, slug, name, store_access_status, address, store_address, store_contact_email, store_phone_number, physical_store_address, city, province, postal_code, business_registration_number, cannabis_license_or_permit_number, created_by_manager_id, store_information_confirmed_at, store_information_confirmed_by)")
-    .or(`auth_user_id.eq.${user.id},user_id.eq.${user.id}`)
+    .eq("auth_user_id", user.id)
     .returns<ManagerSetupProfile[]>();
   if (error) throw new Error(error.message);
   const activeManagers = (profile ?? []).filter((item) => item.role === "manager" && accountIsActive(item));

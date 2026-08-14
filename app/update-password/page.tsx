@@ -10,11 +10,19 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function passwordErrors(password: string) {
   const errors: string[] = [];
-  if (password.length < 8) errors.push("Use at least 8 characters.");
+  if (password.length < 12) errors.push("Use at least 12 characters.");
   if (!/[A-Z]/.test(password)) errors.push("Include at least one uppercase letter.");
   if (!/[a-z]/.test(password)) errors.push("Include at least one lowercase letter.");
   if (!/[0-9]/.test(password)) errors.push("Include at least one number.");
+  if (!/[^A-Za-z0-9]/.test(password)) errors.push("Include at least one symbol.");
   return errors;
+}
+
+function clearRecoveryParameters() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("code");
+  url.hash = "";
+  window.history.replaceState(null, "", `${url.pathname}${url.search}`);
 }
 
 function UpdatePasswordForm() {
@@ -26,15 +34,52 @@ function UpdatePasswordForm() {
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreparingSession, setIsPreparingSession] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const exchangedCodeRef = useRef<string | null>(null);
+  const exchangePromiseRef = useRef<Promise<boolean> | null>(null);
+  const preparationStartedRef = useRef(false);
   const submissionInFlightRef = useRef(false);
 
   useEffect(() => {
+    if (preparationStartedRef.current) return;
+    preparationStartedRef.current = true;
     const code = searchParams.get("code");
-    if (!code || exchangedCodeRef.current === code) return;
-    exchangedCodeRef.current = code;
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const accessToken = hash.get("access_token");
+    const refreshToken = hash.get("refresh_token");
+    const isRecoveryToken = hash.get("type") === "recovery";
+    setIsPreparingSession(true);
     const supabase = createSupabaseBrowserClient();
-    supabase.auth.exchangeCodeForSession(code).catch(() => undefined);
+
+    exchangePromiseRef.current = (async () => {
+      if (searchParams.get("flow") !== "recovery") {
+        throw new Error("Missing password recovery context.");
+      }
+      if (code && exchangedCodeRef.current !== code) {
+        exchangedCodeRef.current = code;
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        const redirectType = (data as typeof data & { redirectType?: string | null }).redirectType;
+        if (error || redirectType !== "recovery") throw error ?? new Error("Invalid recovery purpose.");
+        clearRecoveryParameters();
+      } else if (accessToken && refreshToken && isRecoveryToken) {
+        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (error) throw error;
+        clearRecoveryParameters();
+      } else {
+        throw new Error("Missing recovery token.");
+      }
+
+      setIsReady(true);
+      return true;
+    })()
+      .catch(() => {
+        setErrors(["Password reset session is invalid or expired. Request a new reset link."]);
+        return false;
+      })
+      .finally(() => {
+        setIsPreparingSession(false);
+      });
   }, [searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -51,12 +96,18 @@ function UpdatePasswordForm() {
     setIsSubmitting(true);
     setErrors([]);
     try {
+      const exchangeOk = await (exchangePromiseRef.current ?? Promise.resolve(false));
+      if (!exchangeOk) {
+        submissionInFlightRef.current = false;
+        setIsSubmitting(false);
+        return;
+      }
       const updateResponse = await fetch("/api/auth/password-update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password, confirmPassword })
       });
-      const updateResult = await updateResponse.json() as { updated?: boolean; restricted?: boolean; message?: string; redirectTo?: string; error?: string };
+      const updateResult = await updateResponse.json() as { updated?: boolean; message?: string; redirectTo?: string; error?: string };
       if (!updateResponse.ok || !updateResult.updated) {
         setErrors([updateResult.error ?? "Password reset session is invalid or expired. Request a new reset link."]);
         submissionInFlightRef.current = false;
@@ -67,7 +118,7 @@ function UpdatePasswordForm() {
       setTimeout(() => {
         startNavigationLoading();
         router.replace((updateResult.redirectTo ?? "/login") as never);
-      }, updateResult.restricted ? 1800 : 1500);
+      }, 1500);
     } catch {
       setErrors(["Password reset session is invalid or expired. Request a new reset link."]);
       submissionInFlightRef.current = false;
@@ -78,8 +129,9 @@ function UpdatePasswordForm() {
   return (
     <>
       <LoadingOverlay active={isSubmitting} />
-      <form onSubmit={handleSubmit} className="mt-9 grid gap-6">
+      <form method="post" onSubmit={handleSubmit} className="mt-9 grid gap-6">
         {message ? <p className="rounded-xl border border-lime-300/25 bg-lime-500/10 px-5 py-4 text-lime-50">{message}</p> : null}
+        {isPreparingSession ? <p className="rounded-xl border border-lime-300/25 bg-lime-500/10 px-5 py-4 text-lime-50">Preparing your secure reset session...</p> : null}
         {errors.length ? <div className="rounded-xl border border-red-300/25 bg-red-500/10 px-5 py-4 text-red-100">{errors.map((error) => <p key={error}>{error}</p>)}</div> : null}
         <label className="block text-base font-semibold text-white/95">
           New Password
@@ -98,8 +150,8 @@ function UpdatePasswordForm() {
             <input value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} type={showPassword ? "text" : "password"} className="min-w-0 flex-1 bg-transparent text-lg text-white outline-none placeholder:text-white/42" placeholder="Confirm new password" />
           </span>
         </label>
-        <button disabled={isSubmitting || Boolean(message)} className="h-14 rounded-xl bg-lime-500 font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70">
-          {isSubmitting ? "Updating..." : "Update password"}
+        <button disabled={!isReady || isSubmitting || isPreparingSession || Boolean(message)} className="h-14 rounded-xl bg-lime-500 font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70">
+          {!isReady || isPreparingSession ? "Preparing..." : isSubmitting ? "Resetting..." : "Reset password"}
         </button>
       </form>
     </>
@@ -110,8 +162,8 @@ export default function UpdatePasswordPage() {
   return (
     <main className="grid min-h-screen place-items-center bg-[#060b0b] px-5 py-10 text-white">
       <section className="w-full max-w-xl rounded-[30px] border border-white/22 bg-[linear-gradient(145deg,rgba(32,42,39,0.84),rgba(7,12,13,0.94))] p-8 shadow-[0_42px_120px_rgba(0,0,0,0.62)] sm:p-10">
-        <h1 className="text-4xl font-extrabold">Update password</h1>
-        <p className="mt-4 text-lg leading-8 text-white/68">Choose a new password for your staff account.</p>
+        <h1 className="text-4xl font-extrabold">Reset password</h1>
+        <p className="mt-4 text-lg leading-8 text-white/68">Choose a replacement password for your existing GreenChoice account.</p>
         <Suspense fallback={<LoadingOverlay />}>
           <UpdatePasswordForm />
         </Suspense>

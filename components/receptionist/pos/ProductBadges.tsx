@@ -46,7 +46,7 @@ export function ProductBadges({ product, className }: { product: ReceptionistPro
   if (!showSubcategory && !showCultivation) return null;
   const useCompactBadges = isFlowerOrPreRollCategory(product);
   const useBadgeRow = useCompactBadges && showSubcategory && showCultivation;
-  const defaultClassName = useBadgeRow ? "grid min-h-8 grid-cols-1 gap-2 min-[360px]:grid-cols-2" : useCompactBadges ? "flex min-h-8 items-center gap-2" : "mt-4 flex min-h-9 flex-wrap items-center gap-2";
+  const defaultClassName = useBadgeRow ? "gc-pos-product-badges grid min-h-8 grid-cols-1 gap-2 min-[360px]:grid-cols-2" : useCompactBadges ? "gc-pos-product-badges flex min-h-8 items-center gap-2" : "gc-pos-product-badges mt-4 flex min-h-9 flex-wrap items-center gap-2";
 
   return (
     <div className={className ?? defaultClassName}>

@@ -88,8 +88,9 @@ export function CartPanel({
         <button disabled={cart.length === 0 || isPending} onClick={onClearCart} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-white/18 font-semibold text-white transition hover:border-red-200/45 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-45">
           <XCircle size={18} /> Cancel Sale
         </button>
-        <button disabled={cart.length === 0 || isPending} onClick={onCheckout} className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-lg bg-emerald-500 font-bold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40">
-          <CreditCard size={19} /> {isPending ? "Processing..." : `Checkout${cartCount ? ` (${cartCount})` : ""}`}
+        <button disabled={cart.length === 0 || isPending} onClick={onCheckout} aria-busy={isPending} className="inline-flex min-h-16 w-full touch-manipulation items-center justify-center gap-3 rounded-xl border border-emerald-200/55 bg-emerald-500 px-4 py-4 text-lg font-extrabold text-white shadow-[0_0_30px_rgba(16,185,129,0.36),0_14px_34px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.2)] transition hover:border-emerald-100 hover:bg-emerald-400 hover:shadow-[0_0_36px_rgba(16,185,129,0.46),0_16px_38px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.24)] active:scale-[0.99] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none motion-reduce:transition-none">
+          {isPending ? <span className="size-5 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" /> : <CreditCard size={24} />}
+          {isPending ? "Processing checkout..." : `Checkout${cartCount ? ` (${cartCount})` : ""}`}
         </button>
       </div>
     </aside>

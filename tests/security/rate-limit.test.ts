@@ -13,6 +13,8 @@ describe("application rate limiter", () => {
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("RATE_LIMIT_REDIS_REST_URL", "");
     vi.stubEnv("RATE_LIMIT_REDIS_REST_TOKEN", "");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
     resetLocalRateLimitsForTests();
   });
 
@@ -62,5 +64,79 @@ describe("application rate limiter", () => {
       limit: 2,
       windowMs: 60_000
     })).rejects.toBeInstanceOf(RateLimitUnavailableError);
+  });
+
+  it("uses shared Upstash Redis credentials when dedicated rate-limit credentials are not set", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_KEY_SECRET", "a-production-test-secret-that-is-long-enough");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://shared-redis.example.invalid/");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "a-shared-test-token-that-is-long-enough-for-production");
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify([
+      { result: 1 },
+      { result: 1 },
+      { result: 60_000 }
+    ]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await consumeRateLimit({
+      namespace: "shared-upstash",
+      identifiers: ["anonymous"],
+      limit: 2,
+      windowMs: 60_000
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith("https://shared-redis.example.invalid/pipeline", expect.objectContaining({
+      headers: expect.objectContaining({
+        Authorization: "Bearer a-shared-test-token-that-is-long-enough-for-production"
+      })
+    }));
+  });
+
+  it("falls back to shared Upstash Redis when dedicated rate-limit Redis fails", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_KEY_SECRET", "a-production-test-secret-that-is-long-enough");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_URL", "https://rate-limit-redis.example.invalid");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_TOKEN", "a-rate-limit-token-that-is-long-enough-for-production");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://shared-redis.example.invalid");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "a-shared-test-token-that-is-long-enough-for-production");
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(new Response(JSON.stringify([
+        { result: 1 },
+        { result: 1 },
+        { result: 60_000 }
+      ]), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await consumeRateLimit({
+      namespace: "fallback-upstash",
+      identifiers: ["anonymous"],
+      limit: 2,
+      windowMs: 60_000
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "https://rate-limit-redis.example.invalid/pipeline", expect.any(Object));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "https://shared-redis.example.invalid/pipeline", expect.any(Object));
+  });
+
+  it("can use a local fallback for authenticated business actions when configured providers are unavailable", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RATE_LIMIT_KEY_SECRET", "a-production-test-secret-that-is-long-enough");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_URL", "https://rate-limit-redis.example.invalid");
+    vi.stubEnv("RATE_LIMIT_REDIS_REST_TOKEN", "a-rate-limit-token-that-is-long-enough-for-production");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+
+    const input = {
+      namespace: "checkout-business-action",
+      identifiers: ["staff-user"],
+      limit: 1,
+      windowMs: 60_000,
+      localFallbackWhenConfiguredProviderFails: true
+    };
+
+    expect((await consumeRateLimit(input)).allowed).toBe(true);
+    expect((await consumeRateLimit(input)).allowed).toBe(false);
   });
 });

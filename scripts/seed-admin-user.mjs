@@ -22,6 +22,10 @@ function requiredEnv(name) {
   return value;
 }
 
+function requiredSupabaseAdminKey() {
+  return process.env.SUPABASE_SECRET_KEY?.trim() || requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+}
+
 async function findUserByEmail(adminClient, email) {
   const normalizedEmail = email.toLowerCase();
   let page = 1;
@@ -48,7 +52,7 @@ async function main() {
   }
 
   const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const serviceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = requiredSupabaseAdminKey();
   const email = requiredEnv("ADMIN_EMAIL");
   const password = requiredEnv("ADMIN_INITIAL_PASSWORD");
 

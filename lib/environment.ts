@@ -58,7 +58,11 @@ export function validateProductionEnvironment() {
   if (!process.env.SUPABASE_SECRET_KEY?.trim() && !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
     throw new Error("A Supabase server secret is required.");
   }
-  if (!process.env.RATE_LIMIT_REDIS_REST_URL?.trim() || !process.env.RATE_LIMIT_REDIS_REST_TOKEN?.trim()) {
+  const hasRateLimitRedis = Boolean(
+    (process.env.RATE_LIMIT_REDIS_REST_URL || process.env.UPSTASH_REDIS_REST_URL)?.trim() &&
+    (process.env.RATE_LIMIT_REDIS_REST_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN)?.trim()
+  );
+  if (!hasRateLimitRedis) {
     throw new Error("Distributed rate limiting is required.");
   }
 

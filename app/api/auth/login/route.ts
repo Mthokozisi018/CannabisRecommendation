@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
 import { decideDashboardAccess, getDashboardSessionForVerifiedUser } from "@/lib/dashboard-session";
 import { logServerEvent, reportServerException } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     if (!session) {
       await supabase.auth.signOut();
       await logServerEvent("warn", "login_access_denied", { reason: "missing_profile" });
-      return NextResponse.json({ error: "No staff profile found. Contact your administrator." }, {
+      return NextResponse.json({ error: "This account has not been authorized for GreenChoice. Contact the administrator." }, {
         status: 403,
         headers: privateHeaders
       });
@@ -80,14 +81,8 @@ export async function POST(request: Request) {
     const redirectTo = session.isAdmin
       ? "/dashboard/admin"
       : session.isManager
-        ? !session.accountSetupComplete
-          ? "/manager/setup/account"
-          : !session.storeSetupComplete
-            ? "/manager/setup/store"
-            : !session.onboardingCompleteSeen
-              ? "/manager/setup/complete"
-              : "/dashboard/manager"
-        : "/dashboard/receptionist";
+        ? managerLoginDestination(session)
+        : receptionistLoginDestination(session);
 
     await logServerEvent("info", "login_ready_for_redirect", {
       authUserId: session.authUserId,

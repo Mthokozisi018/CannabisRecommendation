@@ -7,7 +7,8 @@ export async function assertRateLimit(key: string, limit = 20, windowMs = 60_000
     namespace: "legacy",
     identifiers: [key],
     limit,
-    windowMs
+    windowMs,
+    localFallbackWhenConfiguredProviderFails: true
   });
 }
 

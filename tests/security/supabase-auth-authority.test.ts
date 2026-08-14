@@ -21,6 +21,26 @@ describe("Supabase Auth ownership contracts", () => {
     }
   });
 
+  it("keeps manual manager onboarding separate from password recovery", () => {
+    const managerSetup = source("app/manager/setup/actions.ts");
+    const recoveryRequest = source("app/api/auth/password-recovery/route.ts");
+    const recoveryPage = source("app/update-password/page.tsx");
+    const recoveryUpdate = source("app/api/auth/password-update/route.ts");
+
+    expect(managerSetup).not.toContain("currentTemporaryPassword");
+    expect(managerSetup).not.toContain("supabase.auth.signInWithPassword");
+    expect(managerSetup).toContain("supabase.auth.updateUser");
+    expect(managerSetup).toContain("Your secure sign-in session has expired");
+    expect(managerSetup).toContain('rpc("complete_manual_manager_account_setup"');
+    expect(recoveryRequest).toContain("/update-password?flow=recovery");
+    expect(recoveryPage).toContain('redirectType !== "recovery"');
+    expect(recoveryPage).toContain('hash.get("type") === "recovery"');
+    expect(recoveryPage).not.toContain("supabase.auth.getSession()");
+    expect(recoveryUpdate).not.toContain("staff_invitations");
+    expect(recoveryUpdate).toContain('redirectTo: "/login"');
+    expect(recoveryUpdate).not.toContain('.from("staff_profiles").update');
+  });
+
   it("keeps account and store access checks after Supabase authenticates a user", () => {
     const login = source("app/api/auth/login/route.ts");
     const update = source("app/api/auth/password-update/route.ts");
@@ -28,34 +48,38 @@ describe("Supabase Auth ownership contracts", () => {
     expect(login).toContain("supabase.auth.signOut()");
     expect(update).toContain("decideDashboardAccess");
     expect(update).toContain("password_reset_completed_restricted_account");
+    expect(update).not.toContain("restrictedPathForSession");
   });
 
-  it("uses Supabase invitations and user-chosen passwords while GreenChoice assigns authorization", () => {
-    const managerInvite = source("app/dashboard/admin/actions.ts");
-    const managerCompletion = source("app/api/manager/invitation/create-password/route.ts");
-    const receptionistCompletion = source("app/staff/invitation/actions.ts");
+  it("uses manual manager registration and direct receptionist account creation", () => {
+    const managerBootstrap = source("lib/manual-manager-registration.ts");
+    const receptionistCreate = source("app/dashboard/manager/actions.ts");
+    const receptionistCompletion = source("app/staff/setup/actions.ts");
 
-    expect(managerInvite).toContain("auth.admin.inviteUserByEmail");
-    expect(managerCompletion).toContain("supabase.auth.updateUser");
-    expect(managerCompletion).toContain('rpc("complete_manager_invitation"');
+    expect(managerBootstrap).toContain('rpc("bootstrap_manual_manager_profile"');
+    expect(managerBootstrap).not.toContain("user_metadata");
+    expect(receptionistCreate).toContain("auth.admin.createUser");
+    expect(receptionistCreate).toContain("deleteUnboundManagerCreatedReceptionist");
+    expect(receptionistCreate).toContain('rpc("create_manager_receptionist_profile"');
+    expect(receptionistCreate).not.toContain("inviteUserByEmail");
     expect(receptionistCompletion).toContain("supabase.auth.updateUser");
-    expect(receptionistCompletion).toContain('rpc("complete_staff_onboarding"');
+    expect(receptionistCompletion).toContain('rpc("complete_manager_created_receptionist_setup"');
   });
 
   it("retains distributed limits on GreenChoice business actions", () => {
     expect(source("app/dashboard/receptionist/actions.ts")).toContain("assertRateLimit");
     expect(source("app/dashboard/manager/actions.ts")).toContain("assertRateLimit");
     expect(source("app/dashboard/admin/actions.ts")).toContain("assertRateLimit");
-    expect(source("app/staff/invitation/actions.ts")).toContain("assertRateLimit");
+    expect(source("app/staff/setup/actions.ts")).toContain("assertRateLimit");
   });
 
   it("keeps manager and receptionist onboarding bound to current Supabase users", () => {
     const managerOnboarding = source("lib/manager/onboarding.ts");
-    const receptionistOnboarding = source("app/staff/invitation/actions.ts");
+    const receptionistOnboarding = source("app/staff/setup/actions.ts");
     expect(managerOnboarding).toContain("supabase.auth.getUser()");
     expect(managerOnboarding).toContain('redirect("/dashboard/restricted/manager" as never)');
-    expect(receptionistOnboarding).toContain("invitation.auth_user_id !== user.id");
-    expect(receptionistOnboarding).toContain("metadataInvitationId !== parsed.invitationId");
+    expect(receptionistOnboarding).toContain('requireDashboardRoleSession(["employee_receptionist"])');
+    expect(receptionistOnboarding).toContain("session.authUserId");
   });
 
   it("has no second server-side session table, cookie, heartbeat route, or validity guard", () => {
@@ -86,6 +110,9 @@ describe("Supabase Auth ownership contracts", () => {
     const managerSummary = source("lib/manager/dashboard-summary.ts");
     const managerLayout = source("app/dashboard/manager/layout.tsx");
     const managerActions = source("components/manager/ManagerDashboardActions.tsx");
+    const managerPage = source("app/dashboard/manager/page.tsx");
+    const managerData = source("lib/manager/data.ts");
+    const cache = source("lib/cache/redis.ts");
     const loginForm = source("app/login/LoginForm.tsx");
     const recovery = source("app/forgot-password/page.tsx");
 
@@ -93,23 +120,42 @@ describe("Supabase Auth ownership contracts", () => {
     expect(managerSummary).not.toContain("auth.admin.listUsers");
     expect(managerSummary).toContain('.eq("action", "login_success")');
     expect(managerLayout).not.toContain("ManagerRoutePrefetcher");
-    expect(managerActions).toContain("prefetch={false}");
+    expect(managerPage).toContain("ManagerPOSRoutePreloader");
+    expect(managerActions).toContain("prefetch");
+    expect(source("components/manager/ManagerPOSRoutePreloader.tsx")).toContain("MANAGER_FAST_ROUTES");
+    expect(managerData).toContain("managerProductsCacheKey");
+    expect(managerData).toContain("managerStaffAccountsCacheKey");
+    expect(managerData).toContain("receptionistSlotUsageCacheKey");
+    expect(cache).toContain("invalidateManagerStaffCache");
     expect(loginForm).toContain("submissionInFlightRef");
     expect(recovery).toContain("submissionInFlightRef");
   });
 
-  it("confirms the cookie-backed server session before leaving login", () => {
+  it("relies on the login route access decision before leaving login", () => {
+    const loginRoute = source("app/api/auth/login/route.ts");
     const loginForm = source("app/login/LoginForm.tsx");
-    expect(loginForm).toContain('fetch("/api/auth/access-decision"');
-    expect(loginForm).toContain('cache: "no-store"');
-    expect(loginForm).toContain('credentials: "same-origin"');
-    expect(loginForm).toContain("confirmServerSession");
+    expect(loginRoute).toContain("decideDashboardAccess");
+    expect(loginRoute).toContain("getDashboardSessionForVerifiedUser");
+    expect(loginForm).toContain('fetch("/api/auth/login"');
+    expect(loginForm).not.toContain('fetch("/api/auth/access-decision"');
+    expect(loginForm).not.toContain("confirmServerSession");
+    expect(loginForm).toContain('method="post"');
+    expect(loginForm).toContain('action="/api/auth/login-form"');
+    expect(loginForm).toContain("disabled={isSubmitting}");
     expect(loginForm).toContain("window.location.replace");
   });
 
-  it("exchanges each recovery or invitation code only once per mounted flow", () => {
-    expect(source("app/update-password/page.tsx")).toContain("exchangedCodeRef");
-    expect(source("components/staff/StaffInvitationSessionGate.tsx")).toContain("preparedInvitationRef");
-    expect(source("app/manager/invitation/set-password/password-form.tsx")).toContain("verifiedInvitationRef");
+  it("exchanges each recovery code only once per mounted flow", () => {
+    const updatePassword = source("app/update-password/page.tsx");
+    expect(updatePassword).toContain("exchangedCodeRef");
+    expect(updatePassword).toContain("exchangePromiseRef");
+    expect(updatePassword).toContain("await (exchangePromiseRef.current");
+    expect(updatePassword).toContain("window.location.hash");
+    expect(updatePassword).toContain("supabase.auth.setSession");
+    expect(updatePassword).toContain("window.history.replaceState");
+    expect(updatePassword).toContain("Promise.resolve(false)");
+    expect(updatePassword).toContain('method="post"');
+    expect(updatePassword).toContain("!isReady || isSubmitting");
+    expect(existsSync(resolve(process.cwd(), "components/staff/StaffInvitationSessionGate.tsx"))).toBe(false);
   });
 });

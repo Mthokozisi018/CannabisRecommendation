@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -7,44 +7,130 @@ function source(path: string) {
 }
 
 describe("critical repository security contracts", () => {
-  it("requires the exact authenticated invitation identity and transactional completion", () => {
-    const action = source("app/staff/invitation/actions.ts");
-    const gate = source("components/staff/StaffInvitationSessionGate.tsx");
-    const page = source("app/staff/invitation/onboarding/page.tsx");
-    const migration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");
+  it("creates receptionist accounts under the authenticated manager store lock", () => {
+    const action = source("app/dashboard/manager/actions.ts");
+    const setupAction = source("app/staff/setup/actions.ts");
+    const migration = source("supabase/migrations/20260804140000_direct_receptionist_accounts.sql");
 
-    expect(action).toContain("supabase.auth.getUser()");
-    expect(action).toContain("invitation.auth_user_id !== user.id");
-    expect(action).toContain("metadataInvitationId !== parsed.invitationId");
-    expect(gate).toContain("staff_invitation_id !== invitationId");
-    expect(page).toContain("invitation.auth_user_id === userId");
-    expect(page).toContain("invitation.email.toLowerCase() === userEmail.toLowerCase()");
-    expect(page).toContain("manager.store_id !== invitation.store_id");
-    expect(migration).toContain("invitation_row.auth_user_id is distinct from caller_id");
-    expect(migration).toContain("invitation_row.completed_at is not null");
-    expect(migration).toContain("invitation_row.store_id");
-    expect(migration).toContain("invitation_row.invited_by");
-    expect(migration).toContain("where id = p_invitation_id");
-    expect(migration).toContain("for update");
+    expect(action).toContain("auth.admin.createUser");
+    expect(action).toContain('greenchoice_role: "receptionist"');
+    expect(action).toContain('greenchoice_registration: "manager_created"');
+    expect(action).toContain('rpc("create_manager_receptionist_profile"');
+    expect(action).toContain("deleteUnboundManagerCreatedReceptionist");
+    expect(action).not.toContain("inviteUserByEmail");
+    expect(setupAction).toContain("supabase.auth.updateUser");
+    expect(setupAction).toContain('rpc("complete_manager_created_receptionist_setup"');
+    expect(migration).toContain("pg_advisory_xact_lock");
+    expect(migration).toContain("manager_profile.store_id");
+    expect(migration).toContain("greenchoice_manager_id");
+    expect(migration).toContain("occupied_slots >= 5");
+    expect(migration).toContain("temporary_password_active = false");
+    expect(migration).toContain("revoke all on function public.reserve_receptionist_invitation");
+    expect(existsSync(resolve(process.cwd(), "app/staff/invitation/onboarding/page.tsx"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), "components/staff/StaffInvitationSessionGate.tsx"))).toBe(false);
   });
 
-  it("keeps manager invitations bound to the invited auth user and manager setup scope", () => {
+  it("bootstraps only server-marked manual managers and retires manager invitation activation", () => {
+    const registration = source("lib/manual-manager-registration.ts");
+    const dashboardSession = source("lib/dashboard-session.ts");
+    const migration = source("supabase/migrations/20260804120000_manual_manager_registration.sql");
+    const emptyProfileMigration = source("supabase/migrations/20260804130000_empty_manual_manager_onboarding_profile.sql");
     const adminActions = source("app/dashboard/admin/actions.ts");
-    const statusRoute = source("app/api/manager/invitation/status/route.ts");
-    const completionRoute = source("app/api/manager/invitation/create-password/route.ts");
-    const migration = source("supabase/migrations/20260729123000_secure_manager_invitation_completion.sql");
 
-    expect(adminActions).toContain('data: { invited_role: "manager", invitation_id: invitationId }');
-    expect(adminActions).toContain(".eq(\"status\", \"pending\")");
-    expect(statusRoute).toContain('user.user_metadata?.invited_role !== "manager"');
-    expect(statusRoute).toContain("user.user_metadata?.invitation_id !== invitationId.data");
-    expect(statusRoute).toContain(".eq(\"auth_user_id\", user.id)");
-    expect(completionRoute).toContain("metadataInvitationId !== parsed.data.invitationId");
-    expect(completionRoute).toContain('user.user_metadata?.invited_role !== "manager"');
-    expect(migration).toContain("v_invitation.auth_user_id is distinct from v_user_id");
-    expect(migration).toContain("lower(v_invitation.email) <> v_user_email");
-    expect(migration).toContain("auth.jwt() -> 'user_metadata' ->> 'invitation_id'");
-    expect(migration).toContain("on conflict (auth_user_id) do update");
+    expect(registration).toContain("user.app_metadata");
+    expect(registration).not.toContain("user.user_metadata");
+    expect(migration).toContain("auth_user.raw_app_meta_data ->> 'greenchoice_role'");
+    expect(migration).toContain("auth_user.raw_app_meta_data ->> 'greenchoice_registration'");
+    expect(migration).toContain("auth_user.email_confirmed_at is null");
+    expect(migration).toContain("auth_user.banned_until");
+    expect(migration).toContain("existing_profile.role <> 'manager'");
+    expect(migration).toContain("sole_admin_count <> 1");
+    expect(migration).toContain("temporary_password_active");
+    expect(migration).toContain("manual_manager_profile_initialized");
+    expect(emptyProfileMigration).toContain("full_name = null");
+    expect(emptyProfileMigration).toContain("profile.auth_user_id = auth_user.id");
+    expect(emptyProfileMigration).toContain("coalesce(auth_user.raw_app_meta_data ->> 'greenchoice_registration', '') = 'manual'");
+    expect(emptyProfileMigration).toContain("null,\n    'manager'");
+    expect(migration).toContain("revoke execute on function public.complete_manager_invitation(uuid) from authenticated");
+    expect(dashboardSession).toContain("bootstrapManualManagerProfile");
+    expect(source("app/api/auth/login/route.ts")).toContain("This account has not been authorized for GreenChoice");
+    expect(adminActions).not.toContain("inviteUserByEmail");
+    expect(existsSync(resolve(process.cwd(), "app/dashboard/admin/invite-manager/page.tsx"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), "app/dashboard/admin/invitations/page.tsx"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), "app/manager/invitation/set-password/page.tsx"))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), "app/api/manager/invitation/create-password/route.ts"))).toBe(false);
+  });
+
+  it("uses the authenticated manager session to replace the temporary password", () => {
+    const action = source("app/manager/setup/actions.ts");
+    const form = source("components/manager/ManagerOnboarding.tsx");
+    const migration = source("supabase/migrations/20260804120000_manual_manager_registration.sql");
+    const passwordUpdateIndex = action.indexOf("supabase.auth.updateUser");
+    const completionIndex = action.indexOf('admin.rpc("complete_manual_manager_account_setup"');
+
+    expect(action).not.toContain("currentTemporaryPassword");
+    expect(action).not.toContain("supabase.auth.signInWithPassword");
+    expect(form).not.toContain("Current Temporary Password");
+    expect(form).not.toContain('name="currentTemporaryPassword"');
+    expect(passwordUpdateIndex).toBeGreaterThan(-1);
+    expect(completionIndex).toBeGreaterThan(passwordUpdateIndex);
+    expect(action).toContain("Your secure sign-in session has expired");
+    expect(migration).toContain("target_profile.temporary_password_active is not true");
+    expect(migration).toContain("temporary_password_active = false");
+    expect(migration).toContain("manual_manager_account_setup_completed");
+  });
+
+  it("keeps first-time manager account registration empty, compact, and actionable", () => {
+    const onboarding = source("lib/manager/onboarding.ts");
+    const form = source("components/manager/ManagerOnboarding.tsx");
+    const accountPage = source("app/manager/setup/account/page.tsx");
+
+    expect(onboarding).toContain("export function managerAccountInitialValues()");
+    expect(onboarding).toContain('fullName: ""');
+    expect(onboarding).toContain('physicalAddress: ""');
+    expect(onboarding).toContain('.eq("auth_user_id", user.id)');
+    expect(accountPage).toContain("managerAccountInitialValues()");
+    expect(form).toContain('autoComplete="off"');
+    expect(form).toContain("Step 1 of 3 · Account registration");
+    expect(form).not.toContain("<aside");
+    expect(form).not.toContain("!formValid || !legalDocuments.available");
+    expect(form).toContain('role="alert"');
+  });
+
+  it("allows only the sole administrator to mark an existing Auth user for manager onboarding", () => {
+    const action = source("app/dashboard/admin/actions.ts");
+    const form = source("components/admin/ConnectManagerForm.tsx");
+
+    expect(action).toContain("connectManualManagerAction");
+    expect(action).toContain("await requireAdminUser()");
+    expect(action).toContain("activeAdminIds.length !== 1");
+    expect(action).toContain("auth.admin.listUsers");
+    expect(action).toContain("auth.admin.updateUserById");
+    expect(action).toContain("...existingMetadata");
+    expect(action).toContain('greenchoice_role: "manager"');
+    expect(action).toContain('greenchoice_registration: "manual"');
+    expect(action).toContain("authUser.id === soleAdmin.id");
+    expect(action).toContain("staff_profiles");
+    expect(action).toContain("admin_authorized_manual_manager");
+    expect(action).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(form).not.toContain("password");
+  });
+
+  it("keeps incomplete manager onboarding distinct from deliberate access restriction", () => {
+    const accountFlow = source("lib/account-flow.ts");
+    const loginRoute = source("app/api/auth/login/route.ts");
+    const loginFormRoute = source("app/api/auth/login-form/route.ts");
+
+    expect(accountFlow).toContain('profile.role === "manager" && !profile.store_id');
+    expect(accountFlow).toContain('return "/manager/setup/account"');
+    expect(accountFlow).toContain('return "/manager/setup/store"');
+    expect(accountFlow).toContain('return "/manager/setup/complete"');
+    expect(accountFlow).toContain('return "/dashboard/manager"');
+    expect(loginRoute).toContain("managerLoginDestination(session)");
+    expect(loginFormRoute).toContain("managerLoginDestination(session)");
+    expect(loginRoute).toContain("receptionistLoginDestination(session)");
+    expect(loginFormRoute).toContain("receptionistLoginDestination(session)");
+    expect(accountFlow).not.toContain("Your password was changed successfully");
   });
 
   it("binds checkout to trusted server identity and revokes the obsolete RPC", () => {
@@ -62,11 +148,15 @@ describe("critical repository security contracts", () => {
   it("preserves restricted store state during manager registration", () => {
     const onboarding = source("lib/manager/onboarding.ts");
     const migration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");
+    const outputFix = source("supabase/migrations/20260804111000_fix_manager_store_registration_output.sql");
 
     expect(onboarding).toContain("store_access_status");
     expect(onboarding).toContain('redirect("/dashboard/restricted/manager" as never)');
     expect(migration).toContain("resolved_status := coalesce(");
     expect(migration).toContain("manager_store_registration_preserved_restriction");
+    expect(outputFix).toContain("insert into public.stores as created_store");
+    expect(outputFix).toContain("returning created_store.id, created_store.store_access_status");
+    expect(outputFix).toContain("linked_store.created_by_manager_id <> caller_id");
   });
 
   it("guards the full admin route tree and disables request-time provisioning", () => {
@@ -89,19 +179,19 @@ describe("critical repository security contracts", () => {
   it("fails closed for missing origins, production URLs, secrets, and rate-limit storage", () => {
     expect(source("lib/security.ts")).toContain('if (!origin) throw new Error("Request origin is required.")');
     expect(source("lib/app-url.ts")).toContain("The production application URL is not configured");
-    expect(source("lib/environment.ts")).toContain("RATE_LIMIT_REDIS_REST_URL");
+    expect(source("lib/environment.ts")).toContain("UPSTASH_REDIS_REST_URL");
     expect(source("lib/rate-limit.ts")).toContain("if (process.env.NODE_ENV === \"production\") throw new RateLimitUnavailableError()");
   });
 
   it("keeps manager audit scope server-derived and reactivation slot checks database-authoritative", () => {
     const actions = source("app/dashboard/manager/actions.ts");
-    const migration = source("supabase/migrations/20260729129000_atomic_receptionist_status_and_slot_enforcement.sql");
+    const migration = source("supabase/migrations/20260804140000_direct_receptionist_accounts.sql");
 
     expect(actions).toContain('requireAssignedStoreId(profile, "Manager")');
     expect(actions).toContain('rpc("update_receptionist_account_status"');
     expect(migration).toContain("perform 1");
     expect(migration).toContain("for update");
-    expect(migration).toContain("v_used_slots >= 5");
+    expect(migration).toContain("other_occupied_slots >= 5");
     expect(migration).toContain("denial_reason := 'receptionist_slot_limit_reached'");
   });
 });

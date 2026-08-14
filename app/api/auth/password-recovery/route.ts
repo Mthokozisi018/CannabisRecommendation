@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const supabase = await createSupabaseServerClient();
     if (supabase) {
       await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-        redirectTo: `${configuredApplicationUrl()}/update-password`
+        redirectTo: `${configuredApplicationUrl()}/update-password?flow=recovery`
       });
     }
   } catch {

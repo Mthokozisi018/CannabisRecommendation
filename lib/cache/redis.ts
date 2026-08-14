@@ -5,11 +5,13 @@ import { Redis } from "@upstash/redis";
 let redisClient: Redis | null | undefined;
 
 export const GREENCHOICE_CACHE_TTLS_SECONDS = {
-  managerDashboardSummary: 45,
-  posProducts: 60,
+  managerDashboardSummary: 120,
+  posProducts: 180,
   productCategories: 600,
-  lowStockSummary: 45,
-  managerProducts: 60
+  lowStockSummary: 90,
+  managerProducts: 300,
+  managerStaffAccounts: 120,
+  receptionistSlotUsage: 120
 } as const;
 
 function keyPart(value: string | null | undefined) {
@@ -69,6 +71,18 @@ export async function cacheDelete(key: string): Promise<void> {
   }
 }
 
+export async function cacheDeleteMany(keys: string[]): Promise<void> {
+  const redis = getRedisClient();
+  const uniqueKeys = Array.from(new Set(keys.filter(Boolean)));
+  if (!redis || uniqueKeys.length === 0) return;
+
+  try {
+    await redis.del(...uniqueKeys);
+  } catch {
+    // Cache invalidation failures must not block committed Supabase writes.
+  }
+}
+
 export function managerDashboardSummaryCacheKey(storeId: string) {
   return `manager-dashboard-summary:${keyPart(storeId)}`;
 }
@@ -89,16 +103,32 @@ export function managerProductsCacheKey(storeId: string) {
   return `manager-products:${keyPart(storeId)}`;
 }
 
+export function managerStaffAccountsCacheKey(storeId: string) {
+  return `manager-staff-accounts:${keyPart(storeId)}`;
+}
+
+export function receptionistSlotUsageCacheKey(storeId: string) {
+  return `receptionist-slot-usage:${keyPart(storeId)}`;
+}
+
 export async function invalidateManagerDashboardSummaryCache(storeId: string): Promise<void> {
   await cacheDelete(managerDashboardSummaryCacheKey(storeId));
 }
 
+export async function invalidateManagerStaffCache(storeId: string): Promise<void> {
+  await cacheDeleteMany([
+    managerDashboardSummaryCacheKey(storeId),
+    managerStaffAccountsCacheKey(storeId),
+    receptionistSlotUsageCacheKey(storeId)
+  ]);
+}
+
 export async function invalidateStoreDisplayCache(storeId: string): Promise<void> {
-  await Promise.all([
-    cacheDelete(managerDashboardSummaryCacheKey(storeId)),
-    cacheDelete(posProductsCacheKey(storeId)),
-    cacheDelete(productCategoriesCacheKey(storeId)),
-    cacheDelete(lowStockSummaryCacheKey(storeId)),
-    cacheDelete(managerProductsCacheKey(storeId))
+  await cacheDeleteMany([
+    managerDashboardSummaryCacheKey(storeId),
+    posProductsCacheKey(storeId),
+    productCategoriesCacheKey(storeId),
+    lowStockSummaryCacheKey(storeId),
+    managerProductsCacheKey(storeId)
   ]);
 }
