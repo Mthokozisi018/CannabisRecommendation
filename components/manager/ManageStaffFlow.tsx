@@ -258,7 +258,7 @@ export function CreateStaffScreen({ slotUsage }: { slotUsage: ReceptionistSlotUs
               Temporary Password
               <span className="mt-1.5 flex h-12 items-center gap-3 rounded-lg border border-[#6fbd3f] bg-[#020604] px-3 text-white/75 focus-within:border-lime-300">
                 <LockKeyhole size={18} />
-                <input required name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={256} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
+                <input required name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={10} maxLength={256} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
                 <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide temporary password" : "Show temporary password"} className="grid size-9 place-items-center rounded-full text-white hover:bg-[#152019] hover:text-lime-200">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
               </span>
             </label>
@@ -266,11 +266,11 @@ export function CreateStaffScreen({ slotUsage }: { slotUsage: ReceptionistSlotUs
               Confirm Temporary Password
               <span className="mt-1.5 flex h-12 items-center gap-3 rounded-lg border border-[#6fbd3f] bg-[#020604] px-3 text-white/75 focus-within:border-lime-300">
                 <LockKeyhole size={18} />
-                <input required name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={256} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
+                <input required name="confirmPassword" type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" minLength={10} maxLength={256} className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none" />
                 <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? "Hide confirmed password" : "Show confirmed password"} className="grid size-9 place-items-center rounded-full text-white hover:bg-[#152019] hover:text-lime-200">{showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
               </span>
             </label>
-            <p className="rounded-lg border border-[#497d2c] bg-[#09120c] px-3 py-2.5 text-xs leading-5 text-white/85">Use at least 12 characters with uppercase, lowercase, number, and symbol characters.</p>
+            <p className="rounded-lg border border-[#497d2c] bg-[#09120c] px-3 py-2.5 text-xs leading-5 text-white/85">Minimum 10 characters. Special characters are optional.</p>
             <PendingNotice active={pending} text="Creating account..." />
             {!pending && state.message ? <p role="alert" className={`rounded-lg border px-4 py-3 text-sm ${state.ok ? "border-[#6fbd3f] bg-[#0b1b0e] text-lime-100" : "border-[#a74747] bg-[#220b0b] text-red-100"}`}>{state.message}</p> : null}
             <button type="submit" disabled={pending || state.ok || isFull} aria-busy={pending} className="inline-flex h-14 items-center justify-center gap-2.5 rounded-lg border border-[#b8ff6d] bg-[#7de01e] px-6 text-base font-extrabold text-black shadow-[0_14px_30px_rgba(110,220,25,0.24)] transition hover:bg-[#91ed31] disabled:opacity-60">

@@ -7,8 +7,7 @@ import { invalidateManagerStaffCache, invalidateStoreDisplayCache } from "@/lib/
 import { requireActiveManager, requireAdminClient } from "@/lib/manager/auth";
 import { edibleThcDatabaseFields, type ManagerInventoryProduct } from "@/lib/manager/data";
 import { categoryAllowsCultivationType, categoryAllowsProductImageOnCreate, VAPE_PRODUCT_TYPES, VAPE_STRAIN_TYPES } from "@/lib/manager/options";
-import { managerPasswordIssues } from "@/lib/manager/password-policy";
-import { inventoryAddSchema, productEditSchema, productFormSchema, staffActionSchema, staffCreateSchema, staffResetPasswordSchema, type InventoryAddInput, type ProductEditInput, type ProductFormInput } from "@/lib/manager/validation";
+import { inventoryAddSchema, productEditSchema, productFormSchema, staffActionSchema, staffCreateSchema, staffResetPasswordSchema, temporaryPasswordIssues, type InventoryAddInput, type ProductEditInput, type ProductFormInput } from "@/lib/manager/validation";
 import { normalizeProductImage, productImageObjectPath, type NormalizedProductImage } from "@/lib/product-image-upload";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
 import { requireAssignedStoreId } from "@/lib/store-scope";
@@ -584,7 +583,7 @@ export async function createStaffAccountAction(_prev: ManagerActionState, formDa
       password: text(formData, "password"),
       confirmPassword: text(formData, "confirmPassword")
     });
-    const passwordIssues = managerPasswordIssues(parsed.password, parsed.confirmPassword);
+    const passwordIssues = temporaryPasswordIssues(parsed.password, parsed.confirmPassword);
     if (passwordIssues.length) throw new Error(passwordIssues[0]);
     if (parsed.email === user.email?.trim().toLowerCase()) throw new Error("You cannot create a receptionist account with your manager email address.");
 
