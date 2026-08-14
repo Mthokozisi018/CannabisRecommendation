@@ -150,7 +150,7 @@ export const productEditSchema = z.object({
 
 export const staffCreateSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
-  password: z.string().min(6, "Temporary password must be at least 6 characters").max(256),
+  password: z.string().min(1, "Temporary password is required").max(256),
   confirmPassword: z.string().min(1, "Confirm password is required")
 }).refine((value) => value.password === value.confirmPassword, {
   path: ["confirmPassword"],

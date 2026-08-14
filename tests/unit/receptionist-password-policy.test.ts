@@ -1,26 +1,48 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { managerPasswordIssues } from "@/lib/manager/password-policy";
 import { staffCreateSchema } from "@/lib/manager/validation";
 
+vi.mock("server-only", () => ({}));
+
+const originalSecret = process.env.GREENCHOICE_PASSWORD_FINGERPRINT_SECRET;
+
+beforeEach(() => {
+  process.env.GREENCHOICE_PASSWORD_FINGERPRINT_SECRET = "test-only-temporary-password-secret-1234567890";
+});
+
+afterEach(() => {
+  if (originalSecret === undefined) delete process.env.GREENCHOICE_PASSWORD_FINGERPRINT_SECRET;
+  else process.env.GREENCHOICE_PASSWORD_FINGERPRINT_SECRET = originalSecret;
+});
+
 describe("receptionist password policies", () => {
-  it("allows any character combination for a manager-created temporary password", () => {
+  it("allows any non-empty manager-created temporary password", () => {
     const accepted = staffCreateSchema.safeParse({
       email: "receptionist@example.com",
-      password: "123456",
-      confirmPassword: "123456"
+      password: "1",
+      confirmPassword: "1"
     });
-    const tooShort = staffCreateSchema.safeParse({
+    const empty = staffCreateSchema.safeParse({
       email: "receptionist@example.com",
-      password: "12345",
-      confirmPassword: "12345"
+      password: "",
+      confirmPassword: ""
     });
 
     expect(accepted.success).toBe(true);
-    expect(tooShort.success).toBe(false);
+    expect(empty.success).toBe(false);
+  });
+
+  it("derives a strong server-only Supabase credential from the temporary password", async () => {
+    const { managerCreatedTemporaryAuthPassword } = await import("@/lib/manager/temporary-password");
+    const derived = managerCreatedTemporaryAuthPassword("Receptionist@Example.com", "1");
+
+    expect(derived).toMatch(/^Gc1![a-f0-9]{64}$/);
+    expect(derived).toBe(managerCreatedTemporaryAuthPassword("receptionist@example.com", "1"));
+    expect(derived).not.toContain("receptionist@example.com");
   });
 
   it("retains the strong permanent-password policy used during onboarding", () => {
-    expect(managerPasswordIssues("123456", "123456")).toContain("At least 12 characters");
+    expect(managerPasswordIssues("1", "1")).toContain("At least 12 characters");
     expect(managerPasswordIssues("SecureReceptionist1!", "SecureReceptionist1!")).toEqual([]);
   });
 });

@@ -7,6 +7,7 @@ import { invalidateManagerStaffCache, invalidateStoreDisplayCache } from "@/lib/
 import { requireActiveManager, requireAdminClient } from "@/lib/manager/auth";
 import { edibleThcDatabaseFields, type ManagerInventoryProduct } from "@/lib/manager/data";
 import { categoryAllowsCultivationType, categoryAllowsProductImageOnCreate, VAPE_PRODUCT_TYPES, VAPE_STRAIN_TYPES } from "@/lib/manager/options";
+import { managerCreatedTemporaryAuthPassword } from "@/lib/manager/temporary-password";
 import { inventoryAddSchema, productEditSchema, productFormSchema, staffActionSchema, staffCreateSchema, staffResetPasswordSchema, type InventoryAddInput, type ProductEditInput, type ProductFormInput } from "@/lib/manager/validation";
 import { normalizeProductImage, productImageObjectPath, type NormalizedProductImage } from "@/lib/product-image-upload";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
@@ -598,7 +599,7 @@ export async function createStaffAccountAction(_prev: ManagerActionState, formDa
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: parsed.email,
-      password: parsed.password,
+      password: managerCreatedTemporaryAuthPassword(parsed.email, parsed.password),
       email_confirm: true,
       app_metadata: {
         greenchoice_role: "receptionist",
