@@ -10,6 +10,12 @@ export function greenChoiceEnvironment(): GreenChoiceEnvironment {
     }
     return value;
   }
+  if (!value && process.env.VERCEL_ENV === "preview") {
+    return "staging";
+  }
+  if (!value && process.env.VERCEL_ENV === "production") {
+    return "production";
+  }
   if (process.env.NODE_ENV === "production") {
     throw new Error("GREENCHOICE_ENV must identify staging or production.");
   }

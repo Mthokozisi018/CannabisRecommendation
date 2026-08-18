@@ -180,6 +180,8 @@ describe("critical repository security contracts", () => {
     expect(source("lib/security.ts")).toContain('if (!origin) throw new Error("Request origin is required.")');
     expect(source("lib/app-url.ts")).toContain("The production application URL is not configured");
     expect(source("lib/environment.ts")).toContain("UPSTASH_REDIS_REST_URL");
+    expect(source("lib/environment.ts")).toContain('process.env.VERCEL_ENV === "preview"');
+    expect(source("lib/environment.ts")).toContain('return "staging"');
     expect(source("lib/rate-limit.ts")).toContain("if (process.env.NODE_ENV === \"production\") throw new RateLimitUnavailableError()");
   });
 
@@ -196,8 +198,8 @@ describe("critical repository security contracts", () => {
     expect(customerMigration).not.toMatch(/grant\s+(?:select,\s*)?(?:insert|update|delete)[^;]*public\.carts[^;]*to authenticated/i);
     expect(customerMigration).not.toMatch(/grant\s+(?:select,\s*)?(?:insert|update|delete)[^;]*public\.cart_items[^;]*to authenticated/i);
 
-    expect(serverGrantMigration).toContain("grant select, insert, update\n  on table public.carts\n  to service_role");
-    expect(serverGrantMigration).toContain("grant select, insert, update, delete\n  on table public.cart_items\n  to service_role");
+    expect(serverGrantMigration).toMatch(/grant select, insert, update\s+on table public\.carts\s+to service_role/i);
+    expect(serverGrantMigration).toMatch(/grant select, insert, update, delete\s+on table public\.cart_items\s+to service_role/i);
     expect(serverGrantMigration).not.toMatch(/grant\s+[^;]*delete[^;]*public\.carts/i);
     expect(serverGrantMigration).not.toMatch(/to anon/i);
     expect(serverGrantMigration).not.toMatch(/to authenticated/i);
