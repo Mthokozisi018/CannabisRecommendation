@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, CreditCard, Link2, Send, ShieldCheck, Sparkles, Store, UserPlus, UsersRound } from "lucide-react";
+import { CheckCircle2, CreditCard, Link2, Send, ShieldCheck, Sparkles, Store, UserPlus, UserRoundCog, UsersRound } from "lucide-react";
 import { GlassPanel } from "@/components/GreenChoiceDashboard";
 import type { AdminStats } from "@/lib/admin/data";
 
@@ -21,6 +21,12 @@ const adminCards = [
     title: "Connect Manager",
     text: "Connect a confirmed Supabase Auth user to manager onboarding.",
     icon: Link2
+  },
+  {
+    href: "/dashboard/admin/test-customer",
+    title: "Test Customer",
+    text: "Prepare and reset the dedicated customer account for internal QA.",
+    icon: UserRoundCog
   },
   {
     href: "/dashboard/admin/payments",
@@ -71,7 +77,7 @@ export function AdminDashboardHome({ stats }: { stats: AdminStats }) {
         <p className="mt-4 text-xl text-white/75">Platform overview and management.</p>
       </section>
 
-      <section className="grid gap-7 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-7 md:grid-cols-2 xl:grid-cols-5">
         {adminCards.map((card) => {
           const Icon = card.icon;
           return (

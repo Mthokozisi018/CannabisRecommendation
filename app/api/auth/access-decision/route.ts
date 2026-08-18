@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { decideDashboardAccess, getDashboardSession, restrictedPathForSession } from "@/lib/dashboard-session";
+import { getCustomerSession } from "@/lib/customer/auth";
 import { logServerEvent } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
 import { managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
@@ -23,6 +24,11 @@ async function auditAccess(action: string, details: Record<string, unknown>, rec
 }
 
 export async function GET() {
+  const customer = await getCustomerSession();
+  if (customer?.profile.status === "active") {
+    return NextResponse.json({ allowed: true, role: "customer", redirectTo: "/customer" }, { headers: privateHeaders });
+  }
+
   const session = await getDashboardSession();
   if (!session) {
     await auditAccess("access_denied_missing_session", { reason: "missing_session" });

@@ -113,7 +113,7 @@ export function ManagerDashboardActions({
   titleOverrides?: Partial<Record<ManagerActionKey, string>>;
 }) {
   return (
-    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[884px] grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:gap-5">
+    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[884px] grid-cols-2 justify-items-center gap-5 sm:gap-6 lg:grid-cols-4 lg:gap-5">
       {cards.map(({ key, ...card }) => (
         <ManagerActionCard
           key={key}

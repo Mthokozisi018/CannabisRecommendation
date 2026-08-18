@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
+import { getCustomerSessionForVerifiedUser } from "@/lib/customer/auth";
 import { decideDashboardAccess, getDashboardSessionForVerifiedUser, restrictedPathForSession } from "@/lib/dashboard-session";
 import { logServerEvent, reportServerException } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
@@ -46,6 +47,16 @@ export async function POST(request: Request) {
     if (error || !data.user) {
       await logServerEvent("warn", "login_failed", { reason: "invalid_credentials", fallback: "form_post" });
       return loginRedirectForError(request, "invalid");
+    }
+
+    const customerSession = await getCustomerSessionForVerifiedUser(data.user);
+    if (customerSession) {
+      if (customerSession.profile.status === "pending_verification") return redirectTo(request, "/customer/verify-email");
+      if (customerSession.profile.status !== "active") {
+        await supabase.auth.signOut();
+        return redirectTo(request, "/customer/account-unavailable");
+      }
+      return redirectTo(request, "/customer");
     }
 
     const session = await getDashboardSessionForVerifiedUser(data.user);

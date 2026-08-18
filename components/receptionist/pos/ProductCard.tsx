@@ -141,7 +141,7 @@ export const ProductCard = memo(function ProductCard({
       <div className={compactStrainCard ? "space-y-1" : ""}>
         <div className={edibleCard ? "flex items-start justify-between gap-3" : ""}>
           <div className="min-w-0">
-            <p className={`gc-pos-product-name line-clamp-2 font-extrabold ${compactStrainCard ? "text-base leading-snug" : regularCard ? "text-base leading-tight" : "text-lg"}`}>{product.name}</p>
+            <p className={`gc-pos-product-name line-clamp-2 font-extrabold text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.55)] ${compactStrainCard ? "text-base leading-snug" : regularCard ? "text-base leading-tight" : "text-lg"}`}>{product.name}</p>
             {compactStrainCard ? null : product.sizeLabel ? <p className={`gc-pos-product-size ${edibleCard ? "mt-1 min-h-5" : "mt-2 min-h-6"} text-sm text-white/72`}>{product.sizeLabel}</p> : edibleCard ? null : <div className="mt-2 min-h-6" />}
           </div>
         </div>

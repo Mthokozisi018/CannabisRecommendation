@@ -11,6 +11,8 @@ function fieldErrorFromSearch(error: string | null) {
   if (error === "unauthorized") return "You are not authorized to access that dashboard.";
   if (error === "unavailable") return "GreenChoice authentication is not reachable. Check the Supabase configuration.";
   if (error === "session-expired") return "Your session expired because of inactivity. Please sign in again.";
+  if (error === "verification") return "The verification link is invalid or expired. Request a new verification email.";
+  if (error === "customer-account") return "Sign in with your customer account to continue.";
   if (error) return "Invalid email or password.";
   return "";
 }

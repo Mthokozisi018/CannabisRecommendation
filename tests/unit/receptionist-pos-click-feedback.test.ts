@@ -83,6 +83,13 @@ describe("Receptionist POS click feedback", () => {
     expect(markup).not.toContain("gc-pos-product-info-button");
   });
 
+  it("keeps product names readable on dark customer and POS product cards", () => {
+    const card = source("components/receptionist/pos/ProductCard.tsx");
+
+    expect(card).toContain("gc-pos-product-name line-clamp-2 font-extrabold text-white");
+    expect(card).toContain("drop-shadow-[0_2px_5px_rgba(0,0,0,0.55)]");
+  });
+
   it("uses one non-blocking notification slot with auto-dismiss timers", () => {
     const pos = source("components/receptionist/pos/ReceptionistPOS.tsx");
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
+import { getCustomerSessionForVerifiedUser } from "@/lib/customer/auth";
 import { decideDashboardAccess, getDashboardSessionForVerifiedUser } from "@/lib/dashboard-session";
 import { logServerEvent, reportServerException } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
@@ -39,6 +40,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401, headers: privateHeaders });
     }
     await logServerEvent("info", "login_supabase_session_created", { authUserId: data.user.id });
+
+    const customerSession = await getCustomerSessionForVerifiedUser(data.user);
+    if (customerSession) {
+      if (customerSession.profile.status === "pending_verification") {
+        return NextResponse.json({ error: "Verify your email address before signing in.", redirectTo: "/customer/verify-email" }, { status: 403, headers: privateHeaders });
+      }
+      if (customerSession.profile.status !== "active") {
+        await supabase.auth.signOut();
+        return NextResponse.json({ error: "This customer account is currently unavailable." }, { status: 403, headers: privateHeaders });
+      }
+      return NextResponse.json({ authenticated: true, role: "customer", redirectTo: "/customer" }, { headers: privateHeaders });
+    }
 
     const session = await getDashboardSessionForVerifiedUser(data.user);
     if (!session) {

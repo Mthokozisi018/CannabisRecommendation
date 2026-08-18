@@ -183,6 +183,35 @@ describe("critical repository security contracts", () => {
     expect(source("lib/rate-limit.ts")).toContain("if (process.env.NODE_ENV === \"production\") throw new RateLimitUnavailableError()");
   });
 
+  it("grants only the server role the customer cart write privileges required by the API", () => {
+    const baseMigration = source("supabase/migrations/20260602160000_greenchoice_mvp.sql");
+    const customerMigration = source("supabase/migrations/20260814090000_customer_portal.sql");
+    const serverGrantMigration = source("supabase/migrations/20260817150042_grant_customer_cart_server_access.sql");
+    const cartRoute = source("app/api/customer/cart/route.ts");
+    const cartReader = source("lib/customer/cart.ts");
+
+    expect(baseMigration).toContain("alter table public.carts enable row level security");
+    expect(baseMigration).toContain("alter table public.cart_items enable row level security");
+    expect(customerMigration).toContain("grant select on public.carts, public.cart_items to authenticated");
+    expect(customerMigration).not.toMatch(/grant\s+(?:select,\s*)?(?:insert|update|delete)[^;]*public\.carts[^;]*to authenticated/i);
+    expect(customerMigration).not.toMatch(/grant\s+(?:select,\s*)?(?:insert|update|delete)[^;]*public\.cart_items[^;]*to authenticated/i);
+
+    expect(serverGrantMigration).toContain("grant select, insert, update\n  on table public.carts\n  to service_role");
+    expect(serverGrantMigration).toContain("grant select, insert, update, delete\n  on table public.cart_items\n  to service_role");
+    expect(serverGrantMigration).not.toMatch(/grant\s+[^;]*delete[^;]*public\.carts/i);
+    expect(serverGrantMigration).not.toMatch(/to anon/i);
+    expect(serverGrantMigration).not.toMatch(/to authenticated/i);
+
+    expect(cartReader).toContain("createSupabaseAdminClient()");
+    expect(cartReader).toContain('.from("carts")');
+    expect(cartRoute).toContain("createSupabaseAdminClient()");
+    expect(cartRoute).toContain('.from("carts").insert');
+    expect(cartRoute).toContain('.from("carts").update');
+    expect(cartRoute).toContain('.from("cart_items").insert');
+    expect(cartRoute).toContain('.from("cart_items").update');
+    expect(cartRoute).toContain('.from("cart_items").delete');
+  });
+
   it("keeps manager audit scope server-derived and reactivation slot checks database-authoritative", () => {
     const actions = source("app/dashboard/manager/actions.ts");
     const migration = source("supabase/migrations/20260804140000_direct_receptionist_accounts.sql");
