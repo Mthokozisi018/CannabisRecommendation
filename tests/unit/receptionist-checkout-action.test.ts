@@ -6,6 +6,8 @@ const rpcMock = vi.fn();
 const invalidateStoreDisplayCacheMock = vi.fn();
 const revalidatePathMock = vi.fn();
 const afterMock = vi.fn((task: () => unknown) => task());
+const cookieSetMock = vi.fn();
+const cookieGetMock = vi.fn(() => ({ value: "66666666-6666-4666-8666-666666666666" }));
 
 vi.mock("@/lib/security", () => ({
   assertRateLimit: vi.fn().mockResolvedValue({
@@ -40,6 +42,13 @@ vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock
 }));
 
+vi.mock("next/headers", () => ({
+  cookies: vi.fn().mockResolvedValue({
+    get: cookieGetMock,
+    set: cookieSetMock
+  })
+}));
+
 vi.mock("next/server", () => ({
   after: afterMock
 }));
@@ -47,6 +56,7 @@ vi.mock("next/server", () => ({
 describe("receptionist checkout action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    cookieGetMock.mockReturnValue({ value: "66666666-6666-4666-8666-666666666666" });
     rpcMock.mockResolvedValue({
       data: {
         sale_id: "33333333-3333-4333-8333-333333333333",
@@ -58,7 +68,7 @@ describe("receptionist checkout action", () => {
     });
   });
 
-  it("checks out products added to the cart through the atomic Supabase sale RPC", async () => {
+  it("checks out products with the selected customer through the atomic Supabase sale RPC", async () => {
     const { checkoutReceptionistSaleAction } = await import("@/app/dashboard/receptionist/actions");
 
     const result = await checkoutReceptionistSaleAction({
@@ -77,9 +87,10 @@ describe("receptionist checkout action", () => {
       message: "Sale completed successfully.",
       saleId: "33333333-3333-4333-8333-333333333333"
     });
-    expect(rpcMock).toHaveBeenCalledWith("complete_receptionist_sale_v2", {
+    expect(rpcMock).toHaveBeenCalledWith("complete_receptionist_sale_v3", {
       p_checkout_id: "44444444-4444-4444-8444-444444444444",
       p_auth_user_id: "11111111-1111-4111-8111-111111111111",
+      p_customer_id: "66666666-6666-4666-8666-666666666666",
       p_items: [
         {
           productId: "55555555-5555-4555-8555-555555555555",
@@ -88,6 +99,11 @@ describe("receptionist checkout action", () => {
         }
       ]
     });
+    expect(cookieSetMock).toHaveBeenCalledWith(
+      "greenchoice_pos_checkout_customer",
+      "",
+      expect.objectContaining({ maxAge: 0, path: "/dashboard/receptionist" })
+    );
     expect(afterMock).toHaveBeenCalledTimes(1);
     await Promise.resolve();
     expect(invalidateStoreDisplayCacheMock).toHaveBeenCalledWith("22222222-2222-4222-8222-222222222222");
@@ -119,5 +135,24 @@ describe("receptionist checkout action", () => {
       ok: false,
       message: "The cart changed while checkout was processing. Review the cart and try again."
     });
+  });
+
+  it("blocks checkout when no customer has been selected", async () => {
+    const { checkoutReceptionistSaleAction } = await import("@/app/dashboard/receptionist/actions");
+    cookieGetMock.mockReturnValue(undefined as never);
+
+    const result = await checkoutReceptionistSaleAction({
+      checkoutId: "44444444-4444-4444-8444-444444444444",
+      items: [
+        {
+          productId: "55555555-5555-4555-8555-555555555555",
+          quantity: 1,
+          unitPrice: 150
+        }
+      ]
+    });
+
+    expect(result).toEqual({ ok: false, message: "Select a customer before completing checkout." });
+    expect(rpcMock).not.toHaveBeenCalled();
   });
 });
