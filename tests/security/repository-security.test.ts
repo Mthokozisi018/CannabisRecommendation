@@ -133,16 +133,29 @@ describe("critical repository security contracts", () => {
     expect(accountFlow).not.toContain("Your password was changed successfully");
   });
 
-  it("binds checkout to trusted server identity and revokes the obsolete RPC", () => {
+  it("binds customer-linked checkout to trusted server identity and store scope while preserving the hardened sale RPC", () => {
     const action = source("app/dashboard/receptionist/actions.ts");
-    const migration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");
+    const hardenedMigration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");
+    const customerMigration = source("supabase/migrations/20260819150000_pos_customers_and_sales_overview.sql");
 
     expect(action).toContain("p_auth_user_id: staff.id");
-    expect(action).toContain('rpc("complete_receptionist_sale_v2"');
-    expect(migration).toContain("where coalesce(sp.auth_user_id, sp.user_id) = p_auth_user_id");
-    expect(migration).toContain("grant execute on function public.complete_receptionist_sale_v2(uuid, uuid, jsonb) to service_role");
-    expect(migration).toContain("revoke all on function public.complete_receptionist_sale(uuid, uuid, jsonb)");
-    expect(migration).toContain("pg_advisory_xact_lock(hashtextextended(p_checkout_id::text, 0))");
+    expect(action).toContain("p_customer_id: customer.data.customerId");
+    expect(action).toContain('rpc("complete_receptionist_sale_v3"');
+    expect(action).toContain('.eq("store_id", staff.storeId)');
+
+    expect(customerMigration).toContain("where coalesce(sp.auth_user_id, sp.user_id) = p_auth_user_id");
+    expect(customerMigration).toContain("scr.store_id = v_store_id");
+    expect(customerMigration).toContain("scr.customer_id = p_customer_id");
+    expect(customerMigration).toContain("from public.complete_receptionist_sale_v2(p_checkout_id, p_auth_user_id, p_items) r");
+    expect(customerMigration).toContain("grant execute on function public.complete_receptionist_sale_v3(uuid, uuid, uuid, jsonb) to service_role");
+    expect(customerMigration).toContain("revoke all on function public.complete_receptionist_sale_v3(uuid, uuid, uuid, jsonb) from public, anon, authenticated");
+    expect(customerMigration).toContain("revoke all on table public.pos_customers from public, anon, authenticated");
+    expect(customerMigration).toContain("revoke all on table public.store_customer_registrations from public, anon, authenticated");
+
+    expect(hardenedMigration).toContain("where coalesce(sp.auth_user_id, sp.user_id) = p_auth_user_id");
+    expect(hardenedMigration).toContain("grant execute on function public.complete_receptionist_sale_v2(uuid, uuid, jsonb) to service_role");
+    expect(hardenedMigration).toContain("revoke all on function public.complete_receptionist_sale(uuid, uuid, jsonb)");
+    expect(hardenedMigration).toContain("pg_advisory_xact_lock(hashtextextended(p_checkout_id::text, 0))");
   });
 
   it("preserves restricted store state during manager registration", () => {
