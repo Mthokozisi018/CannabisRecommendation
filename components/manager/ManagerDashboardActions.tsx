@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Boxes, ClipboardList, ShoppingCart, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, Boxes, ClipboardList, ReceiptText, ShoppingCart, UsersRound, type LucideIcon } from "lucide-react";
 
 type CardTone = "green" | "purple" | "blue" | "amber";
-type ManagerActionKey = "products" | "inventory" | "staff" | "serve";
+type ManagerActionKey = "products" | "inventory" | "staff" | "serve" | "sales";
 
 type ManagerCard = {
   key: ManagerActionKey;
@@ -40,6 +40,13 @@ const cards: ManagerCard[] = [
     href: "/dashboard/receptionist",
     icon: ShoppingCart,
     tone: "amber"
+  },
+  {
+    key: "sales",
+    title: "Sales Overview",
+    href: "/dashboard/manager/sales",
+    icon: ReceiptText,
+    tone: "green"
   }
 ];
 
@@ -113,7 +120,7 @@ export function ManagerDashboardActions({
   titleOverrides?: Partial<Record<ManagerActionKey, string>>;
 }) {
   return (
-    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[884px] grid-cols-2 justify-items-center gap-5 sm:gap-6 lg:grid-cols-4 lg:gap-5">
+    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[1120px] grid-cols-2 justify-items-center gap-5 sm:gap-6 md:grid-cols-3 xl:grid-cols-5 xl:gap-5">
       {cards.map(({ key, ...card }) => (
         <ManagerActionCard
           key={key}
