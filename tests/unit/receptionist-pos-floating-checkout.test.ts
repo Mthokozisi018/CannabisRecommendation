@@ -11,6 +11,8 @@ describe("Receptionist POS floating checkout shortcut", () => {
     const pos = source("components/receptionist/pos/ReceptionistPOS.tsx");
 
     expect(pos).toContain("FloatingCheckoutButton");
+    expect(pos).toContain("CustomerCheckoutDialog");
+    expect(pos).toContain("Select a customer before completing checkout.");
     expect(pos).toContain('id="current-sale"');
     expect(pos).toContain("checkoutSectionRef");
     expect(pos).toContain("scrollIntoView");

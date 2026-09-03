@@ -1,0 +1,3 @@
+export default function ManagerSalesLoading() {
+  return <main className="min-h-screen bg-[#071008] px-4 py-16 text-white sm:px-8"><div role="status" className="mx-auto max-w-[1280px] animate-pulse"><div className="h-5 w-52 rounded bg-[#29402e]" /><div className="mt-6 h-12 w-80 max-w-full rounded bg-[#29402e]" /><div className="mt-8 h-32 rounded-2xl border-[3px] border-[#405347] bg-[#0a100c]" /><div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="h-36 rounded-2xl border-[3px] border-[#405347] bg-[#0a100c]" />)}</div><div className="mt-6 h-80 rounded-2xl border-[3px] border-[#405347] bg-[#0a100c]" /><span className="sr-only">Loading Sales Overview...</span></div></main>;
+}

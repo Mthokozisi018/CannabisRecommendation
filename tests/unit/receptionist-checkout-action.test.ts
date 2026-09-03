@@ -63,6 +63,7 @@ describe("receptionist checkout action", () => {
 
     const result = await checkoutReceptionistSaleAction({
       checkoutId: "44444444-4444-4444-8444-444444444444",
+      customerId: "66666666-6666-4666-8666-666666666666",
       items: [
         {
           productId: "55555555-5555-4555-8555-555555555555",
@@ -80,6 +81,7 @@ describe("receptionist checkout action", () => {
     expect(rpcMock).toHaveBeenCalledWith("complete_receptionist_sale_v2", {
       p_checkout_id: "44444444-4444-4444-8444-444444444444",
       p_auth_user_id: "11111111-1111-4111-8111-111111111111",
+      p_customer_id: "66666666-6666-4666-8666-666666666666",
       p_items: [
         {
           productId: "55555555-5555-4555-8555-555555555555",
@@ -106,6 +108,7 @@ describe("receptionist checkout action", () => {
 
     const result = await checkoutReceptionistSaleAction({
       checkoutId: "44444444-4444-4444-8444-444444444444",
+      customerId: "66666666-6666-4666-8666-666666666666",
       items: [
         {
           productId: "55555555-5555-4555-8555-555555555555",

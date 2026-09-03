@@ -2,6 +2,7 @@ import type { Route } from "next";
 import type { ReceptionistCategory, ReceptionistProduct } from "@/lib/receptionist/products";
 import type { CheckoutInput, CheckoutResult } from "@/app/dashboard/receptionist/actions";
 import type { DashboardAccountProfile } from "@/components/account/account-types";
+import type { ReceptionistPOSCustomer } from "@/lib/receptionist/customers";
 
 export type ReceptionistCheckoutAction = (input: CheckoutInput) => Promise<CheckoutResult>;
 
@@ -21,6 +22,8 @@ export type POSMessage = {
   tone: "success" | "error";
   text: string;
 };
+
+export type SelectedPOSCustomer = ReceptionistPOSCustomer;
 
 export type ReceptionistPOSProps = {
   products: ReceptionistProduct[];

@@ -9,12 +9,13 @@ import { Money } from "@/components/GreenChoiceDashboard";
 import { isProductCategory, PRODUCT_SUBCATEGORIES } from "@/lib/manager/options";
 import type { ReceptionistCategory, ReceptionistProduct } from "@/lib/receptionist/products";
 import { CartPanel } from "@/components/receptionist/pos/CartPanel";
+import { CustomerCheckoutDialog } from "@/components/receptionist/pos/CustomerCheckoutDialog";
 import { FilterPanel } from "@/components/receptionist/pos/FilterPanel";
 import { FooterTimestamp } from "@/components/receptionist/pos/FooterTimestamp";
 import { ProductDescriptionModal } from "@/components/receptionist/pos/ProductDescriptionModal";
 import { ProductGrid } from "@/components/receptionist/pos/ProductGrid";
 import { getPOSProductCartDetails } from "@/components/receptionist/pos/product-display";
-import type { CartItem, POSMessage, ReceptionistPOSProps, SubcategoryOption } from "@/components/receptionist/pos/pos-types";
+import type { CartItem, POSMessage, ReceptionistPOSProps, SelectedPOSCustomer, SubcategoryOption } from "@/components/receptionist/pos/pos-types";
 import { allowedCategorySlugs, canAddProduct, categoryUsesSecondaryFilter, cultivationKey, displaySubcategory, getCultivationOptions, normalize, preferredSubcategoryOrder, resolveProductSelection, subcategoryKey } from "@/components/receptionist/pos/pos-helpers";
 
 const POS_SELECTION_STORAGE_KEY = "greenchoice:receptionist-pos-selection";
@@ -48,6 +49,10 @@ function EmptyState({ title, body, detail }: { title: string; body: string; deta
       {detail ? <p className="mx-auto mt-4 max-w-2xl rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/45">{detail}</p> : null}
     </div>
   );
+}
+
+function moneyLabel(value: number) {
+  return new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" }).format(value);
 }
 
 function FloatingCheckoutButton({
@@ -183,6 +188,8 @@ export function ReceptionistPOS({
   const [notice, setNotice] = useState<POSNotice | null>(null);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
   const [checkoutId, setCheckoutId] = useState(() => crypto.randomUUID());
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectedPOSCustomer | null>(null);
   const [isPending, startTransition] = useTransition();
   const contentGridRef = useRef<HTMLDivElement>(null);
   const strainPanelRef = useRef<HTMLDivElement>(null);
@@ -375,11 +382,13 @@ export function ReceptionistPOS({
   const cancelSale = useCallback(() => {
     setCart([]);
     setSelectedProductId(null);
+    setSelectedCustomer(null);
+    setCustomerDialogOpen(false);
     setCheckoutId(crypto.randomUUID());
     setMessage(null);
   }, []);
 
-  const checkout = useCallback(() => {
+  const openCheckoutCustomerSelection = useCallback(() => {
     if (isPending) return;
     if (cart.length === 0) {
       setMessage({ tone: "error", text: "Cart is empty." });
@@ -393,8 +402,32 @@ export function ReceptionistPOS({
     }
 
     if (isDemo && !checkoutAction) {
+      setSelectedCustomer({
+        id: "00000000-0000-4000-8000-000000000001",
+        firstName: "Demo",
+        surname: "Customer",
+        fullName: "Demo Customer",
+        phoneNumber: "082 000 0000"
+      });
+    }
+
+    setMessage(null);
+    setCustomerDialogOpen(true);
+  }, [cart, checkoutAction, isDemo, isPending]);
+
+  const completeCheckout = useCallback(() => {
+    if (isPending) return;
+    if (!selectedCustomer) {
+      setMessage({ tone: "error", text: "Select a customer before completing checkout." });
+      setCustomerDialogOpen(true);
+      return;
+    }
+
+    if (isDemo && !checkoutAction) {
       setCart([]);
       setSelectedProductId(null);
+      setSelectedCustomer(null);
+      setCustomerDialogOpen(false);
       setCheckoutId(crypto.randomUUID());
       setNotice({ id: ++noticeIdRef.current, tone: "success", text: "Sale completed", dismissible: true, durationMs: SALE_COMPLETE_FEEDBACK_MS });
       return;
@@ -404,6 +437,7 @@ export function ReceptionistPOS({
       const completeSale = checkoutAction ?? checkoutReceptionistSaleAction;
       const result = await completeSale({
         checkoutId,
+        customerId: selectedCustomer.id,
         items: cart.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice }))
       });
 
@@ -414,10 +448,12 @@ export function ReceptionistPOS({
 
       setCart([]);
       setSelectedProductId(null);
+      setSelectedCustomer(null);
+      setCustomerDialogOpen(false);
       setCheckoutId(crypto.randomUUID());
       setNotice({ id: ++noticeIdRef.current, tone: "success", text: "Sale completed", dismissible: true, durationMs: SALE_COMPLETE_FEEDBACK_MS });
     });
-  }, [cart, checkoutAction, checkoutId, isDemo, isPending, startTransition]);
+  }, [cart, checkoutAction, checkoutId, isDemo, isPending, selectedCustomer, startTransition]);
 
   const dismissNotice = useCallback(() => {
     setNotice(null);
@@ -506,7 +542,7 @@ export function ReceptionistPOS({
             onClearCart={cancelSale}
             onChangeQuantity={changeQuantity}
             onRemoveItem={removeItem}
-            onCheckout={checkout}
+            onCheckout={openCheckoutCustomerSelection}
           />
         </div>
       </div>
@@ -517,6 +553,17 @@ export function ReceptionistPOS({
       </footer>
 
       <ProductDescriptionModal product={selectedProduct} onClose={() => setSelectedProductId(null)} />
+      {customerDialogOpen ? (
+        <CustomerCheckoutDialog
+          open
+          selectedCustomer={selectedCustomer}
+          totalLabel={moneyLabel(subtotal)}
+          isCompleting={isPending}
+          onClose={() => setCustomerDialogOpen(false)}
+          onSelectCustomer={setSelectedCustomer}
+          onCompleteSale={completeCheckout}
+        />
+      ) : null}
       <FloatingCheckoutButton visible={checkoutShortcutVisible} cartCount={cartCount} onClick={goToCheckoutSection} />
       <POSNotification notice={notice} onDismiss={dismissNotice} />
     </main>

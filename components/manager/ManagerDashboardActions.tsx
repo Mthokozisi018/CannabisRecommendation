@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Boxes, ClipboardList, ShoppingCart, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, Boxes, ClipboardList, ShoppingCart, UsersRound, type LucideIcon } from "lucide-react";
 
-type CardTone = "green" | "purple" | "blue" | "amber";
-type ManagerActionKey = "products" | "inventory" | "staff" | "serve";
+type CardTone = "green" | "purple" | "blue" | "amber" | "teal";
+type ManagerActionKey = "products" | "inventory" | "staff" | "sales" | "serve";
 
 type ManagerCard = {
   key: ManagerActionKey;
@@ -12,7 +12,7 @@ type ManagerCard = {
   tone: CardTone;
 };
 
-const cards: ManagerCard[] = [
+const coreCards: ManagerCard[] = [
   {
     key: "products",
     title: "Add Stock",
@@ -33,6 +33,13 @@ const cards: ManagerCard[] = [
     href: "/dashboard/manager/staff",
     icon: UsersRound,
     tone: "blue"
+  },
+  {
+    key: "sales",
+    title: "Sales Overview",
+    href: "/dashboard/manager/sales",
+    icon: BarChart3,
+    tone: "teal"
   },
   {
     key: "serve",
@@ -71,6 +78,13 @@ const toneStyles: Record<CardTone, { card: string; iconRing: string; icon: strin
     icon: "text-[#ffc64a]",
     underline: "bg-[#ffc64a]",
     arrow: "border-[#ffc64a]/35 bg-[#ffc64a]/18 text-white shadow-[0_0_28px_rgba(255,198,74,0.24)]"
+  },
+  teal: {
+    card: "border-[#46dfbf]/45 bg-[linear-gradient(145deg,rgba(13,67,61,0.74),rgba(5,19,18,0.95))] shadow-[0_24px_62px_rgba(32,190,165,0.18)] hover:border-[#68f5db]/75",
+    iconRing: "border-[#46dfbf]/80 shadow-[0_0_32px_rgba(70,223,191,0.2)]",
+    icon: "text-[#68f5db]",
+    underline: "bg-[#68f5db]",
+    arrow: "border-[#68f5db]/35 bg-[#68f5db]/18 text-white shadow-[0_0_28px_rgba(104,245,219,0.24)]"
   }
 };
 
@@ -107,13 +121,17 @@ function ManagerActionCard({ href, icon: Icon, title, tone }: Omit<ManagerCard, 
 
 export function ManagerDashboardActions({
   hrefOverrides,
-  titleOverrides
+  titleOverrides,
+  includeSales = false
 }: {
   hrefOverrides?: Partial<Record<ManagerActionKey, string>>;
   titleOverrides?: Partial<Record<ManagerActionKey, string>>;
+  includeSales?: boolean;
 }) {
+  const cards = includeSales ? coreCards : coreCards.filter((card) => card.key !== "sales");
+
   return (
-    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[884px] grid-cols-2 justify-items-center gap-5 sm:gap-6 lg:grid-cols-4 lg:gap-5">
+    <nav aria-label="Manager dashboard actions" className={`gc-manager-actions-grid mx-auto mt-8 grid w-full grid-cols-2 justify-items-center gap-5 sm:gap-6 ${includeSales ? "max-w-[1105px] md:grid-cols-3 xl:grid-cols-5" : "max-w-[884px] lg:grid-cols-4"} lg:gap-5`}>
       {cards.map(({ key, ...card }) => (
         <ManagerActionCard
           key={key}

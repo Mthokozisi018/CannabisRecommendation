@@ -67,7 +67,7 @@ export default async function ManagerDashboardPage() {
           </Suspense>
         ) : null}
         <ManagerPOSRoutePreloader />
-        <ManagerDashboardActions />
+        <ManagerDashboardActions includeSales />
       </section>
     </main>
   );
