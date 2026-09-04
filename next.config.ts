@@ -4,6 +4,18 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   typedRoutes: true,
   output: "standalone",
+  outputFileTracingIncludes: {
+    "/dashboard/manager/inventory": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*"
+    ],
+    "/dashboard/manager/inventory/**": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*"
+    ]
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {
     root: process.cwd()
