@@ -7,6 +7,8 @@ import { refreshManagerSalesReport } from "@/app/dashboard/manager/sales/actions
 import { DashboardBackdrop } from "@/components/GreenChoiceDashboard";
 import type { ManagerSalesReport, SalesReportFilters } from "@/lib/manager/sales-overview";
 
+const AUTO_REFRESH_MS = 10_000;
+
 function formatRand(value: number) {
   return `R ${value.toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\u00a0/g, " ")}`;
 }
@@ -46,9 +48,16 @@ export function ManagerSalesOverviewUI({ initialReport, storeName, managerName }
   const [exportState, setExportState] = useState<"idle" | "working" | "error">("idle");
   const [isPending, startTransition] = useTransition();
   const requestId = useRef(0);
+  const filtersRef = useRef(filters);
+  const searchDraftRef = useRef(searchDraft);
+  const autoRefreshBusy = useRef(false);
+
+  useEffect(() => { filtersRef.current = filters; }, [filters]);
+  useEffect(() => { searchDraftRef.current = searchDraft; }, [searchDraft]);
 
   function load(next: SalesReportFilters) {
     const id = ++requestId.current;
+    filtersRef.current = next;
     setFilters(next);
     setLoadError("");
     startTransition(async () => {
@@ -57,9 +66,42 @@ export function ManagerSalesOverviewUI({ initialReport, storeName, managerName }
       if (!result.ok) { setLoadError(result.message); return; }
       setReport(result.report);
       setFilters(result.report.filters);
+      filtersRef.current = result.report.filters;
       setExpandedId((current) => result.report.transactions.some((transaction) => transaction.saleId === current) ? current : null);
     });
   }
+
+  async function refreshLatestReport() {
+    if (autoRefreshBusy.current || document.visibilityState !== "visible") return;
+    if (searchDraftRef.current !== filtersRef.current.search) return;
+    autoRefreshBusy.current = true;
+    const id = ++requestId.current;
+    try {
+      const result = await refreshManagerSalesReport(filtersRef.current);
+      if (id !== requestId.current || !result.ok) return;
+      setReport(result.report);
+      setFilters(result.report.filters);
+      filtersRef.current = result.report.filters;
+      setExpandedId((current) => result.report.transactions.some((transaction) => transaction.saleId === current) ? current : null);
+    } finally {
+      autoRefreshBusy.current = false;
+    }
+  }
+
+  useEffect(() => {
+    const refresh = () => { void refreshLatestReport(); };
+    const onVisibilityChange = () => { if (document.visibilityState === "visible") refresh(); };
+    const timer = window.setInterval(refresh, AUTO_REFRESH_MS);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+    // Background refresh intentionally reads the latest values from refs so the interval is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
