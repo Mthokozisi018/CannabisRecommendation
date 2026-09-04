@@ -12,6 +12,10 @@ type ManagerCard = {
   tone: CardTone;
 };
 
+type ManagerActionCardProps = Omit<ManagerCard, "key"> & {
+  nativeNavigation?: boolean;
+};
+
 const coreCards: ManagerCard[] = [
   {
     key: "products",
@@ -88,16 +92,11 @@ const toneStyles: Record<CardTone, { card: string; iconRing: string; icon: strin
   }
 };
 
-function ManagerActionCard({ href, icon: Icon, title, tone }: Omit<ManagerCard, "key">) {
+function ManagerActionCard({ href, icon: Icon, title, tone, nativeNavigation = false }: ManagerActionCardProps) {
   const styles = toneStyles[tone];
-
-  return (
-    <Link
-      href={href as never}
-      prefetch
-      aria-label={title}
-      className={`gc-manager-action-card group relative flex h-[230px] w-full max-w-[176px] flex-col items-center justify-between overflow-hidden rounded-[18px] border px-5 py-8 text-center text-white backdrop-blur-xl transition duration-300 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-[252px] sm:max-w-[190px] lg:h-[270px] lg:max-w-[200px] ${styles.card}`}
-    >
+  const className = `gc-manager-action-card group relative flex h-[230px] w-full max-w-[176px] flex-col items-center justify-between overflow-hidden rounded-[18px] border px-5 py-8 text-center text-white backdrop-blur-xl transition duration-300 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-[252px] sm:max-w-[190px] lg:h-[270px] lg:max-w-[200px] ${styles.card}`;
+  const content = (
+    <>
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,255,255,0.11),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.11),transparent_30%,rgba(255,255,255,0.03))]" />
       <span className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-white/8" />
 
@@ -115,6 +114,20 @@ function ManagerActionCard({ href, icon: Icon, title, tone }: Omit<ManagerCard, 
       <span className={`gc-manager-action-arrow relative grid size-9 place-items-center rounded-full border transition duration-300 group-hover:translate-x-1 ${styles.arrow}`}>
         <ArrowRight aria-hidden="true" size={18} strokeWidth={2.6} />
       </span>
+    </>
+  );
+
+  if (nativeNavigation) {
+    return (
+      <a href={href} aria-label={title} className={className}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href as never} prefetch aria-label={title} className={className}>
+      {content}
     </Link>
   );
 }
@@ -138,6 +151,7 @@ export function ManagerDashboardActions({
           {...card}
           href={hrefOverrides?.[key] ?? card.href}
           title={titleOverrides?.[key] ?? card.title}
+          nativeNavigation={key === "sales"}
         />
       ))}
     </nav>
