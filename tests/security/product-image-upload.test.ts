@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 
@@ -23,6 +25,16 @@ async function imageFile(format: "png" | "jpeg" | "webp", declaredType: string, 
 }
 
 describe("product image upload validation", () => {
+  it("packages the Sharp Linux runtime for manager inventory routes", () => {
+    const nextConfig = readFileSync(resolve(process.cwd(), "next.config.ts"), "utf8");
+    const imageUpload = readFileSync(resolve(process.cwd(), "lib/product-image-upload.ts"), "utf8");
+
+    expect(nextConfig).toContain('"./node_modules/@img/sharp-linux-x64/**/*"');
+    expect(nextConfig).toContain('"./node_modules/@img/sharp-libvips-linux-x64/**/*"');
+    expect(imageUpload).toContain('await import("sharp")');
+    expect(imageUpload).not.toContain('import sharp from "sharp";');
+  });
+
   it("decodes and normalizes a valid image to metadata-free WebP", async () => {
     const normalized = await normalizeProductImage(await imageFile("png", "image/png"));
     expect(normalized.contentType).toBe("image/webp");
