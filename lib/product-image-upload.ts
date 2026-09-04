@@ -1,6 +1,5 @@
 import "server-only";
 import crypto from "node:crypto";
-import sharp from "sharp";
 
 const allowedDeclaredMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const mimeTypeForFormat = {
@@ -38,6 +37,10 @@ export async function normalizeProductImage(file: File): Promise<NormalizedProdu
 
   const input = Buffer.from(await file.arrayBuffer());
   try {
+    // Load the native image processor only when a product picture is supplied.
+    // This keeps product creation available if the optional native runtime cannot
+    // initialize and lets this function turn that failure into a validation error.
+    const { default: sharp } = await import("sharp");
     const decoder = sharp(input, {
       failOn: "error",
       limitInputPixels: maxProductImagePixels
