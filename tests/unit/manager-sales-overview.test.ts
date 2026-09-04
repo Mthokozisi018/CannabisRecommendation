@@ -31,6 +31,25 @@ describe("Manager Sales Overview reporting", () => {
     expect(report.summary).toEqual({ uniqueCustomers: 1, revenue: 195, transactionCount: 3 });
   });
 
+  it("starts analytics from the first completed transaction without waiting for a full week", () => {
+    const firstSaleSource: SalesReportSource = {
+      sales: [{ id: "first-sale", checkout_id: "RCPT-FIRST", customer_id: "customer-a", staff_user_id: "staff-a", total: 250, created_at: "2026-09-01T08:00:00Z" }],
+      items: [{ sale_id: "first-sale", product_name_snapshot: "Blue Dream", category_snapshot: "Flower", subcategory_snapshot: "Sativa", unit_price: 250, quantity: 1, line_total: 250 }],
+      customers: source.customers,
+      staff: source.staff
+    };
+    const report = buildManagerSalesReport(firstSaleSource, filters, false, {
+      weekSales: firstSaleSource.sales,
+      monthSales: firstSaleSource.sales,
+      currentWeekLabel: "31 Aug 2026 - 06 Sept 2026",
+      currentMonthLabel: "September 2026"
+    });
+    expect(report.summary).toEqual({ uniqueCustomers: 1, revenue: 250, transactionCount: 1 });
+    expect(report.kpis.revenueThisWeek).toBe(250);
+    expect(report.kpis.revenueThisMonth).toBe(250);
+    expect(report.transactions).toHaveLength(1);
+  });
+
   it("supports Johannesburg bounds, partial calendar weeks, leap February, and six-week months", () => {
     expect(monthBounds("2026-09").start.toISOString()).toBe("2026-08-31T22:00:00.000Z");
     expect(monthBounds("2026-09").end.toISOString()).toBe("2026-09-30T22:00:00.000Z");
