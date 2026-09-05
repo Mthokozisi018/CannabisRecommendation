@@ -164,13 +164,26 @@ export async function createProductFastAction(_prev: ManagerActionState, formDat
     if (!product?.product_id) throw new Error("Product and inventory could not be created.");
     const productId = String(product.product_id);
 
-    // Image normalization/upload and Redis invalidation are important, but they
-    // do not need to keep the Save Product button spinning. Next.js `after`
-    // uses Vercel waitUntil so this work can finish after the action response.
-    after(async () => {
-      if (image) {
+    // Invalidate product/display caches before returning so the form's existing
+    // router.refresh() cannot race against stale Redis data. This is one batched
+    // Redis DEL in the current production cache helper.
+    await invalidateStoreDisplayCache(storeId);
+
+    revalidatePath("/dashboard/manager/products");
+    revalidatePath("/dashboard/manager/inventory/manage");
+    revalidatePath("/dashboard/manager/inventory");
+
+    // Image normalization and Storage writes are the expensive part. Next.js
+    // `after` uses Vercel waitUntil, allowing them to finish after the product
+    // creation response instead of keeping the Save Product button spinning.
+    if (image) {
+      after(async () => {
         try {
           await finishProductImage({ storeId, productId, image });
+          await invalidateStoreDisplayCache(storeId);
+          revalidatePath("/dashboard/manager/products");
+          revalidatePath("/dashboard/manager/inventory/manage");
+          revalidatePath("/dashboard/manager/inventory");
         } catch (error) {
           console.error("Deferred product image processing failed", {
             productId,
@@ -178,13 +191,8 @@ export async function createProductFastAction(_prev: ManagerActionState, formDat
             error: error instanceof Error ? error.message : "unknown_error"
           });
         }
-      }
-      await invalidateStoreDisplayCache(storeId);
-    });
-
-    revalidatePath("/dashboard/manager/products");
-    revalidatePath("/dashboard/manager/inventory/manage");
-    revalidatePath("/dashboard/manager/inventory");
+      });
+    }
 
     const baseMessage = parsed.initialStockQuantity > 0
       ? "Product created and stock added successfully."
