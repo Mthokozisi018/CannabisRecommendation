@@ -60,15 +60,18 @@ export async function normalizeProductImage(file: File): Promise<NormalizedProdu
       throw new ProductImageValidationError("Product image dimensions are not supported.");
     }
 
+    // Product images render inside compact catalogue/POS cards. A 1600px WebP
+    // preserves ample visual detail while cutting CPU work and upload payload
+    // compared with the previous 2400px/effort-4 encoding path.
     const normalized = await decoder
       .rotate()
       .resize({
-        width: 2_400,
-        height: 2_400,
+        width: 1_600,
+        height: 1_600,
         fit: "inside",
         withoutEnlargement: true
       })
-      .webp({ quality: 88, effort: 4 })
+      .webp({ quality: 85, effort: 2 })
       .toBuffer({ resolveWithObject: true });
 
     return {
