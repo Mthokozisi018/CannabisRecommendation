@@ -4,6 +4,8 @@ import { Redis } from "@upstash/redis";
 
 let redisClient: Redis | null | undefined;
 
+const REDIS_OPERATION_TIMEOUT_MS = 1500;
+
 export const GREENCHOICE_CACHE_TTLS_SECONDS = {
   managerDashboardSummary: 45,
   posProducts: 60,
@@ -15,6 +17,17 @@ export const GREENCHOICE_CACHE_TTLS_SECONDS = {
 function keyPart(value: string | null | undefined) {
   const normalized = value?.trim() || "all";
   return encodeURIComponent(normalized.toLowerCase());
+}
+
+function withRedisTimeout<T>(operation: Promise<T>): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error("Redis operation timed out.")), REDIS_OPERATION_TIMEOUT_MS);
+  });
+
+  return Promise.race([operation, timeout]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
 }
 
 export function getRedisClient() {
@@ -41,7 +54,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   if (!redis) return null;
 
   try {
-    return await redis.get<T>(key);
+    return await withRedisTimeout(redis.get<T>(key));
   } catch {
     return null;
   }
@@ -52,7 +65,7 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Pr
   if (!redis) return;
 
   try {
-    await redis.set(key, value, { ex: ttlSeconds });
+    await withRedisTimeout(redis.set(key, value, { ex: ttlSeconds }));
   } catch {
     // Redis is only an accelerator. Supabase remains the source of truth.
   }
@@ -63,7 +76,7 @@ export async function cacheDelete(key: string): Promise<void> {
   if (!redis) return;
 
   try {
-    await redis.del(key);
+    await withRedisTimeout(redis.del(key));
   } catch {
     // Cache invalidation failures must not block committed Supabase writes.
   }
