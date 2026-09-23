@@ -6,6 +6,7 @@ import { decideDashboardAccess, getDashboardSessionForVerifiedUser } from "@/lib
 import { logServerEvent, reportServerException } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
+import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     }
     await logServerEvent("info", "login_supabase_session_created", { authUserId: data.user.id });
 
-    const customerSession = await getCustomerSessionForVerifiedUser(data.user);
+    const customerSession = isCustomerExperienceEnabled() ? await getCustomerSessionForVerifiedUser(data.user) : null;
     if (customerSession) {
       if (customerSession.profile.status === "pending_verification") {
         return NextResponse.json({ error: "Verify your email address before signing in.", redirectTo: "/customer/verify-email" }, { status: 403, headers: privateHeaders });

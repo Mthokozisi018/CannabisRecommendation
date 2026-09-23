@@ -198,6 +198,23 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 @media (max-width: 639px) and (orientation: portrait) {
+  .gc-pending-orders-page {
+    min-height: 100dvh;
+    overflow-x: clip;
+    padding-inline: 0.75rem;
+  }
+
+  .gc-manager-dashboard-page {
+    min-height: 100dvh;
+    align-items: flex-start;
+    overflow-x: clip;
+    padding: max(4.75rem, env(safe-area-inset-top)) 0.75rem max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .gc-manager-dashboard-shell {
+    max-width: 26rem;
+  }
+
   .gc-pos-page {
     max-width: 100vw;
     overflow-x: clip;
@@ -474,6 +491,16 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+@media (orientation: portrait) and (max-width: 1024px) {
+  .gc-pending-orders-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gc-pending-orders-layout > :first-child {
+    max-height: 38dvh;
+  }
+}
+
 @media (max-width: 360px) and (orientation: portrait) {
   .gc-pos-account-slot button {
     width: 2.75rem;
@@ -537,5 +564,100 @@ input[type="number"]::-webkit-inner-spin-button {
 @media (prefers-reduced-motion: reduce) {
   .greenchoice-loader-ring {
     animation-duration: 2.4s;
+  }
+}
+
+.customer-profile-section form,
+.customer-profile-section details,
+.customer-profile-section article,
+.customer-profile-section > div {
+  border-color: #2d3931 !important;
+  background: #08100b !important;
+  color: #f5f7f4;
+}
+
+.customer-profile-section input,
+.customer-profile-section select,
+.customer-profile-section textarea {
+  border-color: #3b483f !important;
+  background: #020604 !important;
+  color: #f5f7f4 !important;
+}
+
+.customer-profile-section option {
+  background: #08100b;
+  color: #f5f7f4;
+}
+
+.customer-profile-section p,
+.customer-profile-section span {
+  color: #aab4ac;
+}
+
+.customer-app {
+  position: relative;
+  isolation: isolate;
+  background: #050909;
+}
+
+.customer-app::before {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  content: "";
+  background-image:
+    linear-gradient(120deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.2)),
+    url("/images/customer-dashboard-wallpaper.png");
+  background-position: 64% center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  filter: saturate(1.25);
+  opacity: 0.62;
+}
+
+.customer-app::after {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(circle at 70% 8%, rgba(127, 255, 74, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(2, 8, 7, 0.28), rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+
+.customer-home-hero {
+  background: transparent;
+}
+
+.customer-home-hero-wash {
+  background:
+    radial-gradient(circle at 70% 8%, rgba(127, 255, 74, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(2, 8, 7, 0.28), rgba(0, 0, 0, 0.55));
+}
+
+.customer-home-hero h1,
+.customer-home-hero p {
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+}
+
+@media (min-width: 768px) {
+  .customer-app::before {
+    background-position: center;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 1024px) {
+  .customer-app {
+    width: 100%;
+    max-width: 100vw;
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  .customer-app main {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: clip;
   }
 }

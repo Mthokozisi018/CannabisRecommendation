@@ -6,6 +6,7 @@ import { decideDashboardAccess, getDashboardSessionForVerifiedUser, restrictedPa
 import { logServerEvent, reportServerException } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
+import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
       return loginRedirectForError(request, "invalid");
     }
 
-    const customerSession = await getCustomerSessionForVerifiedUser(data.user);
+    const customerSession = isCustomerExperienceEnabled() ? await getCustomerSessionForVerifiedUser(data.user) : null;
     if (customerSession) {
       if (customerSession.profile.status === "pending_verification") return redirectTo(request, "/customer/verify-email");
       if (customerSession.profile.status !== "active") {

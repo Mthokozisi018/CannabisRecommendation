@@ -14,6 +14,6 @@ export function FavouriteButton({ targetType, targetId, initiallySaved = false, 
       if (response.ok && typeof result.saved === "boolean") setSaved(result.saved);
     });
   }
-  return <button type="button" disabled={pending} onClick={toggle} aria-label={saved ? "Remove from saved" : "Save item"} aria-pressed={saved} className={`grid size-11 place-items-center rounded-full border-2 border-[#d8e1da] bg-white text-[#163021] shadow-sm transition hover:border-[#0b8a40] disabled:opacity-60 ${className}`}><Heart size={22} fill={saved ? "#0b8a40" : "none"} className={saved ? "text-[#0b8a40]" : ""} /></button>;
+  return <button type="button" disabled={pending} onClick={toggle} aria-label={saved ? "Remove from saved" : "Save store"} aria-pressed={saved} className={`grid size-11 place-items-center rounded-full border border-[#506053] bg-[#07100b] text-white transition hover:border-[#a8e91d] disabled:opacity-60 ${className}`}><Heart size={22} fill={saved ? "#a8e91d" : "none"} className={saved ? "text-[#a8e91d]" : ""} /></button>;
 }
 

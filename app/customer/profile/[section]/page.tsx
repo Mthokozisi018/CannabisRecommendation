@@ -9,10 +9,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 const sections = ["personal", "addresses", "notifications", "privacy", "categories", "filters", "appearance", "language", "help", "support", "about"] as const;
 type Section = typeof sections[number];
 const titles: Record<Section, string> = { personal: "Personal Information", addresses: "Addresses", notifications: "Notifications", privacy: "Privacy & Security", categories: "Favourite Categories", filters: "Default Filters", appearance: "App Appearance", language: "Language", help: "Help & FAQ", support: "Contact Support", about: "About GreenChoice" };
-const input = "mt-2 h-12 w-full rounded-xl border-2 border-[#d7e1da] bg-white px-4 outline-none focus:border-[#0b8a40]";
-const panel = "rounded-2xl border-2 border-[#dce5df] bg-white p-5";
+const input = "mt-2 h-12 w-full rounded-md border border-[#3b483f] bg-[#020604] px-4 text-white outline-none focus:border-[#a8e91d]";
+const panel = "rounded-md border border-[#2d3931] bg-[#08100b] p-5";
 
-function SaveButton({ label = "Save changes" }: { label?: string }) { return <button className="mt-5 inline-flex h-12 items-center justify-center rounded-xl bg-[#087c39] px-6 font-black text-white"><CheckCircle2 className="mr-2" size={19} />{label}</button>; }
+function SaveButton({ label = "Save changes" }: { label?: string }) { return <button className="mt-5 inline-flex h-12 items-center justify-center rounded-md bg-[#a7e627] px-6 font-black text-[#081000]"><CheckCircle2 className="mr-2" size={19} />{label}</button>; }
 
 export default async function CustomerProfileSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const { section: rawSection } = await params;
@@ -28,7 +28,7 @@ export default async function CustomerProfileSectionPage({ params }: { params: P
   ]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-2xl px-4 py-7 sm:px-6">
+    <main className="customer-profile-section mx-auto min-h-screen max-w-2xl px-4 py-7 sm:px-6">
       <Link href="/customer/profile" className="inline-flex items-center gap-2 font-black text-[#087c39]"><ArrowLeft size={19} /> Profile</Link>
       <h1 className="mt-5 text-3xl font-black">{titles[section]}</h1>
 
@@ -48,11 +48,11 @@ export default async function CustomerProfileSectionPage({ params }: { params: P
 
       {section === "language" ? <form action={updateCustomerPreferencesAction} className={`${panel} mt-6`}><input type="hidden" name="preferenceScope" value="language" /><label className="font-bold">Language<select className={input} name="language" defaultValue="en-ZA"><option value="en-ZA">English (South Africa)</option></select></label><p className="mt-3 text-sm text-[#637168]">Additional languages can be added without changing your account.</p><SaveButton /></form> : null}
 
-      {section === "help" ? <div className="mt-6 grid gap-3">{[["How do I add a product?", "Open a store, choose a category and select Add to cart on an available product."], ["Why can’t I mix stores?", "Each checkout list is scoped to one store so prices and stock remain correct."], ["Does checkout place an order?", "Not yet. The first version saves your selected products and calculates the total only."], ["What if I forget my password?", "Use Forgot Password on the GreenChoice sign-in screen."]].map(([question, answer]) => <details key={question} className={panel}><summary className="cursor-pointer font-black">{question}</summary><p className="mt-3 text-[#637168]">{answer}</p></details>)}</div> : null}
+      {section === "help" ? <div className="mt-6 grid gap-3">{[["How do I add a product?", "Open a store, choose a category and select Add to cart on an available product."], ["Why can't I mix stores?", "Each current order is scoped to one store so prices, fulfillment settings, and stock remain correct."], ["When is stock reserved?", "Available stock is validated and reserved when you place the order from the review step."], ["What if I forget my password?", "Use Forgot Password on the GreenChoice sign-in screen."]].map(([question, answer]) => <details key={question} className={panel}><summary className="cursor-pointer font-black">{question}</summary><p className="mt-3 text-[#637168]">{answer}</p></details>)}</div> : null}
 
       {section === "support" ? <><form action={submitCustomerSupportAction} className={`${panel} mt-6 grid gap-4`}><label className="font-bold">Category<select className={input} name="category"><option value="account">Account</option><option value="technical">Technical</option><option value="store">Store</option><option value="privacy">Privacy</option><option value="other">Other</option></select></label><label className="font-bold">Subject<input className={input} name="subject" required /></label><label className="font-bold">Message<textarea className="mt-2 min-h-36 w-full rounded-xl border-2 border-[#d7e1da] p-4 outline-none focus:border-[#0b8a40]" name="message" minLength={10} maxLength={2000} required /></label><SaveButton label="Submit request" /></form>{supportRequests?.length ? <section className="mt-6"><h2 className="mb-3 text-xl font-black">Your requests</h2><div className="grid gap-3">{supportRequests.map((request) => <article key={request.id} className={panel}><div className="flex justify-between gap-4"><strong>{request.subject}</strong><span className="capitalize text-[#087c39]">{request.status.replace("_", " ")}</span></div></article>)}</div></section> : null}</> : null}
 
-      {section === "about" ? <div className={`${panel} mt-6`}><p className="text-sm font-black uppercase tracking-[0.18em] text-[#0a8840]">GreenChoice</p><h2 className="mt-2 text-2xl font-black">Customer browsing</h2><p className="mt-3 text-[#637168]">GreenChoice connects customer browsing to the same live store, product and inventory information used by participating GreenChoice workstations. This version does not activate online payment, delivery or order placement.</p><div className="mt-5 flex flex-wrap gap-3"><Link href={"/legal/terms-of-service.pdf" as never} target="_blank" className="rounded-xl border-2 border-[#cfdad2] px-4 py-2 font-bold">Terms</Link><Link href={"/legal/privacy-policy.pdf" as never} target="_blank" className="rounded-xl border-2 border-[#cfdad2] px-4 py-2 font-bold">Privacy Policy</Link></div></div> : null}
+      {section === "about" ? <div className={`${panel} mt-6`}><p className="text-sm font-black uppercase text-[#a8e91d]">GreenChoice</p><h2 className="mt-2 text-2xl font-black">Customer ordering</h2><p className="mt-3 text-[#a8b3aa]">GreenChoice customer ordering uses the same live store catalog, pricing, and inventory model as each participating workstation. Collection and delivery appear only when configured by the selected store.</p><div className="mt-5 flex flex-wrap gap-3"><Link href={"/legal/terms-of-service.pdf" as never} target="_blank" className="rounded-xl border-2 border-[#cfdad2] px-4 py-2 font-bold">Terms</Link><Link href={"/legal/privacy-policy.pdf" as never} target="_blank" className="rounded-xl border-2 border-[#cfdad2] px-4 py-2 font-bold">Privacy Policy</Link></div></div> : null}
     </main>
   );
 }

@@ -1,12 +1,15 @@
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { CustomerCartProvider } from "@/components/customer/CustomerCartProvider";
 import { CustomerShell } from "@/components/customer/CustomerShell";
 import { requireCustomerSession } from "@/lib/customer/auth";
 import { readCustomerCart } from "@/lib/customer/cart";
+import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 
 export default async function CustomerLayout({ children }: { children: React.ReactNode }) {
+  if (!isCustomerExperienceEnabled()) notFound();
   const requestHeaders = await headers();
   const pathname = requestHeaders.get("x-greenchoice-pathname") ?? "";
   const publicCustomerRoute = pathname === "/customer/register" || pathname === "/customer/verify-email" || pathname === "/customer/account-unavailable";

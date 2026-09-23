@@ -8,14 +8,16 @@
     "npm": "11.x"
   },
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0 --port 3001",
+    "dev": "npm run verify:local-env && node scripts/run-with-local-env.mjs node_modules/next/dist/bin/next dev --hostname 0.0.0.0 --port 3002",
     "build": "next build",
+    "build:local": "npm run verify:local-env && node scripts/run-with-local-env.mjs node_modules/next/dist/bin/next build",
     "start": "next start --hostname 0.0.0.0 --port 3001",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit --incremental false",
     "test": "vitest run",
     "test:security": "vitest run tests/security",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run verify:local-env && node scripts/run-with-local-env.mjs node_modules/@playwright/test/cli.js test",
+    "verify:local-env": "node scripts/verify-local-environment.mjs",
     "validate:migrations": "node scripts/validate-migrations.mjs",
     "scan:secrets": "node scripts/scan-secrets.mjs",
     "audit:production": "npm audit --omit=dev --audit-level=high",

@@ -1,13 +1,22 @@
-import { CustomerProductGrid } from "@/components/customer/CustomerProductGrid";
+import { Heart } from "lucide-react";
+import { CustomerEmptyState } from "@/components/customer/CustomerEmptyState";
+import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { CustomerStoreCard } from "@/components/customer/CustomerStoreCard";
-import { listCustomerProducts, listCustomerStores } from "@/lib/customer/catalog";
+import { listCustomerStores } from "@/lib/customer/catalog";
 import { listCustomerFavouriteIds } from "@/lib/customer/favourites";
 
-export const metadata = { title: "Saved | GreenChoice" };
-export default async function CustomerSavedPage() {
-  const [stores, products, favourites] = await Promise.all([listCustomerStores(), listCustomerProducts({ limit: 500 }), listCustomerFavouriteIds()]);
-  const savedStores = stores.filter((store) => favourites.storeIds.includes(store.id));
-  const savedProducts = products.filter((product) => favourites.productIds.includes(product.id));
-  return <main className="mx-auto min-h-screen max-w-5xl px-4 py-7 sm:px-6"><h1 className="text-4xl font-black">Saved</h1><p className="mt-2 text-[#647168]">Your saved stores and products.</p><section className="mt-8"><h2 className="mb-4 text-2xl font-black">Stores</h2><div className="grid gap-4">{savedStores.map((store) => <CustomerStoreCard key={store.id} store={store} saved />)}{savedStores.length === 0 ? <p className="rounded-2xl border-2 border-[#dfe6e1] bg-white p-8 text-center text-[#65736a]">You have not saved any stores yet.</p> : null}</div></section><section className="mt-9"><h2 className="mb-4 text-2xl font-black">Products</h2>{savedProducts.length ? <CustomerProductGrid products={savedProducts} savedProductIds={favourites.productIds} /> : <p className="rounded-2xl border-2 border-[#dfe6e1] bg-white p-8 text-center text-[#65736a]">You have not saved any products yet.</p>}</section></main>;
-}
+export const metadata = { title: "Saved Stores | GreenChoice" };
 
+export default async function CustomerSavedPage() {
+  const [stores, favourites] = await Promise.all([listCustomerStores(), listCustomerFavouriteIds()]);
+  const savedStores = stores.filter((store) => favourites.storeIds.includes(store.id));
+  return (
+    <main className="min-h-screen">
+      <CustomerHeader />
+      <section className="border-y border-[#253029] bg-[#08110b]"><div className="mx-auto max-w-6xl px-4 py-8 sm:px-6"><h1 className="text-3xl font-black sm:text-4xl">Saved Stores</h1><p className="mt-2 text-[#a7b1a9]">Your saved GreenChoice locations in one place.</p></div></section>
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        {savedStores.length ? <div className="grid gap-4 lg:grid-cols-2">{savedStores.map((store) => <CustomerStoreCard key={store.id} store={store} saved />)}</div> : <CustomerEmptyState Icon={Heart} title="No saved stores" message="Save a store while browsing to keep it close at hand." href="/customer/stores" action="Browse stores" />}
+      </section>
+    </main>
+  );
+}

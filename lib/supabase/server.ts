@@ -13,7 +13,7 @@ export function hasSupabaseEnv() {
 }
 
 export async function createSupabaseServerClient() {
-  if (process.env.NODE_ENV === "production") assertSupabaseEnvironmentIdentity();
+  assertSupabaseEnvironmentIdentity();
   if (!url || !publishableKey) return null;
   const cookieStore = await cookies();
   return createServerClient(url, publishableKey, {
@@ -33,7 +33,7 @@ export async function createSupabaseServerClient() {
 }
 
 export function createSupabaseAdminClient() {
-  if (process.env.NODE_ENV === "production") assertSupabaseEnvironmentIdentity();
+  assertSupabaseEnvironmentIdentity();
   if (!url || !secretKey) return null;
   return createClient(url, secretKey, { auth: { persistSession: false } });
 }

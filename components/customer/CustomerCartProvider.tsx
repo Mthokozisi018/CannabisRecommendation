@@ -7,7 +7,7 @@ type CustomerCartContextValue = {
   cart: CustomerCartPayload;
   busy: boolean;
   message: string;
-  addProduct: (productId: string) => Promise<boolean>;
+  addProduct: (productId: string, storeId: string) => Promise<boolean>;
   setQuantity: (itemId: string, quantity: number) => Promise<boolean>;
   clearCart: () => Promise<boolean>;
   clearMessage: () => void;
@@ -53,7 +53,7 @@ export function CustomerCartProvider({ initialCart, children }: { initialCart: C
     cart,
     busy,
     message,
-    addProduct: (productId) => mutate("POST", { productId }),
+    addProduct: (productId, storeId) => mutate("POST", { productId, storeId }),
     setQuantity: (itemId, quantity) => mutate("PATCH", { itemId, quantity }),
     clearCart: () => mutate("DELETE"),
     clearMessage: () => setMessage("")

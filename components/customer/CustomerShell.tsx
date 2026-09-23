@@ -2,36 +2,42 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Home, ShoppingCart, Store, UserRound } from "lucide-react";
+import { Heart, Home, ShoppingBag, ShoppingCart, Store, UserRound } from "lucide-react";
 import { useCustomerCart } from "@/components/customer/CustomerCartProvider";
 
 const navigation = [
   { href: "/customer", label: "Home", Icon: Home },
   { href: "/customer/stores", label: "Stores", Icon: Store },
   { href: "/customer/saved", label: "Saved", Icon: Heart },
+  { href: "/customer/orders", label: "Orders", Icon: ShoppingBag },
   { href: "/customer/profile", label: "Profile", Icon: UserRound }
 ] as const;
 
 export function CustomerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { cart } = useCustomerCart();
-  const checkout = pathname === "/customer/checkout";
+  const browsingStore = /^\/customer\/stores\/[^/]+$/.test(pathname);
 
   return (
-    <div className="customer-app min-h-screen bg-[#f7f8f6] pb-[calc(7rem+env(safe-area-inset-bottom))] text-[#101812]">
+    <div className="customer-app min-h-screen overflow-x-clip pb-[calc(6.5rem+env(safe-area-inset-bottom))] text-[#f6f8f4]">
       {children}
-      {!checkout ? (
-        <Link href={"/customer/checkout" as never} aria-label={`Open checkout with ${cart.itemCount} items`} className="fixed bottom-28 right-5 z-[60] grid size-20 place-items-center rounded-full border-[3px] border-emerald-200 bg-[#043c24] text-white shadow-[0_16px_36px_rgba(4,60,36,0.38),0_0_24px_rgba(16,185,129,0.25)] transition hover:scale-105 hover:bg-[#07512f] active:scale-95 sm:right-8">
-          <ShoppingCart size={30} strokeWidth={2.3} />
-          {cart.itemCount > 0 ? <span className="absolute -right-1 -top-1 grid min-w-7 place-items-center rounded-full border-2 border-white bg-emerald-500 px-1 text-xs font-black leading-6 text-white">{cart.itemCount > 99 ? "99+" : cart.itemCount}</span> : null}
+      {browsingStore && cart.itemCount > 0 ? (
+        <Link href="/customer/orders" aria-label={`Open current order with ${cart.itemCount} items`} className="fixed bottom-24 right-4 z-[60] grid size-16 place-items-center rounded-full border border-[#a7ed25] bg-[#12210b] text-[#b6f52d] shadow-[0_10px_30px_rgba(0,0,0,0.55)] transition hover:bg-[#1c3210] active:scale-95 sm:right-8">
+          <ShoppingCart size={27} />
+          <span className="absolute -right-1 -top-1 grid min-w-6 place-items-center rounded-full bg-[#a8e91d] px-1 text-xs font-black leading-6 text-[#061000]">{cart.itemCount > 99 ? "99+" : cart.itemCount}</span>
         </Link>
       ) : null}
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t-2 border-[#dce3de] bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(19,47,31,0.08)]" aria-label="Customer navigation">
-        <div className="mx-auto grid h-20 max-w-2xl grid-cols-4">
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#253129] bg-[#050a07] pb-[env(safe-area-inset-bottom)]" aria-label="Customer navigation">
+        <div className="mx-auto grid h-20 max-w-3xl grid-cols-5">
           {navigation.map(({ href, label, Icon }) => {
             const active = href === "/customer" ? pathname === href : pathname.startsWith(href);
-            return <Link key={href} href={href as never} className={`flex flex-col items-center justify-center gap-1 text-xs font-bold transition ${active ? "text-[#07823b]" : "text-[#405047] hover:text-[#07823b]"}`}><Icon size={25} strokeWidth={active ? 2.6 : 2} /><span>{label}</span></Link>;
+            return (
+              <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-w-0 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition sm:text-xs ${active ? "text-[#a8e91d]" : "text-[#c1c8c2] hover:text-white"}`}>
+                <Icon size={24} strokeWidth={active ? 2.5 : 1.8} fill={active && label === "Saved" ? "currentColor" : "none"} />
+                <span className="max-w-full truncate px-1">{label}</span>
+              </Link>
+            );
           })}
         </div>
       </nav>

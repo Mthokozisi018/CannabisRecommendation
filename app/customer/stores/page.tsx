@@ -1,19 +1,56 @@
-import { MapPinned, Search } from "lucide-react";
-import Link from "next/link";
+import { Store } from "lucide-react";
+import Image from "next/image";
+import { CustomerEmptyState } from "@/components/customer/CustomerEmptyState";
+import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { CustomerStoreCard } from "@/components/customer/CustomerStoreCard";
+import { requireCustomerSession } from "@/lib/customer/auth";
 import { listCustomerStores } from "@/lib/customer/catalog";
 import { listCustomerFavouriteIds } from "@/lib/customer/favourites";
 
 export const metadata = { title: "Stores | GreenChoice" };
 
-export default async function CustomerStoresPage({ searchParams }: { searchParams: Promise<{ search?: string; saved?: string }> }) {
-  const params = await searchParams;
-  const [stores, favourites] = await Promise.all([listCustomerStores(params.search), listCustomerFavouriteIds()]);
-  const visibleStores = params.saved === "true" ? stores.filter((store) => favourites.storeIds.includes(store.id)) : stores;
+export default async function CustomerStoresPage() {
+  const [, stores, favourites] = await Promise.all([
+    requireCustomerSession(),
+    listCustomerStores(),
+    listCustomerFavouriteIds(),
+  ]);
+
   return (
-    <main>
-      <section className="bg-[linear-gradient(135deg,#063d28,#01281b)] px-4 pb-8 pt-7 text-white sm:px-6"><div className="mx-auto max-w-4xl"><div className="flex items-center justify-between"><div><h1 className="text-4xl font-black">Stores</h1><p className="mt-2 text-white/75">Find active GreenChoice stores.</p></div><MapPinned size={42} className="text-emerald-300" /></div><form className="mt-6 flex h-14 items-center gap-3 rounded-2xl bg-white px-4 text-[#15241b]"><Search className="text-[#758179]" /><input name="search" defaultValue={params.search} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="Search stores..." /><button className="rounded-xl bg-[#087c39] px-4 py-2 font-black text-white">Search</button></form></div></section>
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6"><nav className="mb-6 flex gap-3"><Link href="/customer/stores" className={`rounded-full border-2 px-5 py-2 text-sm font-black ${params.saved !== "true" ? "border-[#087c39] bg-[#087c39] text-white" : "border-[#d5dfd8] bg-white"}`}>All Stores</Link><Link href="/customer/stores?saved=true" className={`rounded-full border-2 px-5 py-2 text-sm font-black ${params.saved === "true" ? "border-[#087c39] bg-[#087c39] text-white" : "border-[#d5dfd8] bg-white"}`}>Favorites</Link></nav><div className="grid gap-4">{visibleStores.map((store) => <CustomerStoreCard key={store.id} store={store} saved={favourites.storeIds.includes(store.id)} />)}{visibleStores.length === 0 ? <div className="rounded-2xl border-2 border-[#dfe6e1] bg-white p-10 text-center text-[#65736a]">No matching active stores were found.</div> : null}</div></div>
+    <main className="min-h-screen">
+      <CustomerHeader />
+      <section className="mx-auto max-w-6xl px-4 pb-4 pt-7 sm:px-6 sm:pt-8">
+        <div className="gc-pos-logo-wrap flex justify-center">
+          <Image
+            src="/branding/greenchoice-logo.png"
+            alt="GreenChoice Dispensary"
+            width={1028}
+            height={307}
+            priority
+            className="gc-pos-logo h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28"
+          />
+        </div>
+      </section>
+      <section className="mx-auto max-w-6xl px-4 pb-8 pt-2 sm:px-6">
+        {stores.length ? (
+          <div className="grid grid-cols-1 gap-3 sm:gap-4">
+            {stores.map((store) => (
+              <CustomerStoreCard
+                key={store.id}
+                store={store}
+                saved={favourites.storeIds.includes(store.id)}
+                landingRow
+              />
+            ))}
+          </div>
+        ) : (
+          <CustomerEmptyState
+            Icon={Store}
+            title="No active stores yet"
+            message="Active GreenChoice locations will appear here."
+          />
+        )}
+      </section>
     </main>
   );
 }

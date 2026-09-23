@@ -26,6 +26,7 @@ export function assertSupabaseEnvironmentIdentity() {
   const environment = greenChoiceEnvironment();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const expectedProjectRef = process.env.EXPECTED_SUPABASE_PROJECT_REF?.trim();
+  const productionProjectRef = process.env.PRODUCTION_SUPABASE_PROJECT_REF?.trim();
 
   if (process.env.NODE_ENV !== "production" && environment === "development") return;
   if (!supabaseUrl || !expectedProjectRef) {
@@ -41,6 +42,12 @@ export function assertSupabaseEnvironmentIdentity() {
   }
   if (!actualProjectRef || actualProjectRef !== expectedProjectRef) {
     throw new Error("Supabase project does not match the configured GreenChoice environment.");
+  }
+  if (environment === "staging" && (!productionProjectRef || actualProjectRef === productionProjectRef)) {
+    throw new Error("Staging must use a Supabase project isolated from production.");
+  }
+  if (environment === "production" && productionProjectRef && actualProjectRef !== productionProjectRef) {
+    throw new Error("Production must use the designated production Supabase project.");
   }
 }
 

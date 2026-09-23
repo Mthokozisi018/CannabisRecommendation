@@ -8,7 +8,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store, max-age=0", "Vary": "Cookie, Authorization" };
-const addSchema = z.object({ productId: z.string().uuid() }).strict();
+const addSchema = z.object({ productId: z.string().uuid(), storeId: z.string().uuid() }).strict();
 const updateSchema = z.object({ itemId: z.string().uuid(), quantity: z.number().int().min(0).max(99) }).strict();
 
 async function activeCustomer() {
@@ -35,28 +35,39 @@ export async function POST(request: Request) {
 
     const { data: product, error: productError } = await admin
       .from("products")
-      .select("id,store_id,price,product_status,is_visible_on_pos,is_published,deleted_at,stores(is_active,store_access_status),inventory_stock(current_quantity)")
+      .select("id,store_id,price,product_status,is_visible_on_pos,is_published,deleted_at")
       .eq("id", parsed.data.productId)
       .maybeSingle();
     if (productError) throw productError;
-    const storeRelation = product?.stores as { is_active?: boolean; store_access_status?: string } | Array<{ is_active?: boolean; store_access_status?: string }> | null;
-    const store = Array.isArray(storeRelation) ? storeRelation[0] : storeRelation;
-    const stockRelation = product?.inventory_stock as { current_quantity?: number } | Array<{ current_quantity?: number }> | null;
-    const stock = Array.isArray(stockRelation) ? stockRelation[0] : stockRelation;
-    if (!product || product.deleted_at || product.product_status !== "active" || product.is_visible_on_pos === false || product.is_published === false || store?.is_active !== true || store.store_access_status !== "active" || Number(stock?.current_quantity ?? 0) < 1) {
+    const { data: store, error: storeError } = await admin
+      .from("stores")
+      .select("id,is_active,store_access_status")
+      .eq("id", parsed.data.storeId)
+      .maybeSingle();
+    if (storeError) throw storeError;
+    const fulfillmentResult = await admin.from("store_fulfillment_settings").select("orders_enabled").eq("store_id", parsed.data.storeId).maybeSingle();
+    if (fulfillmentResult.error && !/store_fulfillment_settings|schema cache/i.test(fulfillmentResult.error.message)) throw fulfillmentResult.error;
+    const { data: stock, error: stockError } = await admin
+      .from("inventory_stock")
+      .select("id,current_quantity")
+      .eq("product_id", parsed.data.productId)
+      .eq("store_id", parsed.data.storeId)
+      .maybeSingle();
+    if (stockError) throw stockError;
+    if (!product || !store || fulfillmentResult.data?.orders_enabled === false || product.deleted_at || product.product_status !== "active" || product.is_visible_on_pos === false || product.is_published === false || store.is_active !== true || store.store_access_status !== "active" || Number(stock?.current_quantity ?? 0) < 1) {
       return NextResponse.json({ error: "This product is currently unavailable." }, { status: 409, headers });
     }
 
     let cart = await readCustomerCart(customer.user.id);
-    if (cart.id && cart.storeId !== product.store_id && cart.items.length > 0) {
+    if (cart.id && cart.storeId !== parsed.data.storeId && cart.items.length > 0) {
       return NextResponse.json({ error: "Your cart contains products from another store. Clear that cart before choosing a different store." }, { status: 409, headers });
     }
     if (!cart.id) {
-      const { data: created, error } = await admin.from("carts").insert({ store_id: product.store_id, created_by_user_id: customer.user.id, status: "draft" }).select("id").single();
+      const { data: created, error } = await admin.from("carts").insert({ store_id: parsed.data.storeId, created_by_user_id: customer.user.id, status: "draft" }).select("id").single();
       if (error || !created) throw error ?? new Error("Unable to create cart.");
-      cart = { ...cart, id: created.id, storeId: product.store_id };
-    } else if (cart.storeId !== product.store_id) {
-      const { error } = await admin.from("carts").update({ store_id: product.store_id, updated_at: new Date().toISOString() }).eq("id", cart.id).eq("created_by_user_id", customer.user.id);
+      cart = { ...cart, id: created.id, storeId: parsed.data.storeId };
+    } else if (cart.storeId !== parsed.data.storeId) {
+      const { error } = await admin.from("carts").update({ store_id: parsed.data.storeId, updated_at: new Date().toISOString() }).eq("id", cart.id).eq("created_by_user_id", customer.user.id);
       if (error) throw error;
     }
 

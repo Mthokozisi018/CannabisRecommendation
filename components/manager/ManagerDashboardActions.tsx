@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Boxes, ClipboardList, ShoppingCart, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, Boxes, ClipboardCheck, ClipboardList, ShoppingCart, UsersRound, type LucideIcon } from "lucide-react";
 
-type CardTone = "green" | "purple" | "blue" | "amber";
-type ManagerActionKey = "products" | "inventory" | "staff" | "serve";
+type CardTone = "green" | "purple" | "blue" | "amber" | "teal";
+type ManagerActionKey = "products" | "inventory" | "orders" | "staff" | "sales" | "serve";
 
 type ManagerCard = {
   key: ManagerActionKey;
@@ -13,6 +13,13 @@ type ManagerCard = {
 };
 
 const cards: ManagerCard[] = [
+  {
+    key: "orders",
+    title: "Pending Orders",
+    href: "/dashboard/manager/orders",
+    icon: ClipboardCheck,
+    tone: "amber"
+  },
   {
     key: "products",
     title: "Add Stock",
@@ -33,6 +40,13 @@ const cards: ManagerCard[] = [
     href: "/dashboard/manager/staff",
     icon: UsersRound,
     tone: "blue"
+  },
+  {
+    key: "sales",
+    title: "Sales Overview",
+    href: "/dashboard/manager/sales",
+    icon: BarChart3,
+    tone: "teal"
   },
   {
     key: "serve",
@@ -71,10 +85,17 @@ const toneStyles: Record<CardTone, { card: string; iconRing: string; icon: strin
     icon: "text-[#ffc64a]",
     underline: "bg-[#ffc64a]",
     arrow: "border-[#ffc64a]/35 bg-[#ffc64a]/18 text-white shadow-[0_0_28px_rgba(255,198,74,0.24)]"
+  },
+  teal: {
+    card: "border-[#46dfbf]/45 bg-[linear-gradient(145deg,rgba(13,67,61,0.74),rgba(5,19,18,0.95))] shadow-[0_24px_62px_rgba(32,190,165,0.18)] hover:border-[#68f5db]/75",
+    iconRing: "border-[#46dfbf]/80 shadow-[0_0_32px_rgba(70,223,191,0.2)]",
+    icon: "text-[#68f5db]",
+    underline: "bg-[#68f5db]",
+    arrow: "border-[#68f5db]/35 bg-[#68f5db]/18 text-white shadow-[0_0_28px_rgba(104,245,219,0.24)]"
   }
 };
 
-function ManagerActionCard({ href, icon: Icon, title, tone }: Omit<ManagerCard, "key">) {
+function ManagerActionCard({ href, icon: Icon, title, tone, count }: Omit<ManagerCard, "key"> & { count?: number }) {
   const styles = toneStyles[tone];
 
   return (
@@ -86,6 +107,7 @@ function ManagerActionCard({ href, icon: Icon, title, tone }: Omit<ManagerCard, 
     >
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,255,255,0.11),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.11),transparent_30%,rgba(255,255,255,0.03))]" />
       <span className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-white/8" />
+      {typeof count === "number" ? <span className="absolute right-3 top-3 z-10 grid min-w-7 place-items-center rounded-md border border-[#4bd26a] bg-[#0a3819] px-2 text-xs font-black leading-7 text-[#7af094]">{count > 99 ? "99+" : count}</span> : null}
 
       <span className={`gc-manager-action-icon relative grid size-[78px] place-items-center rounded-full border bg-black/24 ${styles.iconRing} sm:size-[86px]`}>
         <Icon aria-hidden="true" className={styles.icon} size={42} strokeWidth={1.75} />
@@ -107,19 +129,22 @@ function ManagerActionCard({ href, icon: Icon, title, tone }: Omit<ManagerCard, 
 
 export function ManagerDashboardActions({
   hrefOverrides,
-  titleOverrides
+  titleOverrides,
+  pendingOrderCount
 }: {
   hrefOverrides?: Partial<Record<ManagerActionKey, string>>;
   titleOverrides?: Partial<Record<ManagerActionKey, string>>;
+  pendingOrderCount?: number;
 }) {
   return (
-    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[884px] grid-cols-2 justify-items-center gap-5 sm:gap-6 lg:grid-cols-4 lg:gap-5">
+    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[1320px] grid-cols-2 justify-items-center gap-5 sm:gap-6 md:grid-cols-3 xl:grid-cols-6 xl:gap-5">
       {cards.map(({ key, ...card }) => (
         <ManagerActionCard
           key={key}
           {...card}
           href={hrefOverrides?.[key] ?? card.href}
           title={titleOverrides?.[key] ?? card.title}
+          count={key === "orders" ? pendingOrderCount ?? 0 : undefined}
         />
       ))}
     </nav>

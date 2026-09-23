@@ -8,6 +8,7 @@ import { getManagerDashboardSummary } from "@/lib/manager/dashboard-summary";
 import type { DashboardSession } from "@/lib/dashboard-session";
 import { requireCompletedManagerDashboardSession } from "@/lib/manager/onboarding";
 import { warmReceptionistCatalogForStore } from "@/lib/receptionist/products";
+import { countManagerPendingOrders } from "@/lib/manager/pending-orders";
 
 export const dynamic = "force-dynamic";
 
@@ -51,13 +52,14 @@ export default async function ManagerDashboardPage() {
   const session = await requireCompletedManagerDashboardSession();
   const managerName = firstName(session.displayName || "Manager");
   const greeting = managerGreeting();
+  const pendingOrderCount = await countManagerPendingOrders(session);
 
   return (
-    <main className="relative isolate flex min-h-screen items-start px-4 pb-8 pt-20 sm:px-6 sm:pt-10 lg:px-[clamp(2rem,8vw,8.5rem)] lg:pt-[clamp(3rem,10vh,7rem)]">
+    <main className="gc-manager-dashboard-page relative isolate flex min-h-screen items-start px-4 pb-8 pt-20 sm:px-6 sm:pt-10 lg:px-[clamp(2rem,8vw,8.5rem)] lg:pt-[clamp(3rem,10vh,7rem)]">
       <div className="absolute right-4 top-4 z-30 sm:right-6 sm:top-6">
         <DashboardAccountPanel role="manager" profile={accountProfileFromSession(session)} />
       </div>
-      <section className="mx-auto flex w-full max-w-[1180px] flex-col items-center">
+      <section className="gc-manager-dashboard-shell mx-auto flex w-full max-w-[1180px] flex-col items-center">
         <Suspense fallback={<ManagerWelcomePanel greeting={greeting} managerName={managerName} roleLabel={roleLabel(session.role)} summaryLoading />}>
           <ManagerWelcomeWithSummary session={session} greeting={greeting} managerName={managerName} />
         </Suspense>
@@ -67,7 +69,7 @@ export default async function ManagerDashboardPage() {
           </Suspense>
         ) : null}
         <ManagerPOSRoutePreloader />
-        <ManagerDashboardActions />
+        <ManagerDashboardActions pendingOrderCount={pendingOrderCount} />
       </section>
     </main>
   );

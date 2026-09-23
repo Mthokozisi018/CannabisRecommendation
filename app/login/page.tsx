@@ -3,6 +3,7 @@ import { LockKeyhole, UserPlus } from "lucide-react";
 import { Suspense } from "react";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { LoginForm } from "@/app/login/LoginForm";
+import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
 
 function LoginBackground() {
   return (
@@ -50,6 +51,7 @@ function Divider() {
 }
 
 export default function LoginPage() {
+  const customerExperienceEnabled = isCustomerExperienceEnabled();
   return (
     <main className="gc-login-page relative isolate grid min-h-screen place-items-center overflow-hidden px-5 py-6 text-white sm:px-8">
       <LoginBackground />
@@ -83,13 +85,17 @@ export default function LoginPage() {
               <LockKeyhole size={19} strokeWidth={2.2} />
               Forgot Password?
             </Link>
-            <Link href={"/forgot-account" as never} className="mx-auto mt-1 flex w-fit items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-white/72 transition hover:bg-white/8 hover:text-white">
-              Forgot Customer Account Details?
-            </Link>
-            <Link href={"/customer/register" as never} className="mx-auto mt-2 flex h-12 w-full max-w-sm items-center justify-center gap-3 rounded-xl border-2 border-[#70d84d] bg-[#70d84d]/10 px-4 text-base font-extrabold text-[#8ef46b] transition hover:bg-[#70d84d]/20">
-              <UserPlus size={20} strokeWidth={2.2} />
-              Create Customer Account
-            </Link>
+            {customerExperienceEnabled ? (
+              <>
+                <Link href={"/forgot-account" as never} className="mx-auto mt-1 flex w-fit items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-white/72 transition hover:bg-white/8 hover:text-white">
+                  Forgot Customer Account Details?
+                </Link>
+                <Link href={"/customer/register" as never} className="mx-auto mt-2 flex h-12 w-full max-w-sm items-center justify-center gap-3 rounded-xl border-2 border-[#70d84d] bg-[#70d84d]/10 px-4 text-base font-extrabold text-[#8ef46b] transition hover:bg-[#70d84d]/20">
+                  <UserPlus size={20} strokeWidth={2.2} />
+                  Create Customer Account
+                </Link>
+              </>
+            ) : null}
           </div>
         </div>
       </section>

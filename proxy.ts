@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
 
 const legacyRoutePrefixes = [
   "/account",
@@ -9,6 +10,9 @@ const legacyRoutePrefixes = [
   "/register",
   "/dashboard/owner"
 ];
+
+const customerPagePrefixes = ["/customer", "/forgot-account", "/auth/callback"];
+const customerApiPrefixes = ["/api/customer/", "/api/auth/customer-"];
 
 function attachCsrfCookie(response: NextResponse, request: NextRequest) {
   if (!request.cookies.get("csrf_token")) {
@@ -116,6 +120,8 @@ function loginRedirect(request: NextRequest, requestId: string, nonce: string, e
 async function protectedDashboardResponse(request: NextRequest, requestId: string, nonce: string) {
   const { pathname } = request.nextUrl;
   if (!pathname.startsWith("/dashboard/manager") && !pathname.startsWith("/dashboard/receptionist")) return null;
+  const hasSupabaseSession = request.cookies.getAll().some(({ name }) => name.startsWith("sb-") && name.includes("auth-token"));
+  if (!hasSupabaseSession) return loginRedirect(request, requestId, nonce);
 
   const headers = requestHeadersWithSecurityContext(request, requestId, nonce);
   const response = NextResponse.next({ request: { headers } });
@@ -127,6 +133,15 @@ export async function proxy(request: NextRequest) {
   const requestId = request.headers.get("x-request-id")?.slice(0, 120) || crypto.randomUUID();
   const nonce = btoa(crypto.randomUUID());
   const isLegacyRoute = pathname === "/" || legacyRoutePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+
+  if (!isCustomerExperienceEnabled()) {
+    const customerApi = customerApiPrefixes.some((prefix) => pathname.startsWith(prefix));
+    if (customerApi) {
+      return secureResponse(NextResponse.json({ error: "Not found." }, { status: 404 }), request, requestId, nonce);
+    }
+    const customerPage = customerPagePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+    if (customerPage) return loginRedirect(request, requestId, nonce);
+  }
 
   if (isLegacyRoute) {
     return loginRedirect(request, requestId, nonce);

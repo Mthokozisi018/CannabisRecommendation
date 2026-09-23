@@ -8,6 +8,6 @@ export function ShareStoreButton({ storeName }: { storeName: string }) {
     if (navigator.share) await navigator.share(data).catch(() => undefined);
     else await navigator.clipboard.writeText(window.location.href).catch(() => undefined);
   }
-  return <button type="button" onClick={() => void share()} className="grid size-12 place-items-center rounded-full border-2 border-white/55 bg-black/45 text-white backdrop-blur" aria-label="Share this store"><Share2 size={23} /></button>;
+  return <button type="button" onClick={() => void share()} className="grid size-11 place-items-center rounded-full border border-[#526055] bg-[#07100b] text-white" aria-label="Share this store"><Share2 size={21} /></button>;
 }
 

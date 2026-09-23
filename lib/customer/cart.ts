@@ -46,15 +46,22 @@ export async function readCustomerCart(userId: string): Promise<CustomerCartPayl
 
   const { data: products, error: productError } = await admin
     .from("products")
-    .select("id,product_name,price,image_url,image_path,product_status,is_visible_on_pos,is_published,deleted_at,inventory_stock(current_quantity)")
+    .select("id,product_name,price,image_url,image_path,product_status,is_visible_on_pos,is_published,deleted_at")
     .in("id", productIds);
   if (productError) throw new Error("Unable to read the products in your cart.");
+  const { data: stocks, error: stockError } = await admin
+    .from("inventory_stock")
+    .select("product_id,current_quantity")
+    .eq("store_id", cart.store_id)
+    .in("product_id", productIds);
+  if (stockError) throw new Error("Unable to read the stock in your cart.");
   const productMap = new Map((products ?? []).map((product) => [product.id, product]));
+  const stockMap = new Map((stocks ?? []).map((stock) => [stock.product_id, stock]));
   const items = rawItems.flatMap((item) => {
     const product = productMap.get(item.product_id);
     if (!product || product.deleted_at || product.product_status !== "active" || product.is_visible_on_pos === false || product.is_published === false) return [];
-    const stockRelation = product.inventory_stock as { current_quantity?: number } | Array<{ current_quantity?: number }> | null;
-    const stock = Array.isArray(stockRelation) ? stockRelation[0] : stockRelation;
+    const stock = stockMap.get(item.product_id);
+    if (!stock) return [];
     return [{
       id: item.id,
       productId: product.id,

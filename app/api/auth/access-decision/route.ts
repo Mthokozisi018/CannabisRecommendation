@@ -5,6 +5,7 @@ import { getCustomerSession } from "@/lib/customer/auth";
 import { logServerEvent } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
 import { managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
+import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
 
 export const dynamic = "force-dynamic";
 const privateHeaders = { "Cache-Control": "private, no-store, max-age=0", "Vary": "Cookie, Authorization" };
@@ -24,9 +25,11 @@ async function auditAccess(action: string, details: Record<string, unknown>, rec
 }
 
 export async function GET() {
-  const customer = await getCustomerSession();
-  if (customer?.profile.status === "active") {
-    return NextResponse.json({ allowed: true, role: "customer", redirectTo: "/customer" }, { headers: privateHeaders });
+  if (isCustomerExperienceEnabled()) {
+    const customer = await getCustomerSession();
+    if (customer?.profile.status === "active") {
+      return NextResponse.json({ allowed: true, role: "customer", redirectTo: "/customer" }, { headers: privateHeaders });
+    }
   }
 
   const session = await getDashboardSession();
