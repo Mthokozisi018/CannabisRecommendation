@@ -30,7 +30,7 @@ if (!journal.products.length) {
     const id = randomUUID();
     const path = p.image_path || (p.image_url ? decodeURIComponent(new URL(p.image_url).pathname.split("/product-images/")[1] || "") : null);
     if (path && p.image_bucket && p.image_bucket !== "product-images") throw Error("Unexpected source image bucket.");
-    return { sourceId:p.id, id, sourcePath:path, imagePath:path ? `${journal.storeId}/products/${id}/${path.split("/").pop()}` : null };
+    return { sourceId:p.id, id, sourcePath:path, imagePath:path ? `stores/${journal.storeId}/products/${id}/${path.split("/").pop()}` : null };
   });
   await save();
 }
@@ -39,6 +39,18 @@ if (!journal.authUserId) {
     app_metadata:{ greenchoice_demo_view_only:true }, user_metadata:{ full_name:"GreenChoice Demo" } });
   if (error) throw Error(error.message);
   journal.authUserId = data.user.id;
+  await save();
+}
+// Resume an earlier preparation using the canonical store-scoped image layout.
+for (const product of journal.products.filter(p => p.imagePath && !p.imagePath.startsWith('stores/'))) {
+  const previous = product.imagePath;
+  const canonical = `stores/${previous}`;
+  if (journal.copiedImages.includes(previous)) {
+    const { error } = await admin.storage.from('product-images').move(previous,canonical);
+    if (error) throw Error(`Demo image relocation failed: ${error.message}`);
+    journal.copiedImages = journal.copiedImages.map(path => path===previous ? canonical : path);
+  }
+  product.imagePath = canonical;
   await save();
 }
 for (const product of journal.products.filter(p => p.imagePath)) {

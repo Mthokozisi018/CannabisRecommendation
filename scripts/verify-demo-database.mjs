@@ -38,9 +38,10 @@ await db.exec(`
  insert into public.staff_profiles values ('${demo}','${demoStore}'),('${normal}','${normalStore}');
  insert into public.pos_sales values ('${demo}','${demoStore}'),('${normal}','${normalStore}');
  insert into public.pos_sale_items values ('${demo}','${demo}'),('${normal}','${normal}');
- insert into storage.objects values ('product-images','${demoStore}/sample.jpg'),('products','private.jpg');
+ insert into storage.objects values ('product-images','stores/${demoStore}/products/sample.jpg'),('products','private.jpg');
 `);
 await db.exec(await readFile(new URL('../supabase/migrations/20261016135603_production_read_only_demo.sql', import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261016142000_demo_canonical_image_scope.sql', import.meta.url),'utf8'));
 await db.exec(`insert into private.demo_accounts(auth_user_id,store_id,source_store_id) values ('${demo}','${demoStore}','${normalStore}');
  create function public.fixture_definer_write() returns void language sql security definer as $$ update public.inventory_stock set current_quantity=current_quantity+1 $$;
  grant execute on function public.fixture_definer_write() to authenticated;`);

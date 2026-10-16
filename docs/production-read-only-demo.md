@@ -12,7 +12,7 @@ The migration adds restrictive demo policies and write-rejection triggers to exi
 
 1. Verify the branch parent, inspect the complete diff, run type checking, lint, tests, migration validation, secret scan and production build.
 2. Test the migration locally: `PGLITE_MODULE` can point to an installed `@electric-sql/pglite` module; run `node scripts/verify-demo-database.mjs`. It uses an in-memory fixture and never connects to production.
-3. Apply only `20261016135603_production_read_only_demo.sql` to the verified production Supabase project. The empty marker registry leaves normal users unchanged.
+3. Apply `20261016135603_production_read_only_demo.sql` followed by `20261016142000_demo_canonical_image_scope.sql` to the verified production Supabase project. The empty marker registry leaves normal users unchanged. The follow-up uses the existing image validator's canonical `stores/<store>/products/<product>/` layout.
 4. Deploy only the isolated reviewed commit, retaining existing production configuration and deployment protection.
 5. Load the existing production Supabase URL and server key into the operator process, then run `node scripts/prepare-production-demo.mjs <private-directory-outside-repository>`. The script creates a new login and physically copies and hashes the 28 product images. It saves credentials in a private journal, never stdout. Do not commit that directory.
 6. Inspect and execute its generated `snapshot.sql` as an administrator. This atomically creates the dedicated store/profile, marker, 59 copied products and independent stock rows. Twelve generated historical sales provide demonstration reporting. No real customer, supplier, staff or original sale records are copied. The synthetic sales do not change snapshot stock.
