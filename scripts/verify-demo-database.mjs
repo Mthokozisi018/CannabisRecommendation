@@ -1,0 +1,76 @@
+// Run with PGLITE_MODULE pointing to an installed @electric-sql/pglite module.
+// Uses an in-memory fixture only; never connects to Supabase or production.
+import { readFile } from "node:fs/promises";
+import assert from "node:assert/strict";
+const { PGlite } = await import(process.env.PGLITE_MODULE || "@electric-sql/pglite");
+const db = new PGlite();
+const demo = "10000000-0000-4000-8000-000000000001";
+const normal = "10000000-0000-4000-8000-000000000002";
+const demoStore = "20000000-0000-4000-8000-000000000001";
+const normalStore = "20000000-0000-4000-8000-000000000002";
+await db.exec(`
+ create role anon; create role authenticated; create role service_role bypassrls;
+ create schema auth; create schema storage;
+ create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+ grant usage on schema auth,public,storage to anon,authenticated,service_role;
+ create table auth.users(id uuid primary key,email text,encrypted_password text,phone text,email_change text,phone_change text,raw_app_meta_data jsonb,raw_user_meta_data jsonb,last_sign_in_at timestamptz);
+ create table auth.identities(user_id uuid); create table auth.mfa_factors(user_id uuid);
+ create table public.stores(id uuid primary key,name text);
+ create table public.staff_profiles(auth_user_id uuid,store_id uuid);
+ create table public.products(id uuid primary key,store_id uuid,name text);
+ create table public.inventory_stock(product_id uuid,store_id uuid,current_quantity int);
+ create table public.pos_sales(id uuid primary key,store_id uuid);
+ create table public.pos_sale_items(sale_id uuid,product_id uuid);
+ create table public.orders(id uuid primary key,store_id uuid);
+ create table public.order_items(order_id uuid,product_id uuid);
+ create table public.categories(id int);
+ create table public.customer_profiles(user_id uuid);
+ create table storage.objects(bucket_id text,name text);
+ alter table public.products enable row level security;
+ create policy old_product_access on public.products for all to authenticated using (true) with check (true);
+ alter table storage.objects enable row level security;
+ create policy old_storage_access on storage.objects for all to authenticated using (true) with check (true);
+ grant select,insert,update,delete,truncate on all tables in schema public,storage to authenticated;
+ insert into auth.users(id,email) values ('${demo}','demo@gc.example'),('${normal}','normal@example.test');
+ insert into public.stores values ('${demoStore}','Demo'),('${normalStore}','Normal');
+ insert into public.products values ('${demo}','${demoStore}','Demo product'),('${normal}','${normalStore}','Normal product');
+ insert into public.inventory_stock values ('${demo}','${demoStore}',10),('${normal}','${normalStore}',20);
+ insert into public.staff_profiles values ('${demo}','${demoStore}'),('${normal}','${normalStore}');
+ insert into public.pos_sales values ('${demo}','${demoStore}'),('${normal}','${normalStore}');
+ insert into public.pos_sale_items values ('${demo}','${demo}'),('${normal}','${normal}');
+ insert into storage.objects values ('product-images','${demoStore}/sample.jpg'),('products','private.jpg');
+`);
+await db.exec(await readFile(new URL('../supabase/migrations/20261016135603_production_read_only_demo.sql', import.meta.url),'utf8'));
+await db.exec(`insert into private.demo_accounts(auth_user_id,store_id,source_store_id) values ('${demo}','${demoStore}','${normalStore}');
+ create function public.fixture_definer_write() returns void language sql security definer as $$ update public.inventory_stock set current_quantity=current_quantity+1 $$;
+ grant execute on function public.fixture_definer_write() to authenticated;`);
+async function user(id) { await db.exec(`reset role; select set_config('request.jwt.claim.sub','${id}',false); set role authenticated;`); }
+async function rows(sql) { return (await db.query(sql)).rows; }
+async function blocked(sql) { await assert.rejects(db.exec(sql), /view only|row-level security|administrator-managed|permission denied/); }
+await user(normal);
+assert.equal((await rows('select * from products')).length,1);
+assert.equal((await rows('select * from inventory_stock')).length,2);
+await db.exec(`update products set name='Normal still edits' where id='${normal}'`);
+await db.exec('select public.fixture_definer_write()');
+await user(demo);
+assert.equal((await rows('select * from products')).length,1);
+assert.equal((await rows('select * from inventory_stock')).length,1);
+assert.equal((await rows('select * from staff_profiles')).length,1);
+assert.equal((await rows('select * from pos_sale_items')).length,1);
+assert.equal((await rows('select * from storage.objects')).length,1);
+await blocked(`insert into products values (gen_random_uuid(),'${demoStore}','Forbidden')`);
+await blocked('select public.fixture_definer_write()');
+await blocked('truncate public.inventory_stock');
+assert.equal((await rows(`update products set name='Forbidden' returning id`)).length,0);
+assert.equal((await rows(`delete from products returning id`)).length,0);
+await db.exec('reset role');
+await blocked(`update auth.users set encrypted_password='changed' where id='${demo}'`);
+await blocked(`update auth.users set email='changed@example.test' where id='${demo}'`);
+await blocked(`update auth.users set raw_app_meta_data='{}' where id='${demo}'`);
+await blocked(`insert into auth.mfa_factors values ('${demo}')`);
+await db.exec(`update auth.users set last_sign_in_at=now() where id='${demo}'`);
+await db.exec(`update auth.users set encrypted_password='normal change' where id='${normal}'`);
+await db.exec(`delete from auth.users where id='${normal}'`);
+assert.equal((await rows(`select * from auth.users where id='${normal}'`)).length,0);
+console.log('PASS: demo RLS, cross-store reads, writes, definer RPC, truncate, credentials/MFA and normal-account regression checks.');
+await db.close();

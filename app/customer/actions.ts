@@ -11,7 +11,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 function value(form: FormData, key: string) { const entry = form.get(key); return typeof entry === "string" ? entry.trim() : ""; }
 
 export async function logoutCustomerAction() {
-  await verifyOrigin();
+  await verifyOrigin({ allowDemoRead: true });
   const supabase = await createSupabaseServerClient();
   await supabase?.auth.signOut();
   redirect("/login");

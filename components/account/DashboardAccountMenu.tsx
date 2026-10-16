@@ -39,7 +39,7 @@ export function DashboardAccountMenu({ role, profile, manageHref = "/dashboard/a
   }, [closeMenu, open]);
 
   return (
-    <div ref={wrapperRef} className="relative inline-flex">
+    <div data-demo-write ref={wrapperRef} className="relative inline-flex">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

@@ -20,7 +20,7 @@ function formValue(formData: FormData, key: string) {
 }
 
 export async function logoutGreenChoiceStaffAction() {
-  await verifyOrigin();
+  await verifyOrigin({ allowDemoRead: true });
   const supabase = await createSupabaseServerClient();
   await supabase?.auth.signOut();
   const store = await cookies();

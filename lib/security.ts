@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { hasReadOnlyDemoSession } from "@/lib/demo-session";
 import { headers } from "next/headers";
 import { requireRateLimit } from "@/lib/rate-limit";
 
@@ -27,7 +28,7 @@ export function verifyCsrfToken(token: string | null, signature: string | null) 
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
-export async function verifyOrigin() {
+export async function verifyOrigin(options: { allowDemoRead?: boolean } = {}) {
   const headerStore = await headers();
   const origin = headerStore.get("origin");
   if (!origin) throw new Error("Request origin is required.");
@@ -59,5 +60,6 @@ export async function verifyOrigin() {
     throw new Error("Invalid request origin.");
   }
   if (!new Set(configured).has(normalizedOrigin)) throw new Error("Invalid request origin.");
+  if (!options.allowDemoRead && await hasReadOnlyDemoSession()) throw new Error("This demo account is view only. Changes are not permitted.");
   return true;
 }

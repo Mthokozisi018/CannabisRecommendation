@@ -24,7 +24,7 @@ export function CartPanel({
   onCheckout: () => void;
 }) {
   return (
-    <aside className="flex w-full max-h-[calc(100vh-130px)] flex-col rounded-xl border-2 border-white/45 bg-[linear-gradient(160deg,#101714,#07100c_52%,#030806)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] xl:max-h-[760px]">
+    <aside data-demo-write className="flex w-full max-h-[calc(100vh-130px)] flex-col rounded-xl border-2 border-white/45 bg-[linear-gradient(160deg,#101714,#07100c_52%,#030806)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] xl:max-h-[760px]">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-xl font-extrabold">Current Sale</h2>
         <button disabled={cart.length === 0 || isPending} onClick={onClearCart} className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/10 text-white/75 transition hover:border-red-200/45 hover:text-red-100 disabled:opacity-35" aria-label="Clear cart">

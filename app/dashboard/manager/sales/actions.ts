@@ -11,7 +11,7 @@ export type ManagerSalesReportActionResult =
 
 export async function refreshManagerSalesReport(input: unknown): Promise<ManagerSalesReportActionResult> {
   try {
-    await verifyOrigin();
+    await verifyOrigin({ allowDemoRead: true });
     const session = await requireCompletedManagerDashboardSession();
     if (!session.isManager || !session.assignedStoreId) throw new Error("Manager access required.");
     await assertRateLimit(`manager:sales-report:${session.authUserId}`, 40, 60_000);

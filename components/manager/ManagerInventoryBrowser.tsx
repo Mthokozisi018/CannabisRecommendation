@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowLeft, Eye, EyeOff, ImagePlus, Info, PackageSearch, 
 import { archiveProductAction, updateProductCardAction, updateProductPosVisibilityAction } from "@/app/dashboard/manager/actions";
 import { Money } from "@/components/GreenChoiceDashboard";
 import { Field, formatStockQuantity, initialState, ManualNumberInput, Message, PendingNotice, PendingSpinner, type ManagerFormAction } from "@/components/manager/forms/shared";
+import { ProductDescriptionModal } from "@/components/receptionist/pos/ProductDescriptionModal";
 import { FilterPanel } from "@/components/receptionist/pos/FilterPanel";
 import { ProductBadges } from "@/components/receptionist/pos/ProductBadges";
 import { categoryUsesSecondaryFilter, cultivationKey, displaySubcategory, getCultivationOptions, normalize, resolveProductSelection, subcategoryKey } from "@/components/receptionist/pos/pos-helpers";
@@ -177,9 +178,11 @@ function ManagerInventoryCard({
   visibilityAction,
   archiveAction,
   onProductArchived,
-  onVisibilityChanged
+  onVisibilityChanged,
+  readOnlyDemo = false
 }: {
   product: BrowserProduct;
+  readOnlyDemo?: boolean;
   onEdit: (productId: string) => void;
   visibilityAction: ManagerFormAction;
   archiveAction: ManagerFormAction;
@@ -218,12 +221,12 @@ function ManagerInventoryCard({
 
   return (
     <article className="group flex h-full min-h-[372px] w-full flex-col rounded-xl border-2 border-white/58 bg-[linear-gradient(145deg,#101714_0%,#07100c_48%,#030806_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-      <button type="button" onClick={() => onEdit(product.id)} className="relative mb-2 grid aspect-[16/9] place-items-center overflow-hidden rounded-lg bg-black/20 text-left" aria-label={`Edit ${product.name}`}>
+      <button type="button" onClick={() => onEdit(product.id)} className="relative mb-2 grid aspect-[16/9] place-items-center overflow-hidden rounded-lg bg-black/20 text-left" aria-label={`${readOnlyDemo ? "View" : "Edit"} ${product.name}`}>
         {/* Product images can be Supabase URLs or local placeholders. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={productImage} alt={`${product.name} product image`} className={`absolute inset-0 size-full drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105 ${preRollCultivationImage ? "object-cover" : "object-contain p-2"}`} />
         <span className="absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/80 bg-black/35 text-white">
-          <SquarePen size={15} />
+          {readOnlyDemo ? <Eye size={15} /> : <SquarePen size={15} />}
         </span>
         <span className="absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
         {!isVisibleOnPos ? <span className="absolute bottom-2 right-2 rounded-md border border-amber-200/35 bg-amber-500/20 px-2 py-1 text-[0.62rem] font-extrabold leading-5 text-amber-100">Hidden from POS</span> : null}
@@ -246,10 +249,11 @@ function ManagerInventoryCard({
         <StockSquare product={product} />
       </div>
       <button type="button" onClick={() => onEdit(product.id)} className="mt-auto rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-400">
-        Edit Product
+        {readOnlyDemo ? "View Product" : "Edit Product"}
       </button>
       <button
         type="button"
+        data-demo-write
         onClick={() => setConfirming(true)}
         className={`mt-1.5 inline-flex min-h-8 items-center justify-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
           isVisibleOnPos
@@ -261,7 +265,7 @@ function ManagerInventoryCard({
         {isVisibleOnPos ? "Remove from POS" : "Put Back on POS"}
       </button>
       {!state.ok && state.message ? <p className="mt-2 rounded-lg border border-red-300/25 bg-red-500/10 px-2 py-1.5 text-[0.7rem] font-semibold text-red-100">{state.message}</p> : null}
-      <button type="button" onClick={() => setConfirmingDelete(true)} className="mt-1.5 inline-flex min-h-8 items-center justify-center gap-2 rounded-lg border border-red-300/35 bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:border-red-200/65">
+      <button data-demo-write type="button" onClick={() => setConfirmingDelete(true)} className="mt-1.5 inline-flex min-h-8 items-center justify-center gap-2 rounded-lg border border-red-300/35 bg-red-500/15 px-3 py-1.5 text-xs font-bold text-red-100 transition hover:border-red-200/65">
         <Trash2 size={15} />
         Delete Product
       </button>
@@ -530,8 +534,10 @@ export function ManagerInventoryBrowser({
   visibilityAction = updateProductPosVisibilityAction,
   archiveAction = archiveProductAction,
   backHref,
-  storeName
+  storeName,
+  readOnlyDemo = false
 }: {
+  readOnlyDemo?: boolean;
   products: ManagerInventoryProduct[];
   updateAction?: ManagerFormAction;
   visibilityAction?: ManagerFormAction;
@@ -683,6 +689,7 @@ export function ManagerInventoryBrowser({
               <ManagerInventoryCard
                 key={product.id}
                 product={product}
+                readOnlyDemo={readOnlyDemo}
                 onEdit={setSelectedProductId}
                 visibilityAction={visibilityAction}
                 archiveAction={archiveAction}
@@ -695,10 +702,10 @@ export function ManagerInventoryBrowser({
       </section>
 
       <footer className="mt-auto flex flex-col gap-3 border-t border-white/10 py-4 text-sm text-white/68 sm:flex-row sm:items-center sm:justify-between">
-        <p><PackageSearch className="mr-2 inline text-emerald-400" size={17} /> Browse, inspect, and edit product details. Stock additions stay on Add Stock.</p>
+        <p><PackageSearch className="mr-2 inline text-emerald-400" size={17} /> {readOnlyDemo ? "Browse and inspect demonstration product details." : "Browse, inspect, and edit product details. Stock additions stay on Add Stock."}</p>
       </footer>
 
-      <EditProductModal key={selectedProduct?.id ?? "empty"} product={selectedProduct} action={updateAction} onClose={() => setSelectedProductId(null)} onSaved={handleSaved} />
+      {readOnlyDemo ? <ProductDescriptionModal product={selectedProduct} onClose={() => setSelectedProductId(null)} /> : <EditProductModal key={selectedProduct?.id ?? "empty"} product={selectedProduct} action={updateAction} onClose={() => setSelectedProductId(null)} onSaved={handleSaved} />}
     </main>
   );
 }

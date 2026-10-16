@@ -539,3 +539,14 @@ input[type="number"]::-webkit-inner-spin-button {
     animation-duration: 2.4s;
   }
 }
+
+/* Only the server-identified shared demo receives this scope. Backend and DB also deny writes. */
+.gc-demo-view-only [data-demo-write],
+.gc-demo-view-only button[aria-label="Go to checkout"],
+.gc-demo-view-only form:not([data-demo-session]),
+.gc-demo-view-only a[href="/dashboard/manager/inventory/manage"],
+.gc-demo-view-only a[href^="/dashboard/manager/staff"],
+.gc-demo-view-only a[href^="/dashboard/manager/products/new"],
+.gc-demo-view-only a[href^="/dashboard/account"] { display: none !important; }
+.gc-demo-view-only nav[aria-label="Manager dashboard actions"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 640px) { .gc-demo-view-only nav[aria-label="Manager dashboard actions"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

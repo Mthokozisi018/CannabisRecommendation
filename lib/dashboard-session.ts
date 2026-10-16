@@ -1,4 +1,5 @@
 import "server-only";
+import { isReadOnlyDemo } from "@/lib/demo-access";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -235,7 +236,7 @@ async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<ty
     }
   }
 
-  const accountDone = accountSetupComplete(profile);
+  const accountDone = isReadOnlyDemo(user) || accountSetupComplete(profile);
   const storeDone = profile.role === "manager" ? storeSetupComplete(profile) : Boolean(assignedStoreId || profile.role === "admin");
   const onboardingComplete = profile.role === "manager" ? accountDone && storeDone : profile.role === "receptionist" ? accountDone : true;
   const name = displayName(profile, user);

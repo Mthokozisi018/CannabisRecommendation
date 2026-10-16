@@ -88,7 +88,7 @@ export async function checkoutReceptionistSaleAction(input: CheckoutInput): Prom
 
 export async function searchReceptionistCustomersAction(input: unknown) {
   try {
-    await verifyOrigin();
+    await verifyOrigin({ allowDemoRead: true });
     const customers = await searchReceptionistCustomers(input);
     return { ok: true as const, customers };
   } catch (error) {

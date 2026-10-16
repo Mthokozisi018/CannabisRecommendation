@@ -190,7 +190,7 @@ export async function changeOwnAccountPasswordAction(_prev: AccountActionState, 
 }
 
 export async function logoutOwnAccountAction() {
-  await verifyOrigin();
+  await verifyOrigin({ allowDemoRead: true });
   const supabase = await createSupabaseServerClient();
   const session = await getDashboardSession();
   if (session) {

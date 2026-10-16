@@ -1,3 +1,4 @@
+import { isReadOnlyDemo } from "@/lib/demo-access";
 import { ManagerInventoryBrowser } from "@/components/manager/ManagerInventoryBrowser";
 import { listManagerProducts } from "@/lib/manager/data";
 import { requireCompletedManagerDashboardSession } from "@/lib/manager/onboarding";
@@ -10,5 +11,5 @@ export default async function ManagerInventoryPage() {
     listManagerProducts()
   ]);
 
-  return <ManagerInventoryBrowser products={products} backHref="/dashboard/manager" storeName={session.storeName} />;
+  return <ManagerInventoryBrowser readOnlyDemo={isReadOnlyDemo(session.user)} products={products} backHref="/dashboard/manager" storeName={session.storeName} />;
 }
