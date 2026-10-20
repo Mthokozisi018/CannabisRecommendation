@@ -1,20 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, ShoppingCart, X } from "lucide-react";
+import type { POSPayment } from "@/lib/pos-payment";
 import { checkoutReceptionistSaleAction } from "@/app/dashboard/receptionist/actions";
 import { DashboardAccountPanel } from "@/components/account/DashboardAccountMenu";
 import { Money } from "@/components/GreenChoiceDashboard";
 import { isProductCategory, PRODUCT_SUBCATEGORIES } from "@/lib/manager/options";
 import type { ReceptionistCategory, ReceptionistProduct } from "@/lib/receptionist/products";
+import { TransactionWorkspace } from "@/components/receptionist/pos/TransactionWorkspace";
 import { CartPanel } from "@/components/receptionist/pos/CartPanel";
+import { CustomerCheckoutDialog } from "@/components/receptionist/pos/CustomerCheckoutDialog";
+import { StaffCustomerOnboarding } from "@/components/registration/StaffCustomerOnboarding";
 import { FilterPanel } from "@/components/receptionist/pos/FilterPanel";
 import { FooterTimestamp } from "@/components/receptionist/pos/FooterTimestamp";
 import { ProductDescriptionModal } from "@/components/receptionist/pos/ProductDescriptionModal";
 import { ProductGrid } from "@/components/receptionist/pos/ProductGrid";
 import { getPOSProductCartDetails } from "@/components/receptionist/pos/product-display";
-import type { CartItem, POSMessage, ReceptionistPOSProps, SubcategoryOption } from "@/components/receptionist/pos/pos-types";
+import type { CartItem, POSMessage, ReceptionistPOSProps, SelectedPOSCustomer, SubcategoryOption } from "@/components/receptionist/pos/pos-types";
 import { allowedCategorySlugs, canAddProduct, categoryUsesSecondaryFilter, cultivationKey, displaySubcategory, getCultivationOptions, normalize, preferredSubcategoryOrder, resolveProductSelection, subcategoryKey } from "@/components/receptionist/pos/pos-helpers";
 
 const POS_SELECTION_STORAGE_KEY = "greenchoice:receptionist-pos-selection";
@@ -48,6 +52,10 @@ function EmptyState({ title, body, detail }: { title: string; body: string; deta
       {detail ? <p className="mx-auto mt-4 max-w-2xl rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/45">{detail}</p> : null}
     </div>
   );
+}
+
+function moneyLabel(value: number) {
+  return new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" }).format(value);
 }
 
 function FloatingCheckoutButton({
@@ -166,6 +174,7 @@ export function ReceptionistPOS({
   categories,
   unavailableReason,
   initialCategory,
+  profileLabel,
   isDemo = false,
   storeName = "DISPENSARY",
   backToDashboardHref,
@@ -183,12 +192,14 @@ export function ReceptionistPOS({
   const [notice, setNotice] = useState<POSNotice | null>(null);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
   const [checkoutId, setCheckoutId] = useState(() => crypto.randomUUID());
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [transactionView, setTransactionView] = useState<{ saleId?: string } | null>(null);
+  const [registeredCustomerPhone, setRegisteredCustomerPhone] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectedPOSCustomer | null>(null);
   const [isPending, startTransition] = useTransition();
-  const contentGridRef = useRef<HTMLDivElement>(null);
   const strainPanelRef = useRef<HTMLDivElement>(null);
   const productResultsRef = useRef<HTMLDivElement>(null);
   const checkoutSectionRef = useRef<HTMLDivElement>(null);
-  const [cartOffset, setCartOffset] = useState(0);
   const [checkoutShortcutVisible, setCheckoutShortcutVisible] = useState(false);
   const recentAddClicksRef = useRef(new Map<string, number>());
   const noticeIdRef = useRef(0);
@@ -215,27 +226,8 @@ export function ReceptionistPOS({
   const cultivationOptions = useMemo(() => getCultivationOptions(products, selectedCategory, effectiveSubcategory), [effectiveSubcategory, products, selectedCategory]);
   const filteredProducts = useMemo(() => getFilteredProducts({ products, selectedCategory, subcategory: effectiveSubcategory, showCultivationFilter, cultivationType: effectiveCultivationType }), [effectiveCultivationType, effectiveSubcategory, products, selectedCategory, showCultivationFilter]);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + Math.round(item.unitPrice * 100) * item.quantity, 0) / 100;
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartPanelStyle = { "--pos-cart-offset": `${cartOffset}px` } as CSSProperties;
-
-  useEffect(() => {
-    function updateCartOffset() {
-      const contentGrid = contentGridRef.current;
-      const productResults = productResultsRef.current;
-      if (!contentGrid || !productResults || window.innerWidth < 1280) {
-        setCartOffset(0);
-        return;
-      }
-
-      const nextOffset = Math.max(0, productResults.getBoundingClientRect().top - contentGrid.getBoundingClientRect().top);
-      setCartOffset(Math.round(nextOffset));
-    }
-
-    updateCartOffset();
-    window.addEventListener("resize", updateCartOffset);
-    return () => window.removeEventListener("resize", updateCartOffset);
-  }, [category, cultivationOptions.length, message, showCultivationFilter, subcategory, subcategoryOptions.length]);
 
   useEffect(() => {
     if (!notice) return;
@@ -372,14 +364,21 @@ export function ReceptionistPOS({
     setCart((current) => current.filter((item) => item.productId !== productId));
   }, []);
 
-  const cancelSale = useCallback(() => {
+  const clearCartItems = useCallback(() => {
     setCart([]);
     setSelectedProductId(null);
     setCheckoutId(crypto.randomUUID());
     setMessage(null);
   }, []);
 
-  const checkout = useCallback(() => {
+  const cancelSale = useCallback(() => {
+    clearCartItems();
+    setSelectedCustomer(null);
+    setRegisteredCustomerPhone("");
+    setCustomerDialogOpen(false);
+  }, [clearCartItems]);
+
+  const openCheckoutCustomerSelection = useCallback(() => {
     if (isPending) return;
     if (cart.length === 0) {
       setMessage({ tone: "error", text: "Cart is empty." });
@@ -393,8 +392,33 @@ export function ReceptionistPOS({
     }
 
     if (isDemo && !checkoutAction) {
+      setSelectedCustomer({
+        id: "00000000-0000-4000-8000-000000000001",
+        firstName: "Demo",
+        surname: "Customer",
+        fullName: "Demo Customer",
+        phoneNumber: "082 000 0000"
+      });
+    }
+
+    setMessage(null);
+    setCustomerDialogOpen(true);
+  }, [cart, checkoutAction, isDemo, isPending]);
+
+  const completeCheckout = useCallback((payment: POSPayment) => {
+    if (isPending) return;
+    if (!selectedCustomer) {
+      setMessage({ tone: "error", text: "Select a customer before completing checkout." });
+      setCustomerDialogOpen(true);
+      return;
+    }
+
+    if (isDemo && !checkoutAction) {
       setCart([]);
       setSelectedProductId(null);
+      setSelectedCustomer(null);
+      setRegisteredCustomerPhone("");
+      setCustomerDialogOpen(false);
       setCheckoutId(crypto.randomUUID());
       setNotice({ id: ++noticeIdRef.current, tone: "success", text: "Sale completed", dismissible: true, durationMs: SALE_COMPLETE_FEEDBACK_MS });
       return;
@@ -402,11 +426,18 @@ export function ReceptionistPOS({
 
     startTransition(async () => {
       const completeSale = checkoutAction ?? checkoutReceptionistSaleAction;
-      const result = await completeSale({
+      let result;
+      try { result = await completeSale({
         checkoutId,
+        customerId: selectedCustomer.id,
+        payment,
         items: cart.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice }))
       });
 
+      } catch {
+        setMessage({ tone: "error", text: "Checkout response was interrupted. Retry this checkout to recover its saved result safely." });
+        return;
+      }
       if (!result.ok) {
         setMessage({ tone: "error", text: result.message });
         return;
@@ -414,10 +445,14 @@ export function ReceptionistPOS({
 
       setCart([]);
       setSelectedProductId(null);
+      setSelectedCustomer(null);
+      setCustomerDialogOpen(false);
+      setRegisteredCustomerPhone("");
       setCheckoutId(crypto.randomUUID());
       setNotice({ id: ++noticeIdRef.current, tone: "success", text: "Sale completed", dismissible: true, durationMs: SALE_COMPLETE_FEEDBACK_MS });
+      if (result.saleId) { setNotice(null); setTransactionView({ saleId: result.saleId }); }
     });
-  }, [cart, checkoutAction, checkoutId, isDemo, isPending, startTransition]);
+  }, [cart, checkoutAction, checkoutId, isDemo, isPending, selectedCustomer, startTransition]);
 
   const dismissNotice = useCallback(() => {
     setNotice(null);
@@ -438,6 +473,7 @@ export function ReceptionistPOS({
 
   return (
     <main className="gc-pos-page mx-auto flex min-h-screen max-w-[1920px] flex-col px-4 py-3 text-white sm:px-6">
+      {transactionView && <TransactionWorkspace saleId={transactionView.saleId} onClose={() => { setTransactionView(null); if (transactionView.saleId) cancelSale(); }} />}
       <header className="gc-pos-header grid gap-0 border-b border-white/10 pb-1 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
         <div className="flex justify-start">
           {backToDashboardHref ? (
@@ -457,8 +493,8 @@ export function ReceptionistPOS({
         </div>
       </header>
 
-      <div ref={contentGridRef} className="grid flex-1 gap-5 py-3 xl:grid-cols-[minmax(0,936px)_minmax(400px,460px)] xl:justify-between">
-        <section className="min-w-0">
+      <div className="grid flex-1 gap-x-5 pb-3 xl:grid-cols-[minmax(0,936px)_minmax(400px,460px)] xl:justify-between">
+        <section className="min-w-0 pt-3 xl:pt-2">
           <FilterPanel
             message={message}
             visibleCategories={visibleCategories}
@@ -490,24 +526,30 @@ export function ReceptionistPOS({
           </div>
         </section>
 
-        <div
-          id="current-sale"
-          ref={checkoutSectionRef}
-          tabIndex={-1}
-          aria-label="Current Sale checkout section"
-          className="scroll-mt-4 self-start outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503] xl:pt-[var(--pos-cart-offset)]"
-          style={cartPanelStyle}
-        >
-          <CartPanel
-            cart={cart}
-            subtotal={subtotal}
-            cartCount={cartCount}
-            isPending={isPending}
-            onClearCart={cancelSale}
-            onChangeQuantity={changeQuantity}
-            onRemoveItem={removeItem}
-            onCheckout={checkout}
-          />
+        <div className="contents xl:block xl:self-start">
+          <div aria-label="Customer registration" className={`order-first grid ${isDemo ? "grid-cols-2" : "grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)]"} items-stretch gap-2 py-2 [&>button]:min-w-0 [&>button]:px-2 [&>button]:text-xs sm:[&>button]:px-3 sm:[&>button]:text-sm [&>p]:col-span-full`}>
+            {!isDemo && <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#16c78c]/70 bg-[#063b2d] px-3 py-2 text-sm font-black text-[#d7fff0] transition hover:border-[#56f0ba] hover:bg-[#08523e]" onClick={() => setTransactionView({})}>Previous Transactions</button>}
+            <StaffCustomerOnboarding onRegistered={phoneNumber => { setRegisteredCustomerPhone(phoneNumber); setCustomerDialogOpen(true); }} />
+          </div>
+
+          <div
+            id="current-sale"
+            ref={checkoutSectionRef}
+            tabIndex={-1}
+            aria-label="Current Sale checkout section"
+            className="mt-5 scroll-mt-4 self-start outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503] xl:mt-3"
+          >
+            <CartPanel
+              cart={cart}
+              subtotal={subtotal}
+              cartCount={cartCount}
+              isPending={isPending}
+              onClearCart={cancelSale}
+              onChangeQuantity={changeQuantity}
+              onRemoveItem={removeItem}
+              onCheckout={openCheckoutCustomerSelection}
+            />
+          </div>
         </div>
       </div>
 
@@ -517,6 +559,28 @@ export function ReceptionistPOS({
       </footer>
 
       <ProductDescriptionModal product={selectedProduct} onClose={() => setSelectedProductId(null)} />
+      <CustomerCheckoutDialog
+        initialCustomerQuery={registeredCustomerPhone}
+        key={`${checkoutId}:${customerDialogOpen}`}
+        cart={cart}
+        cartCount={cartCount}
+        total={subtotal}
+        checkoutError={message?.tone === "error" ? message.text : undefined}
+        open={customerDialogOpen}
+        selectedCustomer={selectedCustomer}
+        totalLabel={moneyLabel(subtotal)}
+        isCompleting={isPending}
+        storeName={storeName}
+        profileLabel={profileLabel}
+        accountRole={accountRole}
+        accountProfile={accountProfile}
+        onClose={() => setCustomerDialogOpen(false)}
+        onClearCart={clearCartItems}
+        onChangeQuantity={changeQuantity}
+        onRemoveItem={removeItem}
+        onSelectCustomer={setSelectedCustomer}
+        onCompleteSale={completeCheckout}
+      />
       <FloatingCheckoutButton visible={checkoutShortcutVisible} cartCount={cartCount} onClick={goToCheckoutSection} />
       <POSNotification notice={notice} onDismiss={dismissNotice} />
     </main>

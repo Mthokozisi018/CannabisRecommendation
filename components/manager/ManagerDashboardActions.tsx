@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, Boxes, ClipboardCheck, ClipboardList, ShoppingCart, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, Boxes, ClipboardCheck, ClipboardList, ShoppingCart, Truck, UsersRound, type LucideIcon } from "lucide-react";
 
 type CardTone = "green" | "purple" | "blue" | "amber" | "teal";
-type ManagerActionKey = "products" | "inventory" | "orders" | "staff" | "sales" | "serve";
+type ManagerActionKey = "products" | "inventory" | "suppliers" | "orders" | "staff" | "sales" | "serve";
 
 type ManagerCard = {
   key: ManagerActionKey;
@@ -33,6 +33,13 @@ const cards: ManagerCard[] = [
     href: "/dashboard/manager/inventory",
     icon: ClipboardList,
     tone: "purple"
+  },
+  {
+    key: "suppliers",
+    title: "Supplier Information",
+    href: "/dashboard/manager/suppliers",
+    icon: Truck,
+    tone: "teal"
   },
   {
     key: "staff",
@@ -137,7 +144,7 @@ export function ManagerDashboardActions({
   pendingOrderCount?: number;
 }) {
   return (
-    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[1320px] grid-cols-2 justify-items-center gap-5 sm:gap-6 md:grid-cols-3 xl:grid-cols-6 xl:gap-5">
+    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[1500px] grid-cols-2 justify-items-center gap-5 sm:gap-6 md:grid-cols-3 xl:grid-cols-7 xl:gap-4">
       {cards.map(({ key, ...card }) => (
         <ManagerActionCard
           key={key}

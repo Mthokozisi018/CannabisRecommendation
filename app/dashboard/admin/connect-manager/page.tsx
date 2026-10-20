@@ -1,14 +1,14 @@
 import { AdminPageShell } from "@/components/admin/AdminDashboardUI";
-import { ConnectManagerForm } from "@/components/admin/ConnectManagerForm";
+import { CreateManagerAccountForm } from "@/components/admin/ConnectManagerForm";
 import { requireAdminUser } from "@/lib/admin/data";
 
 export const dynamic = "force-dynamic";
 
-export default async function ConnectManagerPage() {
+export default async function CreateManagerAccountPage() {
   await requireAdminUser();
   return (
     <AdminPageShell>
-      <ConnectManagerForm />
+      <CreateManagerAccountForm />
     </AdminPageShell>
   );
 }

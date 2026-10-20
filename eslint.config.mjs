@@ -5,7 +5,7 @@ const config = [
   ...nextVitals,
   ...nextTypescript,
   {
-    ignores: [".next/**", ".vercel/**", "node_modules/**"]
+    ignores: [".next/**", ".next-stale-*/**", ".vercel/**", "node_modules/**", "tmp/**"]
   }
 ];
 

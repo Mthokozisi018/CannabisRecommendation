@@ -1,4 +1,5 @@
 import "server-only";
+import { readStoreNetRevenue } from "./net-sales";
 import { cache } from "react";
 import { cacheGet, cacheSet, GREENCHOICE_CACHE_TTLS_SECONDS, managerDashboardSummaryCacheKey } from "@/lib/cache/redis";
 import type { DashboardSession } from "@/lib/dashboard-session";
@@ -97,7 +98,7 @@ export const getManagerDashboardSummary = cache(async (session: DashboardSession
 
   const { start, end } = todayBounds();
   const [salesResult, staffResult, loginResult] = await Promise.all([
-    supabase.rpc("get_manager_sales_total_today"),
+    readStoreNetRevenue(supabase, storeId, start, end),
     admin
       .from("staff_profiles")
       .select("id, auth_user_id, user_id, full_name, first_name, surname, role, account_status, is_active")
@@ -114,17 +115,15 @@ export const getManagerDashboardSummary = cache(async (session: DashboardSession
       .order("created_at", { ascending: true })
   ]);
 
-  if (salesResult.error || staffResult.error || loginResult.error) {
+  if (staffResult.error || loginResult.error) {
     await logServerEvent("warn", "manager_dashboard_summary_partial", {
-      salesAvailable: !salesResult.error,
+      salesAvailable: true,
       staffAvailable: !staffResult.error,
       loginSummaryAvailable: !loginResult.error
     });
   }
 
-  const salesRow = Array.isArray(salesResult.data) ? salesResult.data[0] : salesResult.data;
-  const parsedSalesTotal = Number(salesRow?.total_sales ?? 0);
-  const totalSalesToday = Number.isFinite(parsedSalesTotal) ? parsedSalesTotal : 0;
+  const totalSalesToday = salesResult;
   const staff = ((staffResult.data ?? []) as StoreStaffRow[]).filter(staffIsActive);
   const staffByAuthId = new Map<string, StoreStaffRow>();
   staff.forEach((member) => {

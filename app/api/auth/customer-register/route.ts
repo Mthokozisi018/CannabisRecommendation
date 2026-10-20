@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
-        emailRedirectTo: `${configuredApplicationUrl()}/auth/callback?next=/customer`,
+        emailRedirectTo: `${configuredApplicationUrl()}/auth/callback?next=/customer/shop`,
         data: { greenchoice_registration: "customer" }
       }
     });
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       created: true,
       requiresEmailVerification: !signUpData.user.email_confirmed_at,
-      redirectTo: signUpData.user.email_confirmed_at ? "/customer" : "/customer/verify-email",
+      redirectTo: signUpData.user.email_confirmed_at ? "/customer/shop" : "/customer/verify-email",
       message: "Your GreenChoice customer account has been created. Keep your email and password safe—you will need them whenever you sign in."
     }, { status: 201, headers: responseHeaders });
   } catch (error) {

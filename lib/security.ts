@@ -27,10 +27,17 @@ export function verifyCsrfToken(token: string | null, signature: string | null) 
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
+export class RequestOriginError extends Error {
+  constructor(message = "Invalid request origin.") {
+    super(message);
+    this.name = "RequestOriginError";
+  }
+}
+
 export async function verifyOrigin() {
   const headerStore = await headers();
   const origin = headerStore.get("origin");
-  if (!origin) throw new Error("Request origin is required.");
+  if (!origin) throw new RequestOriginError("Request origin is required.");
 
   const configured = [
     process.env.APP_URL,
@@ -54,10 +61,12 @@ export async function verifyOrigin() {
 
   let normalizedOrigin = "";
   try {
-    normalizedOrigin = new URL(origin).origin;
+    const parsed = new URL(origin);
+    if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password || parsed.origin !== origin) throw new RequestOriginError();
+    normalizedOrigin = parsed.origin;
   } catch {
-    throw new Error("Invalid request origin.");
+    throw new RequestOriginError();
   }
-  if (!new Set(configured).has(normalizedOrigin)) throw new Error("Invalid request origin.");
+  if (!new Set(configured).has(normalizedOrigin)) throw new RequestOriginError();
   return true;
 }

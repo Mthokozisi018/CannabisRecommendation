@@ -1,32 +1,21 @@
 import Link from "next/link";
-import { CheckCircle2, CreditCard, Link2, Send, ShieldCheck, Sparkles, Store, UserPlus, UserRoundCog, UsersRound } from "lucide-react";
+import { CheckCircle2, CreditCard, Send, ShieldCheck, Store, UserPlus, UsersRound } from "lucide-react";
 import { GlassPanel } from "@/components/GreenChoiceDashboard";
 import type { AdminStats } from "@/lib/admin/data";
 
 const adminCards = [
+  { href: "/dashboard/admin/franchises", title: "Franchises", text: "Register franchises and their administrators.", icon: Store },
   {
-    href: "/dashboard/admin/demo-store",
-    title: "Demo Store",
-    text: "Open the admin demo environment for manager and receptionist walkthroughs.",
-    icon: Sparkles
+    href: "/dashboard/admin/connect-manager",
+    title: "Create Manager Account",
+    text: "Create a manager account with a temporary password and required onboarding.",
+    icon: UserPlus
   },
   {
     href: "/dashboard/admin/stores",
     title: "View Stores & Managers",
     text: "View all stores and their connected manager and receptionist accounts.",
     icon: Store
-  },
-  {
-    href: "/dashboard/admin/connect-manager",
-    title: "Connect Manager",
-    text: "Connect a confirmed Supabase Auth user to manager onboarding.",
-    icon: Link2
-  },
-  {
-    href: "/dashboard/admin/test-customer",
-    title: "Test Customer",
-    text: "Prepare and reset the dedicated customer account for internal QA.",
-    icon: UserRoundCog
   },
   {
     href: "/dashboard/admin/payments",
@@ -77,7 +66,7 @@ export function AdminDashboardHome({ stats }: { stats: AdminStats }) {
         <p className="mt-4 text-xl text-white/75">Platform overview and management.</p>
       </section>
 
-      <section className="grid gap-7 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-7 md:grid-cols-2 xl:grid-cols-4">
         {adminCards.map((card) => {
           const Icon = card.icon;
           return (

@@ -6,8 +6,10 @@ vi.mock("server-only", () => ({}));
 import {
   maxProductImageBytes,
   normalizeProductImage,
+  normalizeStoreImage,
   ProductImageValidationError,
-  productImageObjectPath
+  productImageObjectPath,
+  storeImageObjectPath
 } from "@/lib/product-image-upload";
 
 async function imageFile(format: "png" | "jpeg" | "webp", declaredType: string, width = 80, height = 60) {
@@ -58,5 +60,13 @@ describe("product image upload validation", () => {
     const second = productImageObjectPath(storeId, productId);
     expect(first).toMatch(new RegExp(`^stores/${storeId}/products/${productId}/[0-9a-f-]+\\.webp$`));
     expect(second).not.toBe(first);
+  });
+
+  it("normalizes store images and keeps them under the store cover prefix", async () => {
+    const storeId = "10000000-0000-4000-8000-000000000001";
+    const normalized = await normalizeStoreImage(await imageFile("webp", "image/webp"));
+    const path = storeImageObjectPath(storeId);
+    expect(normalized.contentType).toBe("image/webp");
+    expect(path).toMatch(new RegExp(`^stores/${storeId}/cover/[0-9a-f-]+\\.webp$`));
   });
 });

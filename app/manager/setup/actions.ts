@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { LEGAL_DOCUMENTS, assertLegalDocumentsAvailable } from "@/lib/manager/legal-documents";
 import { reportServerException } from "@/lib/logger";
-import { managerPasswordIssues } from "@/lib/manager/password-policy";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
 import { accountSetupComplete, getCurrentManagerSetupProfile, linkedManagerStore, managerAccountSetupSchema, managerOnboardingComplete, normalizeSAPhone, slugForStoreName, storeRegistrationSchema } from "@/lib/manager/onboarding";
@@ -74,12 +73,11 @@ export async function completeManagerAccountSetupAction(_prev: SetupActionState,
       termsAccepted: submittedValues.termsAccepted ? "on" : "",
       privacyAccepted: submittedValues.privacyAccepted ? "on" : ""
     });
+    if (accountSetupComplete(profile)) throw new Error("Your account setup is already complete.");
     const mustChangePassword = profile.temporary_password_active === true;
     const permanentPassword = text(formData, "permanentPassword");
-    const confirmPermanentPassword = text(formData, "confirmPermanentPassword");
     if (mustChangePassword) {
-      const passwordIssues = managerPasswordIssues(permanentPassword, confirmPermanentPassword);
-      if (passwordIssues.length) throw new Error(passwordIssues[0]);
+      if (!permanentPassword) throw new Error("Enter your new password.");
       const supabase = await createSupabaseServerClient();
       if (!supabase) throw new Error("Supabase is not configured.");
       const { error: passwordError } = await supabase.auth.updateUser({ password: permanentPassword });
@@ -87,8 +85,10 @@ export async function completeManagerAccountSetupAction(_prev: SetupActionState,
         await reportServerException("manager_onboarding_password_update_failed", passwordError, { managerUserId: user.id });
         const sessionProblem = /session|expired|reauth|nonce|jwt|authentication/i.test(passwordError.message);
         throw new Error(sessionProblem
-          ? "Your secure sign-in session has expired. Sign in again with your temporary password, then return to account registration."
-          : "Your new password could not be saved. Check the password requirements and try again.");
+          ? "Your secure sign-in session has expired. Sign in again with your current password, then return to account registration."
+          : passwordError.code === "weak_password"
+            ? passwordError.message
+            : "Your new password could not be saved. Choose a different password that meets the authentication provider requirements and try again.");
       }
     }
 
@@ -130,7 +130,7 @@ export async function completeManagerAccountSetupAction(_prev: SetupActionState,
     const { data: updatedProfile, error } = completion;
     if (error) {
       await reportServerException("manager_onboarding_profile_update_failed", error, { managerUserId: user.id });
-      throw new Error("Your password was updated, but your account details could not be saved. Submit the form again. If the problem continues, contact the administrator.");
+      throw new Error("Your password was updated, but your account details could not be saved. Sign in with your new password and submit the form again with another new password. If the problem continues, contact the administrator.");
     }
     if (!updatedProfile) throw new Error("Manager profile could not be updated.");
   } catch (error) {

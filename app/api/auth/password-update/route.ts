@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auditAccessDenied, decideDashboardAccess, getDashboardSession } from "@/lib/dashboard-session";
 import { managerPasswordIssues } from "@/lib/manager/password-policy";
-import { verifyOrigin } from "@/lib/security";
+import { RequestOriginError, verifyOrigin } from "@/lib/security";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -39,7 +39,8 @@ export async function POST(request: Request) {
       message: "Password updated successfully. Please log in again.",
       redirectTo: "/login"
     }, { headers: privateHeaders });
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestOriginError) return NextResponse.json({ error: "Invalid request origin." }, { status: 403, headers: privateHeaders });
     return NextResponse.json({ error: "Password reset is unavailable." }, { status: 503, headers: privateHeaders });
   }
 }

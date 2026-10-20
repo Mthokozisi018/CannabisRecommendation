@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
-import { notFound } from "next/navigation";
-import { addCustomerAddressAction, submitCustomerSupportAction, updateCustomerPersonalAction, updateCustomerPreferencesAction } from "@/app/customer/actions";
+import { notFound, redirect } from "next/navigation";
+import { submitCustomerSupportAction, updateCustomerPersonalAction, updateCustomerPreferencesAction } from "@/app/customer/actions";
 import { requireCustomerSession } from "@/lib/customer/auth";
-import { SOUTH_AFRICAN_PROVINCES } from "@/lib/customer/validation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const sections = ["personal", "addresses", "notifications", "privacy", "categories", "filters", "appearance", "language", "help", "support", "about"] as const;
@@ -19,10 +18,10 @@ export default async function CustomerProfileSectionPage({ params }: { params: P
   if (!sections.includes(rawSection as Section)) notFound();
   const section = rawSection as Section;
   const session = await requireCustomerSession();
+  if (section === "addresses") redirect("/customer/addresses");
   const supabase = await createSupabaseServerClient();
-  const [{ data: preferences }, { data: addresses }, { data: categories }, { data: supportRequests }] = await Promise.all([
+  const [{ data: preferences }, { data: categories }, { data: supportRequests }] = await Promise.all([
     supabase!.from("customer_preferences").select("*").eq("user_id", session.user.id).maybeSingle(),
-    supabase!.from("customer_addresses").select("*").eq("user_id", session.user.id).order("is_default", { ascending: false }),
     supabase!.from("categories").select("slug,name").eq("is_active", true).order("sort_order"),
     supabase!.from("customer_support_requests").select("id,subject,status,created_at").eq("user_id", session.user.id).order("created_at", { ascending: false }).limit(10)
   ]);
@@ -34,7 +33,7 @@ export default async function CustomerProfileSectionPage({ params }: { params: P
 
       {section === "personal" ? <form action={updateCustomerPersonalAction} className={`${panel} mt-6 grid gap-4 sm:grid-cols-2`}><label className="font-bold">Name<input className={input} name="firstName" defaultValue={session.profile.first_name} required /></label><label className="font-bold">Surname<input className={input} name="surname" defaultValue={session.profile.surname} required /></label><label className="font-bold sm:col-span-2">Email address<input className={`${input} bg-[#f2f4f2]`} value={session.profile.email} readOnly /></label><label className="font-bold sm:col-span-2">Phone number<input className={input} name="phoneNumber" defaultValue={session.profile.phone_number} required /></label><div className="sm:col-span-2 rounded-xl bg-[#f2f7f3] p-4 text-sm text-[#55645a]">Date of birth: {new Intl.DateTimeFormat("en-ZA", { dateStyle: "long" }).format(new Date(`${session.profile.date_of_birth}T00:00:00Z`))}<br />ID number ending in {session.profile.id_last_four}. Your complete ID number is not displayed or stored here.</div><div className="sm:col-span-2"><SaveButton /></div></form> : null}
 
-      {section === "addresses" ? <><div className="mt-6 grid gap-3">{(addresses ?? []).map((address) => <article key={address.id} className={panel}><div className="flex items-center justify-between"><strong>{address.label}</strong>{address.is_default ? <span className="rounded-full bg-[#e1f5e7] px-3 py-1 text-xs font-black text-[#087c39]">Default</span> : null}</div><p className="mt-2 text-[#617067]">{[address.street_address, address.unit_details, address.suburb, address.city, address.province, address.postal_code].filter(Boolean).join(", ")}</p></article>)}{!addresses?.length ? <p className={panel}>No addresses saved.</p> : null}</div><form action={addCustomerAddressAction} className={`${panel} mt-6 grid gap-4 sm:grid-cols-2`}><h2 className="text-xl font-black sm:col-span-2">Add an address</h2><label className="font-bold">Label<input className={input} name="label" defaultValue="Home" required /></label><label className="font-bold">Street address<input className={input} name="streetAddress" required /></label><label className="font-bold">Unit or complex<input className={input} name="unitDetails" /></label><label className="font-bold">Suburb<input className={input} name="suburb" required /></label><label className="font-bold">City<input className={input} name="city" required /></label><label className="font-bold">Province<select className={input} name="province" defaultValue="Gauteng">{SOUTH_AFRICAN_PROVINCES.map((province) => <option key={province}>{province}</option>)}</select></label><label className="font-bold">Postal code<input className={input} name="postalCode" pattern="[0-9]{4}" required /></label><div className="sm:col-span-2"><SaveButton label="Add address" /></div></form></> : null}
+
 
       {section === "notifications" ? <form action={updateCustomerPreferencesAction} className={`${panel} mt-6 grid gap-4`}><input type="hidden" name="preferenceScope" value="notifications" /><label className="flex items-center justify-between gap-4 font-bold"><span>Email account updates</span><input className="size-5 accent-[#087c39]" type="checkbox" name="emailNotifications" defaultChecked={preferences?.email_notifications ?? true} /></label><label className="flex items-center justify-between gap-4 font-bold"><span>SMS account updates</span><input className="size-5 accent-[#087c39]" type="checkbox" name="smsNotifications" defaultChecked={preferences?.sms_notifications ?? true} /></label><label className="flex items-center justify-between gap-4 font-bold"><span>Promotional updates</span><input className="size-5 accent-[#087c39]" type="checkbox" name="promotionalNotifications" defaultChecked={preferences?.promotional_notifications ?? false} /></label><SaveButton /></form> : null}
 

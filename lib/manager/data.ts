@@ -1,4 +1,5 @@
 import "server-only";
+import { inventoryStockLevel } from "@/lib/manager/stock-level";
 import {
   cacheGet,
   cacheSet,
@@ -144,8 +145,9 @@ export async function getManagerLowStockSummary(): Promise<ManagerLowStockSummar
   const summary = products.reduce<ManagerLowStockSummary>(
     (acc, product) => {
       acc.productCount += 1;
-      if (product.currentQuantity <= 0) acc.outOfStockCount += 1;
-      else if (product.lowStockThreshold > 0 && product.currentQuantity <= product.lowStockThreshold) acc.lowStockCount += 1;
+      const level = inventoryStockLevel(product.currentQuantity, product.lowStockThreshold);
+      if (level === "out_of_stock") acc.outOfStockCount += 1;
+      else if (level === "low_stock") acc.lowStockCount += 1;
       return acc;
     },
     { productCount: 0, lowStockCount: 0, outOfStockCount: 0, expiringSoonCount: 0 }

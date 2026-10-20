@@ -20,6 +20,7 @@ jobs:
     env:
       GREENCHOICE_ENV: staging
       EXPECTED_SUPABASE_PROJECT_REF: aaaaaaaaaaaaaaaaaaaa
+      PRODUCTION_SUPABASE_PROJECT_REF: bbbbbbbbbbbbbbbbbbbb
       NEXT_PUBLIC_SUPABASE_URL: https://aaaaaaaaaaaaaaaaaaaa.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-public-anonymous-key-placeholder
       SUPABASE_SERVICE_ROLE_KEY: ci-server-secret-placeholder-000000000000
@@ -33,6 +34,7 @@ jobs:
       STAFF_SESSION_SIGNING_SECRET: ci-staff-session-placeholder-0000000000
       GREENCHOICE_PASSWORD_FINGERPRINT_SECRET: ci-password-fingerprint-placeholder-00000
       RATE_LIMIT_KEY_SECRET: ci-rate-limit-key-placeholder-0000000000
+      READINESS_DIAGNOSTIC_SECRET: ci-readiness-secret-placeholder-00000000000
       RATE_LIMIT_REDIS_REST_URL: https://redis-ci.example.invalid
       RATE_LIMIT_REDIS_REST_TOKEN: ci-redis-token-placeholder-000000000000
       UPSTASH_REDIS_REST_URL: https://redis-cache-ci.example.invalid
@@ -57,6 +59,9 @@ jobs:
       - name: Scan repository for committed secrets
         run: npm run scan:secrets
 
+      - name: Check whitespace and conflict markers
+        run: git diff --check
+
       - name: Validate forward migrations
         run: npm run validate:migrations
 
@@ -77,6 +82,12 @@ jobs:
 
       - name: Build production application
         run: npm run build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run unauthenticated end-to-end regression tests
+        run: npx playwright test tests/e2e/workstation.spec.ts
 
       - name: Upload test reports
         if: always()

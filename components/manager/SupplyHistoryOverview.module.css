@@ -1,0 +1,33 @@
+.filterGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.filterGrid > label,
+.filterGrid input,
+.filterGrid select { min-width: 0; }
+.filterGrid select { padding-right: 2.25rem; }
+@media (min-width: 640px) {
+  .filterGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .filterGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+}
+@media (min-width: 1120px) {
+  .filterGrid {
+    grid-template-columns: minmax(0, 15fr) minmax(0, 13fr) minmax(0, 17fr) minmax(0, 15fr) minmax(0, 17fr) minmax(0, 23fr);
+    gap: 10px;
+  }
+}
+@media (min-width: 1280px) {
+  .filterGrid { gap: 12px; }
+}
+
+.detailReveal { animation: reveal 160ms ease-out; }
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .detailReveal { animation: none; }
+}

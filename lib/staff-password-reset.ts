@@ -10,7 +10,8 @@ export async function sendStaffPasswordResetLink(email: string) {
   }
 
   const supabase = createClient(url, anonKey, { auth: { persistSession: false } });
-  await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
     redirectTo: `${configuredApplicationUrl()}/update-password`
   });
+  if (error) throw new Error("The password-reset email could not be sent. Please retry later.");
 }

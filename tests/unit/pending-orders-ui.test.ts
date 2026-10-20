@@ -38,7 +38,8 @@ describe("pending orders user interface", () => {
     const ui = source("components/manager/ManagerPendingOrdersUI.tsx");
     expect(css).toContain("@media (orientation: portrait) and (max-width: 1024px)");
     expect(css).toContain(".gc-pending-orders-layout");
-    expect(shell).toContain('{ href: "/customer/orders", label: "Orders"');
+    expect(shell).toContain("CustomerBottomNavigation");
+    expect(source("lib/customer/navigation.ts")).toContain('{ href: "/customer/orders", label: "Orders"');
     expect(checkout).toContain("placeCustomerOrderAction");
     expect(checkout).toContain("Place Order");
     expect(ui).toContain("Available after four days");

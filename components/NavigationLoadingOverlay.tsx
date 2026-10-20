@@ -67,6 +67,7 @@ export function NavigationLoadingOverlay() {
       if (event.defaultPrevented || isModifiedClick(event)) return;
       const anchor = getAnchor(event.target);
       if (!anchor || !shouldShowForAnchor(anchor)) return;
+      if (anchor.dataset.navigationLoading === "franchise-sales" || anchor.dataset.navigationLoading === "franchise-stores") return;
       show();
     }
 

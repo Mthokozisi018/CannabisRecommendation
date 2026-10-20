@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { configuredApplicationUrl } from "@/lib/app-url";
-import { verifyOrigin } from "@/lib/security";
+import { RequestOriginError, verifyOrigin } from "@/lib/security";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const schema = z.object({ email: z.string().trim().toLowerCase().email().max(320) }).strict();
@@ -22,7 +22,8 @@ export async function POST(request: Request) {
         redirectTo: `${configuredApplicationUrl()}/update-password?flow=recovery`
       });
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestOriginError) return NextResponse.json({ error: "Invalid request origin." }, { status: 403, headers: privateHeaders });
     // Password recovery remains deliberately account-enumeration neutral.
   }
   return NextResponse.json({ message: neutralMessage }, { headers: privateHeaders });

@@ -1,9 +1,16 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+const isCi = process.env.CI === "true" || process.env.CI === "1";
+const uploadSentrySourceMaps = isCi && process.env.SENTRY_UPLOAD_SOURCE_MAPS === "true";
+
 const nextConfig: NextConfig = {
   typedRoutes: true,
   output: "standalone",
+  outputFileTracingIncludes: {
+    "/api/dashboard/manager/registration-qr": ["./public/branding/greenchoice-registration-template.png"],
+    "/api/dashboard/registration-qr": ["./public/branding/greenchoice-registration-template.png"]
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {
     root: process.cwd()
@@ -17,7 +24,10 @@ const nextConfig: NextConfig = {
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+      {
+        key: "Permissions-Policy",
+        value: "camera=(), microphone=(), geolocation=(self), payment=(), usb=()"
+      },
       { key: "X-Frame-Options", value: "DENY" }
     ];
     if (process.env.NODE_ENV === "production") {
@@ -52,8 +62,16 @@ export default withSentryConfig(nextConfig, {
 
   project: process.env.SENTRY_PROJECT ?? "javascript-nextjs",
 
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
+  // Local builds never contact Sentry. Uploads require an explicit CI opt-in.
+  silent: !uploadSentrySourceMaps,
+  telemetry: uploadSentrySourceMaps,
+  sourcemaps: {
+    disable: !uploadSentrySourceMaps
+  },
+  release: {
+    create: uploadSentrySourceMaps,
+    finalize: uploadSentrySourceMaps
+  },
 
   // For all available options, see:
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/

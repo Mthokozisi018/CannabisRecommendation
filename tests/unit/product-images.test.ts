@@ -46,5 +46,8 @@ describe("product image placeholders", () => {
     expect(getProductImage({ category: "Pre-Rolls", cultivationType: "Indoor" })).toBe("/placeholder-images/PreRolls.png");
     expect(getProductImage({ category: "Vape Cartridges", cultivationType: "Outdoor" })).toBe("/placeholder-images/Vape Cartige .png");
     expect(getProductImage({ category: "Edibles", subcategory: "Gummies" })).toBe("/placeholder-images/gummies.png");
+    expect(getProductImage({ category: "Edibles", subcategory: "Cookies" })).toBe("/placeholder-images/backed Goods.png");
+    expect(getProductImage({ category: "Accessories", subcategory: "Storage Containers" })).toBe("/placeholder-images/Storage Tin.png");
+    expect(getProductImage({ category: "Accessories", subcategory: "Trays" })).toBe("/placeholder-images/tray.png");
   });
 });

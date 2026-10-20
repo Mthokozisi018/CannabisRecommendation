@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 import { CheckCircle2, Eye, EyeOff, UserPlus } from "lucide-react";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
-import { SOUTH_AFRICAN_PROVINCES } from "@/lib/customer/validation";
+import { SOUTH_AFRICAN_PROVINCES } from "@/lib/customer/provinces";
 
 const inputClass = "mt-2 h-12 w-full rounded-xl border-2 border-[#d9e2dc] bg-white px-4 text-[#102018] outline-none transition placeholder:text-[#839087] focus:border-[#159447]";
 

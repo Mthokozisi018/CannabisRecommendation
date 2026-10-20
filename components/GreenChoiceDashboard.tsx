@@ -3,28 +3,7 @@ import Image from "next/image";
 import { ArrowLeft, Leaf, LogOut, LucideIcon, Sprout } from "lucide-react";
 import { logoutGreenChoiceStaffAction } from "@/app/actions";
 
-export function DashboardBackdrop(_props: { variant?: "manager" | "receptionist" | "admin" }) {
-  const variant = _props.variant ?? "manager";
-  const background = {
-    admin: "/images/admin-dashboard-wallpaper.png",
-    manager: "/images/manager-dashboard/new-manager-wallpaper.png",
-    receptionist: "/images/backgrounds/receptionist-pos-wallpaper.png"
-  }[variant];
-  const manager = variant === "manager";
-
-  return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#050909]">
-      <div
-        className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${manager ? "opacity-100 saturate-110" : "opacity-62 saturate-125"}`}
-        style={{ backgroundImage: manager ? `url(${background})` : `linear-gradient(120deg,rgba(0,0,0,0.48),rgba(0,0,0,0.2)),url(${background})` }}
-      />
-      {manager ? <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.56),rgba(0,0,0,0.24)_48%,rgba(0,0,0,0.58)),linear-gradient(180deg,rgba(0,0,0,0.16),rgba(0,0,0,0.68))]" /> : null}
-      {!manager ? <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_8%,rgba(127,255,74,0.08),transparent_28%),linear-gradient(180deg,rgba(2,8,7,0.28),rgba(0,0,0,0.55))]" /> : null}
-      {!manager ? <div className="absolute -left-28 -top-24 size-[430px] rounded-full bg-[radial-gradient(circle,rgba(109,210,75,0.3),transparent_68%)] blur-3xl" /> : null}
-      {!manager ? <div className="absolute bottom-[-140px] right-[-120px] size-[560px] rounded-full bg-[radial-gradient(circle,rgba(93,186,70,0.34),transparent_70%)] blur-3xl" /> : null}
-    </div>
-  );
-}
+export { DashboardBackdrop } from "@/components/DashboardBackdrop";
 
 export function DashboardHeader({ title, subtitle, profileLabel }: { title: string; subtitle: string; profileLabel: string }) {
   return (
@@ -82,18 +61,6 @@ export function VisualHeroPanel({ imageSrc, alt, children, className = "" }: { i
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.86),rgba(0,0,0,0.44)_55%,rgba(0,0,0,0.16))]" />
       <div className="relative p-6 sm:p-8">{children}</div>
     </section>
-  );
-}
-
-export function ProductVisualPanel({ imageSrc, alt, children }: { imageSrc: string; alt: string; children?: React.ReactNode }) {
-  return (
-    <div className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-2xl border border-lime-400/25 bg-black/35">
-      {/* Product cards accept Supabase URLs and local placeholders without Next image domain config. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={imageSrc} alt={alt} className="absolute inset-0 size-full object-cover opacity-72 saturate-125 transition duration-300 group-hover:scale-105" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(132,229,89,0.16),transparent_42%),linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.62))]" />
-      <div className="relative">{children}</div>
-    </div>
   );
 }
 

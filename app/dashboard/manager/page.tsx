@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import Link from "next/link";
+import { StoreRegistrationQR } from "@/components/manager/StoreRegistrationQR";
 import { DashboardAccountPanel } from "@/components/account/DashboardAccountMenu";
 import type { DashboardAccountProfile } from "@/components/account/account-types";
 import { ManagerDashboardActions } from "@/components/manager/ManagerDashboardActions";
@@ -9,6 +11,7 @@ import type { DashboardSession } from "@/lib/dashboard-session";
 import { requireCompletedManagerDashboardSession } from "@/lib/manager/onboarding";
 import { warmReceptionistCatalogForStore } from "@/lib/receptionist/products";
 import { countManagerPendingOrders } from "@/lib/manager/pending-orders";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -53,10 +56,15 @@ export default async function ManagerDashboardPage() {
   const managerName = firstName(session.displayName || "Manager");
   const greeting = managerGreeting();
   const pendingOrderCount = await countManagerPendingOrders(session);
+  const supabase = await createSupabaseServerClient();
+  const franchiseStore = session.assignedStoreId && supabase
+    ? await supabase.from("stores").select("franchise_id").eq("id", session.assignedStoreId).maybeSingle()
+    : null;
 
   return (
     <main className="gc-manager-dashboard-page relative isolate flex min-h-screen items-start px-4 pb-8 pt-20 sm:px-6 sm:pt-10 lg:px-[clamp(2rem,8vw,8.5rem)] lg:pt-[clamp(3rem,10vh,7rem)]">
-      <div className="absolute right-4 top-4 z-30 sm:right-6 sm:top-6">
+      <div className="absolute right-4 top-4 z-30 flex items-center gap-3 sm:right-6 sm:top-6">
+        <StoreRegistrationQR />
         <DashboardAccountPanel role="manager" profile={accountProfileFromSession(session)} />
       </div>
       <section className="gc-manager-dashboard-shell mx-auto flex w-full max-w-[1180px] flex-col items-center">
@@ -70,6 +78,7 @@ export default async function ManagerDashboardPage() {
         ) : null}
         <ManagerPOSRoutePreloader />
         <ManagerDashboardActions pendingOrderCount={pendingOrderCount} />
+        {franchiseStore?.data?.franchise_id ? <Link href={"/dashboard/manager/supply" as never} className="mt-6 inline-flex min-h-10 items-center rounded-lg border border-emerald-400/60 bg-emerald-950/80 px-5 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-900">Master Supply →</Link> : null}
       </section>
     </main>
   );

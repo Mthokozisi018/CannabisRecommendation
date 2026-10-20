@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { PublicTelemetry } from "@/components/PublicTelemetry";
 import "./globals.css";
 import { NavigationLoadingOverlay } from "@/components/NavigationLoadingOverlay";
 import { TopBar } from "@/components/TopBar";
@@ -20,8 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={null}>
           <NavigationLoadingOverlay />
         </Suspense>
-        <Analytics />
-        <SpeedInsights />
+        <Suspense fallback={null}><PublicTelemetry /></Suspense>
       </body>
     </html>
   );

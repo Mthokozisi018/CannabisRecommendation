@@ -15,6 +15,8 @@ export const PRODUCT_SUBCATEGORY_PLACEHOLDERS = {
   dab: "/placeholder-images/Dap.png",
   gummies: "/placeholder-images/gummies.png",
   chocolates: "/placeholder-images/chocolate.png",
+  cookies: "/placeholder-images/backed Goods.png",
+  brownies: "/placeholder-images/backed Goods.png",
   "baked-goods": "/placeholder-images/backed Goods.png",
   drinks: "/placeholder-images/beverage.png",
   beverage: "/placeholder-images/beverage.png",
@@ -25,10 +27,12 @@ export const PRODUCT_SUBCATEGORY_PLACEHOLDERS = {
   crushers: "/placeholder-images/Grinder.png",
   "rolling-papers": "/placeholder-images/rolling paper.png",
   "storage-jars": "/placeholder-images/Storage Tin.png",
+  "storage-containers": "/placeholder-images/Storage Tin.png",
   "storage-tin": "/placeholder-images/Storage Tin.png",
   storage: "/placeholder-images/Storage Tin.png",
   jars: "/placeholder-images/Storage Tin.png",
-  tray: "/placeholder-images/tray.png"
+  tray: "/placeholder-images/tray.png",
+  trays: "/placeholder-images/tray.png"
 } as const;
 
 export const DEFAULT_PRODUCT_PLACEHOLDER = PRODUCT_PLACEHOLDERS.accessories;

@@ -9,21 +9,23 @@ function source(path: string) {
 
 describe("customer experience rebuild", () => {
   it("uses the exact persistent navigation order", () => {
-    const shell = source("components/customer/CustomerShell.tsx");
-    const labels = ["Home", "Stores", "Saved", "Orders", "Profile"];
+    const shell = source("components/customer/CustomerBottomNavigation.tsx");
+    const navigation = source("lib/customer/navigation.ts");
+    const labels = ["Shop", "Cart", "Orders", "Alerts", "Addresses"];
     let previous = -1;
     for (const label of labels) {
-      const index = shell.indexOf(`label: "${label}"`);
+      const index = navigation.indexOf(`label: "${label}"`);
       expect(index).toBeGreaterThan(previous);
       previous = index;
     }
     expect(shell).toContain("fixed inset-x-0 bottom-0");
   });
 
-  it("keeps Home and Saved store-focused", () => {
+  it("keeps Shop and retained Saved stores store-focused", () => {
     const home = source("app/customer/page.tsx");
     const saved = source("app/customer/saved/page.tsx");
-    expect(home).toContain("listRecentlyViewedStores");
+    expect(home).toContain('redirect("/customer/shop")');
+    expect(source("app/customer/shop/page.tsx")).toContain("listCustomerStores");
     expect(home).not.toContain("listCustomerProducts");
     expect(saved).toContain("Saved Stores");
     expect(saved).not.toContain("CustomerProductGrid");
@@ -69,19 +71,19 @@ describe("customer experience rebuild", () => {
     expect(css).toContain("filter: saturate(1.25)");
     expect(css).toContain("linear-gradient(120deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.2))");
     expect(css).toContain("linear-gradient(180deg, rgba(2, 8, 7, 0.28), rgba(0, 0, 0, 0.55))");
-    expect(dashboard).toContain("opacity-62 saturate-125");
+    expect(dashboard).toContain('export { DashboardBackdrop } from "@/components/DashboardBackdrop"');
+    expect(source("components/DashboardBackdrop.tsx")).toContain("opacity-62 saturate-125");
     expect(home).not.toContain("rgba(1,5,3,0.96)");
   });
 
-  it("removes the Customer Home hero search panel so Nearby stores can move up", () => {
+  it("replaces the legacy Home landing page with Shop", () => {
     const home = source("app/customer/page.tsx");
     expect(home).not.toContain("Welcome back");
     expect(home).not.toContain("Find your GreenChoice store");
     expect(home).not.toContain('placeholder="Search stores"');
     expect(home).not.toContain("/customer/profile/addresses");
     expect(home).not.toContain("Pretoria, Gauteng");
-    expect(home).toContain("Nearby stores");
-    expect(home).toContain("pt-4");
+    expect(home).toContain('redirect("/customer/shop")');
   });
 
   it("splits collection and delivery checkout fields and includes review", () => {
@@ -213,7 +215,7 @@ describe("customer experience rebuild", () => {
   });
 
   it("keeps the Stores landing page in a single-column row layout", () => {
-    const storesPage = source("app/customer/stores/page.tsx");
+    const storesPage = source("app/customer/shop/page.tsx");
     const card = source("components/customer/CustomerStoreCard.tsx");
     expect(storesPage).toContain("grid grid-cols-1");
     expect(storesPage).not.toContain("lg:grid-cols-2");
@@ -227,14 +229,14 @@ describe("customer experience rebuild", () => {
   });
 
   it("uses the Receptionist dashboard logo treatment on the Stores landing page", () => {
-    const storesPage = source("app/customer/stores/page.tsx");
+    const storesPage = source("app/customer/shop/page.tsx");
     const receptionistPOS = source("components/receptionist/pos/ReceptionistPOS.tsx");
     const logoClass =
       "gc-pos-logo h-20 w-[min(30cm,calc(100vw-2rem))] object-contain sm:h-24 sm:w-[min(30cm,58vw)] lg:h-28";
     expect(storesPage).not.toContain(
       "Search active GreenChoice locations and their configured fulfillment",
     );
-    expect(storesPage).not.toContain("<h1");
+    expect(storesPage).toContain(">Shop</h1>");
     expect(storesPage).toContain('src="/branding/greenchoice-logo.png"');
     expect(storesPage).toContain("gc-pos-logo-wrap flex justify-center");
     expect(storesPage).toContain(logoClass);

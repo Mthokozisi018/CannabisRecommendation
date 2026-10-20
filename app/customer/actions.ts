@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireCustomerSession } from "@/lib/customer/auth";
+import { addressFormValues, addressRecord, customerAddressSchema } from "@/lib/customer/address-validation";
 import { readCustomerCart } from "@/lib/customer/cart";
 import { logServerEvent } from "@/lib/logger";
 import { normalizeSouthAfricanPhone, SOUTH_AFRICAN_PROVINCES } from "@/lib/customer/validation";
@@ -186,13 +187,16 @@ export async function updateCustomerPersonalAction(formData: FormData) {
 export async function addCustomerAddressAction(formData: FormData) {
   await verifyOrigin();
   const session = await requireCustomerSession();
-  const parsed = z.object({ label: z.string().min(1).max(40), streetAddress: z.string().min(3).max(180), unitDetails: z.string().max(100), suburb: z.string().min(1).max(100), city: z.string().min(1).max(100), province: z.enum(SOUTH_AFRICAN_PROVINCES), postalCode: z.string().regex(/^\d{4}$/) }).safeParse({ label: value(formData, "label"), streetAddress: value(formData, "streetAddress"), unitDetails: value(formData, "unitDetails"), suburb: value(formData, "suburb"), city: value(formData, "city"), province: value(formData, "province"), postalCode: value(formData, "postalCode") });
+  const parsed = customerAddressSchema.safeParse(addressFormValues(formData));
   if (!parsed.success) throw new Error("Check the address information.");
   const supabase = await createSupabaseServerClient();
-  const { count } = await supabase!.from("customer_addresses").select("id", { count: "exact", head: true }).eq("user_id", session.user.id);
-  const { error } = await supabase!.from("customer_addresses").insert({ user_id: session.user.id, label: parsed.data.label, street_address: parsed.data.streetAddress, unit_details: parsed.data.unitDetails || null, suburb: parsed.data.suburb, city: parsed.data.city, province: parsed.data.province, postal_code: parsed.data.postalCode, country: "South Africa", is_default: !count });
+  const { count, error: countError } = await supabase!.from("customer_addresses").select("id", { count: "exact", head: true }).eq("user_id", session.user.id);
+  if (countError) throw new Error("We could not read your addresses.");
+  const { error } = await supabase!.from("customer_addresses").insert({ ...addressRecord(parsed.data), user_id: session.user.id, is_default: count === 0 });
   if (error) throw new Error("We could not save this address.");
   revalidatePath("/customer/profile/addresses");
+  revalidatePath("/customer/addresses");
+  revalidatePath("/customer/checkout");
 }
 
 export async function updateCustomerPreferencesAction(formData: FormData) {

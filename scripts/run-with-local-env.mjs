@@ -7,8 +7,7 @@ const requestedPath = process.env.GREENCHOICE_STAGING_ENV_FILE;
 const candidates = requestedPath
   ? [resolve(process.cwd(), requestedPath)]
   : [
-      resolve(process.cwd(), ".env.staging.local"),
-      resolve(process.cwd(), "../greenchoice-production-hardening/.env.staging.local")
+      resolve(process.cwd(), ".env.staging.local")
     ];
 const envPath = candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 const entryPath = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : "";

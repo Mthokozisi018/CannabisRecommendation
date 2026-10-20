@@ -3,25 +3,31 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import { isSensitiveRegistrationUrl } from "@/lib/registration/telemetry";
 
 const isProduction = process.env.NODE_ENV === "production";
-const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN ?? "https://d3ba0bde4eac4f8b6b6e8bbcccd59d13@o4511845984305152.ingest.de.sentry.io/4511846003769424";
-const tracesSampleRate = Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? (isProduction ? "0.2" : "1"));
-const replaySessionSampleRate = Number(process.env.NEXT_PUBLIC_SENTRY_REPLAY_SAMPLE_RATE ?? (isProduction ? "0.02" : "1"));
-const replayOnErrorSampleRate = Number(process.env.NEXT_PUBLIC_SENTRY_REPLAY_ERROR_SAMPLE_RATE ?? "1");
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim() || undefined;
+const enabled = Boolean(dsn);
+const tracesSampleRate = Number(process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? (isProduction ? "0.2" : "0"));
 
 Sentry.init({
   dsn,
+  enabled,
   environment: process.env.NEXT_PUBLIC_GREENCHOICE_ENV ?? process.env.NODE_ENV,
 
-  integrations: [Sentry.replayIntegration()],
+  // Registration can be reached by client navigation from a staff page. Do not
+  // start session replay anywhere until a route-safe collection policy is approved.
+  integrations: [],
+  beforeSend: event => isSensitiveRegistrationUrl(window.location.pathname) || isSensitiveRegistrationUrl(event.request?.url) ? null : event,
+  beforeSendTransaction: event => isSensitiveRegistrationUrl(window.location.pathname) || isSensitiveRegistrationUrl(event.request?.url) ? null : event,
+  beforeBreadcrumb: breadcrumb => isSensitiveRegistrationUrl(breadcrumb.data?.url as string | undefined) ? null : breadcrumb,
 
   tracesSampleRate,
-  enableLogs: true,
+  enableLogs: enabled && isProduction,
 
-  replaysSessionSampleRate: replaySessionSampleRate,
+  replaysSessionSampleRate: 0,
 
-  replaysOnErrorSampleRate: replayOnErrorSampleRate,
+  replaysOnErrorSampleRate: 0,
 
   sendDefaultPii: false,
 
