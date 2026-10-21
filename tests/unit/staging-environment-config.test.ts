@@ -24,7 +24,9 @@ const validEnvironment = {
   ALLOW_DESTRUCTIVE_LOCAL_SEED: "false",
   PAYSTACK_BILLING_ENABLED: "true",
   PAYSTACK_MODE: "test",
-  PAYSTACK_SECRET_KEY: "sk_test_fixture_not_a_real_key"
+  PAYSTACK_SECRET_KEY: "sk_test_fixture_not_a_real_key",
+  PAYSTACK_CALLBACK_URL: "https://greenchoice-staging.vercel.app/billing/payment/callback",
+  PAYSTACK_WEBHOOK_URL: "https://greenchoice-staging.vercel.app/api/payments/paystack/webhook"
 };
 
 describe("staging environment verification", () => {
@@ -77,5 +79,24 @@ describe("staging environment verification", () => {
     });
     expect(failures).toContain("Paystack billing requires a staging-only test secret and PAYSTACK_MODE=test.");
     expect(failures).toContain("PAYSTACK_CALLBACK_URL must use the configured staging origin and route.");
+  });
+
+  it("rejects missing callback and webhook URLs while billing is enabled", () => {
+    const failures = validateStagingEnvironment({
+      ...validEnvironment,
+      PAYSTACK_CALLBACK_URL: "",
+      PAYSTACK_WEBHOOK_URL: ""
+    });
+    expect(failures).toContain("PAYSTACK_CALLBACK_URL must use the configured staging origin and route.");
+    expect(failures).toContain("PAYSTACK_WEBHOOK_URL must use the configured staging origin and route.");
+  });
+
+  it("allows missing Paystack endpoints when billing is disabled", () => {
+    expect(validateStagingEnvironment({
+      ...validEnvironment,
+      PAYSTACK_BILLING_ENABLED: "false",
+      PAYSTACK_CALLBACK_URL: "",
+      PAYSTACK_WEBHOOK_URL: ""
+    })).toEqual([]);
   });
 });

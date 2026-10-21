@@ -5,6 +5,7 @@ import { requireBillingOwner } from "@/lib/billing/accounts";
 import { beginOnboardingCheckout, beginRecoveryCheckout } from "@/lib/billing/transactions";
 import { cardUpdateUrl } from "@/lib/billing/subscriptions";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
+import { paystackCheckoutCallbackUrl } from "@/lib/billing/checkout-config";
 
 export async function startOnboardingCheckoutAction() {
   await verifyOrigin();
@@ -12,7 +13,11 @@ export async function startOnboardingCheckoutAction() {
   if (!session) redirect("/login");
   await assertRateLimit(`billing:checkout:${session.authUserId}`, 8, 15 * 60_000);
   const account = await requireBillingOwner(session, true);
-  const url = await beginOnboardingCheckout(account, session.email);
+  if (!paystackCheckoutCallbackUrl()) redirect("/billing?checkoutError=configuration" as never);
+  let url: string | null = null;
+  try { url = await beginOnboardingCheckout(account, session.email); }
+  catch { console.error("Could not start Paystack onboarding checkout"); }
+  if (!url) redirect("/billing?checkoutError=provider" as never);
   redirect(url as never);
 }
 
@@ -22,7 +27,11 @@ export async function startRecoveryCheckoutAction() {
   if (!session) redirect("/login");
   await assertRateLimit(`billing:recovery:${session.authUserId}`, 8, 15 * 60_000);
   const account = await requireBillingOwner(session);
-  const url = await beginRecoveryCheckout(account, session.email);
+  if (!paystackCheckoutCallbackUrl()) redirect("/billing?checkoutError=configuration" as never);
+  let url: string | null = null;
+  try { url = await beginRecoveryCheckout(account, session.email); }
+  catch { console.error("Could not start Paystack recovery checkout"); }
+  if (!url) redirect("/billing?checkoutError=provider" as never);
   redirect(url as never);
 }
 

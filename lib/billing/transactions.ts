@@ -3,6 +3,7 @@ import { billingDb, type BillingAccount } from "./accounts";
 import { BILLING_PRICES_CENTS } from "./pricing";
 import { initializePaystackCheckout, paymentMatchesExpected, verifyPaystackTransaction } from "./paystack";
 import { provisionSubscription } from "./subscriptions";
+import { paystackCheckoutCallbackUrl } from "./checkout-config";
 
 type BillingPayment = {
   id: string; account_id: string; reference: string; payer_email: string;
@@ -10,16 +11,9 @@ type BillingPayment = {
   amount_cents: number; status: "pending" | "success" | "failed";
 };
 
-function callbackUrl() {
-  const configured = process.env.PAYSTACK_CALLBACK_URL?.trim();
-  const app = process.env.APP_URL?.trim();
-  if (!configured || !app || configured !== `${app.replace(/\/$/, "")}/billing/payment/callback` || !configured.startsWith("https://")) {
-    throw new Error("The public staging Paystack callback is not configured.");
-  }
-  return configured;
-}
-
 export async function beginOnboardingCheckout(account: BillingAccount, payerEmail: string) {
+  const callbackUrl = paystackCheckoutCallbackUrl();
+  if (!callbackUrl) throw new Error("The public staging Paystack callback is not configured.");
   if (account.onboarding_paid_at) throw new Error("The onboarding payment has already been completed.");
   const email = payerEmail.trim().toLowerCase();
   if (!email || !email.includes("@")) throw new Error("A billing owner email is required.");
@@ -47,10 +41,12 @@ export async function beginOnboardingCheckout(account: BillingAccount, payerEmai
   }
   if (payment.payer_email !== email || payment.amount_cents !== amountCents) throw new Error("The pending checkout belongs to another payer or amount.");
   return initializePaystackCheckout({ email, amountCents, reference: payment.reference,
-    callbackUrl: callbackUrl(), billingId: account.id });
+    callbackUrl, billingId: account.id });
 }
 
 export async function beginRecoveryCheckout(account: BillingAccount, payerEmail: string) {
+  const callbackUrl = paystackCheckoutCallbackUrl();
+  if (!callbackUrl) throw new Error("The public staging Paystack callback is not configured.");
   if (!account.onboarding_paid_at || !["grace", "restricted"].includes(account.status)) {
     throw new Error("There is no overdue subscription payment to recover.");
   }
@@ -82,7 +78,7 @@ export async function beginRecoveryCheckout(account: BillingAccount, payerEmail:
   }
   if (payment.payer_email !== email || payment.amount_cents !== amountCents) throw new Error("The pending recovery payment does not match this bill.");
   return initializePaystackCheckout({ email, amountCents, reference: payment.reference,
-    callbackUrl: callbackUrl(), billingId: account.id });
+    callbackUrl, billingId: account.id });
 }
 
 export async function reconcileBillingPayment(reference: string) {

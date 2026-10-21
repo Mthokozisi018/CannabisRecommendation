@@ -52,7 +52,7 @@ export async function initializePaystackCheckout(input: {
   if (!Number.isSafeInteger(input.amountCents) || input.amountCents <= 0) throw new Error("Invalid billing amount.");
   if (!/^[a-zA-Z0-9.=-]+$/.test(input.reference)) throw new Error("Invalid payment reference.");
   const callback = new URL(input.callbackUrl);
-  if (callback.protocol !== "https:" && !(process.env.GREENCHOICE_ENV === "development" && callback.hostname === "127.0.0.1")) {
+  if (callback.protocol !== "https:") {
     throw new Error("A secure Paystack callback URL is required.");
   }
   const result = await paystackRequest<InitializedTransaction>("/transaction/initialize", {

@@ -111,7 +111,7 @@ export function validateStagingEnvironment(env) {
     }
     for (const [name, path] of [["PAYSTACK_CALLBACK_URL", "/billing/payment/callback"], ["PAYSTACK_WEBHOOK_URL", "/api/payments/paystack/webhook"]]) {
       const value = env[name]?.trim();
-      if (value && value !== `${appOrigin}${path}`) failures.push(`${name} must use the configured staging origin and route.`);
+      if (value !== `${appOrigin}${path}`) failures.push(`${name} must use the configured staging origin and route.`);
     }
   }
 
