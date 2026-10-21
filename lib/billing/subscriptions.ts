@@ -1,7 +1,6 @@
 import "server-only";
 import { billingDb } from "./accounts";
 import { createPaystackMonthlyPlan, createPaystackSubscription, paystackCardUpdateLink, updatePaystackPlan } from "./paystack";
-import { franchiseMonthlyPriceCents } from "./pricing";
 
 type SubscriptionRow = {
   id: string; account_id: string; paystack_customer_code: string | null;
@@ -28,6 +27,9 @@ export async function provisionSubscription(accountId: string) {
     }
     const provider = await createPaystackSubscription({ customerCode: row.paystack_customer_code,
       planCode, authorizationCode: row.authorization_code, firstDueAt: row.first_due_at });
+    if (provider.next_payment_date && new Date(provider.next_payment_date).getTime() < new Date(row.first_due_at).getTime()) {
+      throw new Error("Paystack scheduled a renewal before the first month ends.");
+    }
     const { error: subscriptionError } = await client.from("billing_subscriptions").update({
       paystack_subscription_code: provider.subscription_code, paystack_email_token: provider.email_token,
       status: "active", next_payment_at: provider.next_payment_date ?? row.first_due_at,
@@ -52,11 +54,14 @@ export async function synchronizeFranchisePlan(accountId: string, franchiseId: s
   const { count, error: countError } = await client.from("stores").select("id", { count: "exact", head: true })
     .eq("franchise_id", franchiseId).eq("is_active", true);
   if (countError || count === null) throw new Error("Franchise stores could not be counted.");
-  const newAmount = franchiseMonthlyPriceCents(count);
   const { data: row, error } = await client.from("billing_subscriptions")
     .select("id,account_id,paystack_customer_code,paystack_plan_code,paystack_subscription_code,authorization_code,first_due_at,next_payment_at,monthly_amount_cents,billable_store_count")
     .eq("account_id", accountId).single<SubscriptionRow>();
-  if (error || !row?.paystack_plan_code || !row.paystack_subscription_code || newAmount === row.monthly_amount_cents) return;
+  if (error || !row?.paystack_plan_code || !row.paystack_subscription_code) return;
+  // Keep an existing account's base rate when only its store count changes.
+  const existingBase = row.monthly_amount_cents - Math.max(row.billable_store_count - 1, 0) * 100_000;
+  const newAmount = existingBase + Math.max(count - 1, 0) * 100_000;
+  if (newAmount === row.monthly_amount_cents) return;
   await updatePaystackPlan(row.paystack_plan_code, newAmount);
   const { error: ledgerError } = await client.from("billing_price_changes").insert({
     account_id: accountId, old_amount_cents: row.monthly_amount_cents, new_amount_cents: newAmount,

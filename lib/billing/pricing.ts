@@ -4,7 +4,7 @@ export const BILLING_PRICES_CENTS = {
   independentOnboarding: 250_000,
   independentMonthly: 150_000,
   franchiseOnboarding: 450_000,
-  franchiseBaseMonthly: 230_000,
+  franchiseBaseMonthly: 250_000,
   franchiseAdditionalStoreMonthly: 100_000,
 } as const;
 
@@ -14,6 +14,18 @@ export function franchiseMonthlyPriceCents(billableStoreCount: number) {
   }
   return BILLING_PRICES_CENTS.franchiseBaseMonthly
     + Math.max(billableStoreCount - 1, 0) * BILLING_PRICES_CENTS.franchiseAdditionalStoreMonthly;
+}
+
+export function initialBillingPriceCents(isFranchise: boolean, monthlyAmountCents: number) {
+  if (!Number.isSafeInteger(monthlyAmountCents) || monthlyAmountCents <= 0) {
+    throw new Error("Invalid monthly billing amount.");
+  }
+  const onboardingCents = isFranchise
+    ? BILLING_PRICES_CENTS.franchiseOnboarding
+    : BILLING_PRICES_CENTS.independentOnboarding;
+  const totalCents = onboardingCents + monthlyAmountCents;
+  if (!Number.isSafeInteger(totalCents)) throw new Error("Invalid initial billing amount.");
+  return { onboardingCents, firstMonthCents: monthlyAmountCents, totalCents };
 }
 
 export function amountInRand(cents: number) {

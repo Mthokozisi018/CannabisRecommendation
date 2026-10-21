@@ -92,14 +92,14 @@ export async function billingAccessForSession(session: DashboardSession): Promis
   if (!account && session.assignedStoreId) {
     const { data: store, error } = await client.from("stores").select("franchise_id").eq("id", session.assignedStoreId).single();
     if (error) throw new Error("Billing access could not be checked.");
-    if (store.franchise_id) {
-      const { data, error: accountError } = await client.from("billing_accounts")
-        .select("id,store_id,franchise_id,owner_profile_id,status,onboarding_paid_at,grace_ends_at")
-        .eq("franchise_id", store.franchise_id).maybeSingle<BillingAccount>();
-      if (accountError) throw new Error("Billing access could not be checked.");
-      account = data;
-    }
+    const { data, error: accountError } = await client.from("billing_accounts")
+      .select("id,store_id,franchise_id,owner_profile_id,status,onboarding_paid_at,grace_ends_at")
+      .eq(store.franchise_id ? "franchise_id" : "store_id", store.franchise_id ?? session.assignedStoreId)
+      .maybeSingle<BillingAccount>();
+    if (accountError) throw new Error("Billing access could not be checked.");
+    account = data;
   }
-  if (account?.status === "active" || account?.status === "grace") return "allowed";
+  if (account?.status === "active") return "allowed";
+  if (account?.status === "grace" && account.grace_ends_at && new Date(account.grace_ends_at).getTime() > Date.now()) return "allowed";
   return account?.owner_profile_id === session.staffProfileId ? "owner_due" : "staff_restricted";
 }

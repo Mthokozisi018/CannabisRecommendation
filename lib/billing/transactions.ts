@@ -1,6 +1,6 @@
 import "server-only";
-import { billingDb, type BillingAccount } from "./accounts";
-import { BILLING_PRICES_CENTS } from "./pricing";
+import { billingDb, currentMonthlyPrice, type BillingAccount } from "./accounts";
+import { BILLING_PRICES_CENTS, initialBillingPriceCents } from "./pricing";
 import { initializePaystackCheckout, paymentMatchesExpected, verifyPaystackTransaction } from "./paystack";
 import { provisionSubscription } from "./subscriptions";
 import { paystackCheckoutCallbackUrl } from "./checkout-config";
@@ -9,38 +9,47 @@ type BillingPayment = {
   id: string; account_id: string; reference: string; payer_email: string;
   purpose: "onboarding" | "renewal" | "recovery";
   amount_cents: number; status: "pending" | "success" | "failed";
+  initial_monthly_amount_cents: number | null;
+  initial_billable_store_count: number | null;
 };
 
-export async function beginOnboardingCheckout(account: BillingAccount, payerEmail: string) {
+export async function beginOnboardingCheckout(account: BillingAccount, payerEmail: string, expectedAmountCents?: number) {
   const callbackUrl = paystackCheckoutCallbackUrl();
   if (!callbackUrl) throw new Error("The public staging Paystack callback is not configured.");
   if (account.onboarding_paid_at) throw new Error("The onboarding payment has already been completed.");
   const email = payerEmail.trim().toLowerCase();
   if (!email || !email.includes("@")) throw new Error("A billing owner email is required.");
   const client = billingDb();
-  const amountCents = account.franchise_id ? BILLING_PRICES_CENTS.franchiseOnboarding : BILLING_PRICES_CENTS.independentOnboarding;
+  const onboardingCents = account.franchise_id ? BILLING_PRICES_CENTS.franchiseOnboarding : BILLING_PRICES_CENTS.independentOnboarding;
   const { data: existing, error: lookupError } = await client.from("billing_payments")
-    .select("id,account_id,reference,payer_email,purpose,amount_cents,status")
+    .select("id,account_id,reference,payer_email,purpose,amount_cents,status,initial_monthly_amount_cents,initial_billable_store_count")
     .eq("account_id", account.id).eq("purpose", "onboarding").eq("status", "pending").maybeSingle<BillingPayment>();
   if (lookupError) throw new Error("Billing payment could not be loaded.");
   let payment = existing;
   if (!payment) {
+    const { amountCents: monthlyAmountCents, count } = await currentMonthlyPrice(account);
+    const { totalCents } = initialBillingPriceCents(Boolean(account.franchise_id), monthlyAmountCents);
     const { data, error } = await client.from("billing_payments").insert({
       account_id: account.id, reference: `gc-onboard-${crypto.randomUUID()}`,
-      payer_email: email, purpose: "onboarding", amount_cents: amountCents,
-    }).select("id,account_id,reference,payer_email,purpose,amount_cents,status").single<BillingPayment>();
+      payer_email: email, purpose: "onboarding", amount_cents: totalCents,
+      initial_monthly_amount_cents: monthlyAmountCents, initial_billable_store_count: count,
+    }).select("id,account_id,reference,payer_email,purpose,amount_cents,status,initial_monthly_amount_cents,initial_billable_store_count").single<BillingPayment>();
     if (error && error.code !== "23505") throw new Error("Billing payment could not be created.");
     if (data) payment = data;
     else {
       const { data: raced, error: racedError } = await client.from("billing_payments")
-        .select("id,account_id,reference,payer_email,purpose,amount_cents,status")
+        .select("id,account_id,reference,payer_email,purpose,amount_cents,status,initial_monthly_amount_cents,initial_billable_store_count")
         .eq("account_id", account.id).eq("purpose", "onboarding").eq("status", "pending").single<BillingPayment>();
       if (racedError) throw new Error("Billing payment could not be loaded.");
       payment = raced;
     }
   }
-  if (payment.payer_email !== email || payment.amount_cents !== amountCents) throw new Error("The pending checkout belongs to another payer or amount.");
-  return initializePaystackCheckout({ email, amountCents, reference: payment.reference,
+  const expectedRecordedAmount = onboardingCents + (payment.initial_monthly_amount_cents ?? 0);
+  if (payment.payer_email !== email || payment.amount_cents !== expectedRecordedAmount) throw new Error("The pending checkout belongs to another payer or amount.");
+  if (expectedAmountCents !== undefined && payment.amount_cents !== expectedAmountCents) {
+    throw new Error("The billing amount changed. Refresh the payment summary.");
+  }
+  return initializePaystackCheckout({ email, amountCents: payment.amount_cents, reference: payment.reference,
     callbackUrl, billingId: account.id });
 }
 
