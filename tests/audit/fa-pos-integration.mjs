@@ -1,5 +1,5 @@
 // Real POS checkout/refund functions and FA aggregation, disposable in-memory Postgres only.
-import {readFileSync,writeFileSync} from 'node:fs';
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 process.env.POS_CONFIRMATION_BROWSER='1';
 const {db,uuid}=await import('../local/pos-confirmation-database.mjs');
@@ -24,5 +24,6 @@ try {
   assert.equal(items.products.reduce((n,r)=>n+Math.round(r.revenue*100),0),75000);
   assert.equal(items.categories.reduce((n,r)=>n+Math.round(r.value*100),0),75000);
   await assert.rejects(()=>db.query('select franchise_dashboard_totals_v2($1,$2,$3)',[uuid(82),'2000-01-01','2100-01-01']));
-  writeFileSync('../docs/fa-remediation-evidence/pos-financial-integration.json',JSON.stringify({passed:true,completedTransactions:3,netRevenue:750,categoryRevenue:750,productRevenue:750,refundedSales:2,foreignFranchiseRejected:true},null,2));
+  mkdirSync('test-results/fa-remediation-evidence', { recursive: true });
+  writeFileSync('test-results/fa-remediation-evidence/pos-financial-integration.json',JSON.stringify({passed:true,completedTransactions:3,netRevenue:750,categoryRevenue:750,productRevenue:750,refundedSales:2,foreignFranchiseRejected:true},null,2));
 } finally { await db.close(); }

@@ -73,7 +73,7 @@ test("Admin creates credentials and the manager completes their own onboarding",
     })).error).toBeNull();
     await page.context().addCookies(cookieJar.map((cookie) => ({
       ...cookie,
-      domain: "127.0.0.1",
+      domain: new URL(testInfo.project.use.baseURL ?? "http://127.0.0.1:3001").hostname,
       path: "/",
       sameSite: "Lax" as const,
     })));
@@ -241,14 +241,22 @@ test("Admin creates credentials and the manager completes their own onboarding",
     expect((await service.from("stores").select("id").eq("name", storeName)).data).toEqual([{ id: storeId }]);
 
     await page.getByRole("button", { name: "Go to Manager Dashboard" }).click();
+    await expect(page).toHaveURL(/\/billing$/);
+    // Unlock only this generated account to exercise non-billing dashboards.
+    // This fixture is not evidence of a Paystack payment.
+    const billing = await service.from("billing_accounts").update({ status: "active", onboarding_paid_at: new Date().toISOString() })
+      .eq("store_id", storeId!).select("id").single();
+    expect(billing.error).toBeNull();
+    await page.goto("/dashboard/manager");
     await expect(page).toHaveURL(/\/dashboard\/manager$/);
+    await page.goto("/dashboard/manager/products/new");
+    await expect(page).toHaveURL(/\/dashboard\/manager\/inventory\/manage$/);
     for (const route of [
-      "/dashboard/manager/products/new",
       "/dashboard/manager/inventory/manage",
       "/dashboard/manager/staff",
     ]) {
       await page.goto(route);
-      await expect(page).toHaveURL(route);
+      await expect(page).toHaveURL(new URL(route, testInfo.project.use.baseURL ?? "http://127.0.0.1:3001").href);
       await expect(page.locator("main")).toBeVisible();
     }
 
@@ -266,7 +274,7 @@ test("Admin creates credentials and the manager completes their own onboarding",
 
     const context = await browser.newContext();
     const returning = await context.newPage();
-    await returning.goto("http://127.0.0.1:3001/login");
+    await returning.goto(new URL("/login", testInfo.project.use.baseURL ?? "http://127.0.0.1:3001").href);
     await returning.getByLabel("Email Address").fill(email);
     await returning.getByPlaceholder("Enter your password").fill(permanentPassword);
     await returning.getByRole("button", { name: "Sign In", exact: true }).click();
@@ -282,6 +290,10 @@ test("Admin creates credentials and the manager completes their own onboarding",
     storeId ||= owned.data?.store_id;
     if (authId) {
       await managerClient.auth.signOut();
+      if (storeId) {
+        const billing = await service.from("billing_accounts").delete().eq("store_id", storeId);
+        expect(billing.error).toBeNull();
+      }
       await service.from("audit_logs").delete().eq("user_id", authId);
       await service.from("staff_profiles").delete().eq("auth_user_id", authId);
       expect((await service.auth.admin.deleteUser(authId)).error).toBeNull();

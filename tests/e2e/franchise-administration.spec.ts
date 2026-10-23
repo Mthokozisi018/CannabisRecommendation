@@ -162,11 +162,18 @@ test("franchise onboarding, isolation, management, analytics and concurrent staf
     await page.getByRole("checkbox", { name: /Privacy Policy/ }).check();
     await page.getByRole("button", { name: "Complete account setup" }).click();
     await expect(page).toHaveURL(/\/dashboard\/franchise$/, { timeout: 45000 });
+    await expect(page).toHaveURL(/\/billing$/);
+    // Unlock only this generated account for non-billing workflow coverage.
+    // This fixture does not represent a Paystack charge.
+    const billing = await service.from("billing_accounts").update({ status: "active", onboarding_paid_at: new Date().toISOString() })
+      .eq("franchise_id", franchises[0]).select("id").single();
+    expect(billing.error).toBeNull();
+    await page.goto("/dashboard/franchise");
     await expect(
       page
         .getByRole("navigation", { name: "Franchise main navigation" })
         .getByRole("link"),
-    ).toHaveCount(3);
+    ).toHaveCount(4);
     const client = createClient(url, publicKey, {
       auth: { persistSession: false },
     });
@@ -450,7 +457,7 @@ test("franchise onboarding, isolation, management, analytics and concurrent staf
     const viewStore=page.getByRole("link", { name: "View Store" });
     const viewHref=await viewStore.getAttribute("href");
     await viewStore.click();
-    await expect(page).toHaveURL(new URL(viewHref!,"http://127.0.0.1:3001").href);
+    await expect(page).toHaveURL(new URL(viewHref!, testInfo.project.use.baseURL ?? "http://127.0.0.1:3001").href);
     await expect(
       page.getByRole("heading", { name: "Sales by Category", exact: true }),
     ).toBeVisible();
@@ -499,6 +506,8 @@ test("franchise onboarding, isolation, management, analytics and concurrent staf
     // Resolve every store created under this test's generated franchises, even
     // if a browser assertion failed between creation and capturing the store ID.
     if (franchises.length) {
+      const billing = await service.from("billing_accounts").delete().in("franchise_id", franchises);
+      expect(billing.error).toBeNull();
       const created = await service
         .from("stores")
         .select("id,store_image_path")

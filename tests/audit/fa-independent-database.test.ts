@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 let db: PGlite;
 const admin = "10000000-0000-4000-8000-000000000001",
   fa = "10000000-0000-4000-8000-000000000002",
@@ -161,7 +161,8 @@ describe("Independent FA audit; disposable selected-migration fixture", () => {
       expect(r.rows[0].totals.daily.reduce((n,r)=>n+Math.round(Number(r.revenue)*100),0)).toBe(100000);
       expect(r.rows[0].totals.daily.reduce((n,r)=>n+Number(r.transactions),0)).toBe(10000);
     }
-    writeFileSync('../docs/fa-remediation-evidence/pglite-performance.json',JSON.stringify({rows:10000,samplesMs:samples,rssBytes:process.memoryUsage().rss,scope:'PGlite WASM single-store, selected migrations; not hosted PostgreSQL'},null,2));
+    mkdirSync('test-results/fa-remediation-evidence', { recursive: true });
+    writeFileSync('test-results/fa-remediation-evidence/pglite-performance.json',JSON.stringify({rows:10000,samplesMs:samples,rssBytes:process.memoryUsage().rss,scope:'PGlite WASM single-store, selected migrations; not hosted PostgreSQL'},null,2));
   });
   it("replays one store result without duplicate audit/resources and rejects a changed payload",async()=>{
     await db.exec('reset role;set role service_role');
