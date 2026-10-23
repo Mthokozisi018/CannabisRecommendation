@@ -1,0 +1,805 @@
+{
+  "project": "jezbvjepxosphdrykrcg",
+  "date": "2026-10-12",
+  "before": [
+    {
+      "table_name": "audit_events",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "audit_logs",
+      "rows": 185,
+      "digest": "b8e755db36fbb88c27ceb065c80931c2"
+    },
+    {
+      "table_name": "cart_items",
+      "rows": 5,
+      "digest": "a0cbaf986dee6d117f8e61118c447d81"
+    },
+    {
+      "table_name": "carts",
+      "rows": 4,
+      "digest": "488bd7940ba9b1b9c0c7acde2062bfce"
+    },
+    {
+      "table_name": "categories",
+      "rows": 8,
+      "digest": "f207070d8576b5d80547815c1cef14a6"
+    },
+    {
+      "table_name": "customer_addresses",
+      "rows": 2,
+      "digest": "dddc14c297c9306e6183b767812001e7"
+    },
+    {
+      "table_name": "customer_consents",
+      "rows": 8,
+      "digest": "0d82e985b33f3c26f8cf82fcfb86c501"
+    },
+    {
+      "table_name": "customer_favourites",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "customer_preferences",
+      "rows": 2,
+      "digest": "302f438a60326467fc253107950f646e"
+    },
+    {
+      "table_name": "customer_profiles",
+      "rows": 2,
+      "digest": "92a962784f1210b9410ca84bb15f12e3"
+    },
+    {
+      "table_name": "customer_store_views",
+      "rows": 4,
+      "digest": "d886e1845e242e4325b48eecc73a58a7"
+    },
+    {
+      "table_name": "customer_support_requests",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "effects",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "flavors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "franchises",
+      "rows": 1,
+      "digest": "1d210d70687006bb97a3fcd3d8d7ccd3"
+    },
+    {
+      "table_name": "import_job_errors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "import_jobs",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "inventory_items",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "inventory_movements",
+      "rows": 35,
+      "digest": "19a9592efb0bff7f76975ef798544f36"
+    },
+    {
+      "table_name": "inventory_stock",
+      "rows": 63,
+      "digest": "f490a43595bcd69702a847983a290478"
+    },
+    {
+      "table_name": "manager_invitations",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "order_delivery_tracking",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "order_events",
+      "rows": 9,
+      "digest": "32ccf4a851a4d8b8eadc23ea6e6a3eef"
+    },
+    {
+      "table_name": "order_fulfillment_details",
+      "rows": 3,
+      "digest": "27c1d90f3619531516cad6c6f2683680"
+    },
+    {
+      "table_name": "order_items",
+      "rows": 3,
+      "digest": "4025a4b45277568a4375422fb3dc9a1c"
+    },
+    {
+      "table_name": "orders",
+      "rows": 3,
+      "digest": "3ecc945041ce7cf1f40eb6e03112bb19"
+    },
+    {
+      "table_name": "payment_transactions",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "pos_customer_search_outbox",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "pos_customers",
+      "rows": 3,
+      "digest": "74f8e4c34c89bd853cc38eebe3bd2dca"
+    },
+    {
+      "table_name": "pos_sale_items",
+      "rows": 192,
+      "digest": "bf237bafef877996aaa51a2ab91c4444"
+    },
+    {
+      "table_name": "pos_sales",
+      "rows": 61,
+      "digest": "18e47a1d08bdeff750802eb432a6a0e5"
+    },
+    {
+      "table_name": "product_effect_scores",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_flavors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_images",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_lineage",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_terpenes",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "products",
+      "rows": 63,
+      "digest": "2ef36177413cd3fe8521feb85a3ab2fe"
+    },
+    {
+      "table_name": "profiles",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "recommendation_sessions",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "staff_invitations",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "staff_profiles",
+      "rows": 5,
+      "digest": "0b4447103580d4f6ac47f9fdcf537ca7"
+    },
+    {
+      "table_name": "store_fulfillment_settings",
+      "rows": 2,
+      "digest": "dba85c0843a8168939233ea06d2ed4c8"
+    },
+    {
+      "table_name": "store_media",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "store_memberships",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "store_registration_tokens",
+      "rows": 3,
+      "digest": "075afc30c261b926dd1c90d2dcb48a4d"
+    },
+    {
+      "table_name": "stores",
+      "rows": 5,
+      "digest": "aa5f7d4fde321b76aec562d7076588f3"
+    },
+    {
+      "table_name": "supplier_categories",
+      "rows": 9,
+      "digest": "e303d5fb0d11ce5370999bf24742210e"
+    },
+    {
+      "table_name": "suppliers",
+      "rows": 7,
+      "digest": "6e328c497707069238e2013411c8e4d6"
+    },
+    {
+      "table_name": "supply_deliveries",
+      "rows": 10,
+      "digest": "2ef6830010eb0f8741f41e6c5b166532"
+    },
+    {
+      "table_name": "supply_delivery_items",
+      "rows": 10,
+      "digest": "10b4a97ac6e9d25eb6d91b7cfc226256"
+    },
+    {
+      "table_name": "terpenes",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "auth.users",
+      "rows": 7,
+      "digest": "2a2f3cef9312c42bcec65b554ae43b30"
+    },
+    {
+      "table_name": "pg_policies",
+      "rows": 94,
+      "digest": "55339f3b83bcf3a23050aacb22a8e92e"
+    }
+  ],
+  "afterExcludingOnlyDemoRows": [
+    {
+      "table_name": "audit_events",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "audit_logs",
+      "rows": 185,
+      "digest": "b8e755db36fbb88c27ceb065c80931c2"
+    },
+    {
+      "table_name": "cart_items",
+      "rows": 5,
+      "digest": "a0cbaf986dee6d117f8e61118c447d81"
+    },
+    {
+      "table_name": "carts",
+      "rows": 4,
+      "digest": "488bd7940ba9b1b9c0c7acde2062bfce"
+    },
+    {
+      "table_name": "categories",
+      "rows": 8,
+      "digest": "f207070d8576b5d80547815c1cef14a6"
+    },
+    {
+      "table_name": "customer_addresses",
+      "rows": 2,
+      "digest": "dddc14c297c9306e6183b767812001e7"
+    },
+    {
+      "table_name": "customer_consents",
+      "rows": 8,
+      "digest": "0d82e985b33f3c26f8cf82fcfb86c501"
+    },
+    {
+      "table_name": "customer_favourites",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "customer_preferences",
+      "rows": 2,
+      "digest": "302f438a60326467fc253107950f646e"
+    },
+    {
+      "table_name": "customer_profiles",
+      "rows": 2,
+      "digest": "92a962784f1210b9410ca84bb15f12e3"
+    },
+    {
+      "table_name": "customer_store_views",
+      "rows": 4,
+      "digest": "d886e1845e242e4325b48eecc73a58a7"
+    },
+    {
+      "table_name": "customer_support_requests",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "effects",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "flavors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "franchises",
+      "rows": 1,
+      "digest": "1d210d70687006bb97a3fcd3d8d7ccd3"
+    },
+    {
+      "table_name": "import_job_errors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "import_jobs",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "inventory_items",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "inventory_movements",
+      "rows": 35,
+      "digest": "19a9592efb0bff7f76975ef798544f36"
+    },
+    {
+      "table_name": "inventory_stock",
+      "rows": 63,
+      "digest": "f490a43595bcd69702a847983a290478"
+    },
+    {
+      "table_name": "manager_invitations",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "order_delivery_tracking",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "order_events",
+      "rows": 9,
+      "digest": "32ccf4a851a4d8b8eadc23ea6e6a3eef"
+    },
+    {
+      "table_name": "order_fulfillment_details",
+      "rows": 3,
+      "digest": "27c1d90f3619531516cad6c6f2683680"
+    },
+    {
+      "table_name": "order_items",
+      "rows": 3,
+      "digest": "4025a4b45277568a4375422fb3dc9a1c"
+    },
+    {
+      "table_name": "orders",
+      "rows": 3,
+      "digest": "3ecc945041ce7cf1f40eb6e03112bb19"
+    },
+    {
+      "table_name": "payment_transactions",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "pos_customer_search_outbox",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "pos_customers",
+      "rows": 3,
+      "digest": "74f8e4c34c89bd853cc38eebe3bd2dca"
+    },
+    {
+      "table_name": "pos_sale_items",
+      "rows": 192,
+      "digest": "bf237bafef877996aaa51a2ab91c4444"
+    },
+    {
+      "table_name": "pos_sales",
+      "rows": 61,
+      "digest": "18e47a1d08bdeff750802eb432a6a0e5"
+    },
+    {
+      "table_name": "product_effect_scores",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_flavors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_images",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_lineage",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_terpenes",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "products",
+      "rows": 63,
+      "digest": "2ef36177413cd3fe8521feb85a3ab2fe"
+    },
+    {
+      "table_name": "profiles",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "recommendation_sessions",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "staff_invitations",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "staff_profiles",
+      "rows": 5,
+      "digest": "0b4447103580d4f6ac47f9fdcf537ca7"
+    },
+    {
+      "table_name": "store_fulfillment_settings",
+      "rows": 2,
+      "digest": "dba85c0843a8168939233ea06d2ed4c8"
+    },
+    {
+      "table_name": "store_media",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "store_memberships",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "store_registration_tokens",
+      "rows": 3,
+      "digest": "075afc30c261b926dd1c90d2dcb48a4d"
+    },
+    {
+      "table_name": "stores",
+      "rows": 5,
+      "digest": "aa5f7d4fde321b76aec562d7076588f3"
+    },
+    {
+      "table_name": "supplier_categories",
+      "rows": 9,
+      "digest": "e303d5fb0d11ce5370999bf24742210e"
+    },
+    {
+      "table_name": "suppliers",
+      "rows": 7,
+      "digest": "6e328c497707069238e2013411c8e4d6"
+    },
+    {
+      "table_name": "supply_deliveries",
+      "rows": 10,
+      "digest": "2ef6830010eb0f8741f41e6c5b166532"
+    },
+    {
+      "table_name": "supply_delivery_items",
+      "rows": 10,
+      "digest": "10b4a97ac6e9d25eb6d91b7cfc226256"
+    },
+    {
+      "table_name": "terpenes",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "auth.users",
+      "rows": 7,
+      "digest": "2a2f3cef9312c42bcec65b554ae43b30"
+    },
+    {
+      "table_name": "pg_policies",
+      "rows": 94,
+      "digest": "55339f3b83bcf3a23050aacb22a8e92e"
+    }
+  ],
+  "afterSeedAndIdenticalRerun": [
+    {
+      "table_name": "audit_events",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "audit_logs",
+      "rows": 185,
+      "digest": "b8e755db36fbb88c27ceb065c80931c2"
+    },
+    {
+      "table_name": "cart_items",
+      "rows": 5,
+      "digest": "a0cbaf986dee6d117f8e61118c447d81"
+    },
+    {
+      "table_name": "carts",
+      "rows": 4,
+      "digest": "488bd7940ba9b1b9c0c7acde2062bfce"
+    },
+    {
+      "table_name": "categories",
+      "rows": 8,
+      "digest": "f207070d8576b5d80547815c1cef14a6"
+    },
+    {
+      "table_name": "customer_addresses",
+      "rows": 2,
+      "digest": "dddc14c297c9306e6183b767812001e7"
+    },
+    {
+      "table_name": "customer_consents",
+      "rows": 8,
+      "digest": "0d82e985b33f3c26f8cf82fcfb86c501"
+    },
+    {
+      "table_name": "customer_favourites",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "customer_preferences",
+      "rows": 2,
+      "digest": "302f438a60326467fc253107950f646e"
+    },
+    {
+      "table_name": "customer_profiles",
+      "rows": 2,
+      "digest": "92a962784f1210b9410ca84bb15f12e3"
+    },
+    {
+      "table_name": "customer_store_views",
+      "rows": 4,
+      "digest": "d886e1845e242e4325b48eecc73a58a7"
+    },
+    {
+      "table_name": "customer_support_requests",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "effects",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "flavors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "franchises",
+      "rows": 1,
+      "digest": "1d210d70687006bb97a3fcd3d8d7ccd3"
+    },
+    {
+      "table_name": "import_job_errors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "import_jobs",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "inventory_items",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "inventory_movements",
+      "rows": 35,
+      "digest": "19a9592efb0bff7f76975ef798544f36"
+    },
+    {
+      "table_name": "inventory_stock",
+      "rows": 63,
+      "digest": "f490a43595bcd69702a847983a290478"
+    },
+    {
+      "table_name": "manager_invitations",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "order_delivery_tracking",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "order_events",
+      "rows": 9,
+      "digest": "32ccf4a851a4d8b8eadc23ea6e6a3eef"
+    },
+    {
+      "table_name": "order_fulfillment_details",
+      "rows": 3,
+      "digest": "27c1d90f3619531516cad6c6f2683680"
+    },
+    {
+      "table_name": "order_items",
+      "rows": 3,
+      "digest": "4025a4b45277568a4375422fb3dc9a1c"
+    },
+    {
+      "table_name": "orders",
+      "rows": 3,
+      "digest": "3ecc945041ce7cf1f40eb6e03112bb19"
+    },
+    {
+      "table_name": "payment_transactions",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "pos_customer_search_outbox",
+      "rows": 645,
+      "digest": "87d9671b8417c5430b49c49b063ecd5e"
+    },
+    {
+      "table_name": "pos_customers",
+      "rows": 648,
+      "digest": "d8c541c6a69bb0408752b15a829193a6"
+    },
+    {
+      "table_name": "pos_sale_items",
+      "rows": 6839,
+      "digest": "0eefa3aa042ede302e55e15d54f79f4d"
+    },
+    {
+      "table_name": "pos_sales",
+      "rows": 3810,
+      "digest": "08da447e44b1a539c2dc1465ca33d02e"
+    },
+    {
+      "table_name": "product_effect_scores",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_flavors",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_images",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_lineage",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "product_terpenes",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "products",
+      "rows": 98,
+      "digest": "425883fc1e17e324ef9adf27b401835a"
+    },
+    {
+      "table_name": "profiles",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "recommendation_sessions",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "staff_invitations",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "staff_profiles",
+      "rows": 5,
+      "digest": "0b4447103580d4f6ac47f9fdcf537ca7"
+    },
+    {
+      "table_name": "store_fulfillment_settings",
+      "rows": 2,
+      "digest": "dba85c0843a8168939233ea06d2ed4c8"
+    },
+    {
+      "table_name": "store_media",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "store_memberships",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "store_registration_tokens",
+      "rows": 3,
+      "digest": "075afc30c261b926dd1c90d2dcb48a4d"
+    },
+    {
+      "table_name": "stores",
+      "rows": 10,
+      "digest": "54093c3c0bfc40b0bcf278be0eb4fe93"
+    },
+    {
+      "table_name": "supplier_categories",
+      "rows": 9,
+      "digest": "e303d5fb0d11ce5370999bf24742210e"
+    },
+    {
+      "table_name": "suppliers",
+      "rows": 7,
+      "digest": "6e328c497707069238e2013411c8e4d6"
+    },
+    {
+      "table_name": "supply_deliveries",
+      "rows": 10,
+      "digest": "2ef6830010eb0f8741f41e6c5b166532"
+    },
+    {
+      "table_name": "supply_delivery_items",
+      "rows": 10,
+      "digest": "10b4a97ac6e9d25eb6d91b7cfc226256"
+    },
+    {
+      "table_name": "terpenes",
+      "rows": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "table_name": "auth.users",
+      "rows": 7,
+      "digest": "2a2f3cef9312c42bcec65b554ae43b30"
+    },
+    {
+      "table_name": "pg_policies",
+      "rows": 94,
+      "digest": "55339f3b83bcf3a23050aacb22a8e92e"
+    }
+  ]
+}

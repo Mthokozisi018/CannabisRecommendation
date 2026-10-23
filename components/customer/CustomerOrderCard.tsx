@@ -17,6 +17,7 @@ export function orderStatusLabel(status: string) {
   const labels: Record<string, string> = {
     pending: "Order placed",
     placed: "Order placed",
+    confirmed: "Order accepted",
     preparing: "Preparing",
     ready_for_collection: "Ready for collection",
     out_for_delivery: "Out for delivery",

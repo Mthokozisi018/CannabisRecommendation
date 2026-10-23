@@ -17,6 +17,8 @@ type StoreRow = {
   postal_code: string | null;
   store_contact_email: string | null;
   store_phone_number: string | null;
+  store_information_confirmed_at: string | null;
+  store_information_confirmed_by: string | null;
   public_description: string | null;
   logo_url: string | null;
   store_image_url?: string | null;
@@ -106,7 +108,8 @@ type InventoryStockRow = {
   low_stock_threshold: number | null;
 };
 
-const STORE_COLUMNS_BASE = "id,slug,name,currency_code,address,store_address,physical_store_address,city,province,postal_code,store_contact_email,store_phone_number,public_description,logo_url,latitude,longitude,opening_hours";
+const ADMIN_DEMO_STORE_SLUG = "greenchoice-admin-demo-store";
+const STORE_COLUMNS_BASE = "id,slug,name,currency_code,address,store_address,physical_store_address,city,province,postal_code,store_contact_email,store_phone_number,store_information_confirmed_at,store_information_confirmed_by,public_description,logo_url,latitude,longitude,opening_hours";
 const STORE_COLUMNS = `${STORE_COLUMNS_BASE},store_image_url`;
 const STORE_SELECT = `${STORE_COLUMNS},store_fulfillment_settings(orders_enabled,collection_enabled,delivery_enabled,collection_lead_minutes,collection_minimum,collection_fee,delivery_minimum,delivery_fee,delivery_eta_min_minutes,delivery_eta_max_minutes,delivery_radius_km),store_media(media_type,public_url,alt_text,sort_order)`;
 const PRODUCT_SELECT = "id,store_id,product_name,category,subcategory,cultivation_type,description,thc_per_unit_mg,thc_per_packet_mg,facet_values,price,product_status,is_visible_on_pos,image_url,image_path,size_label,strain_type,created_at,stores!inner(is_active,store_access_status),inventory_stock(current_quantity,low_stock_threshold)";
@@ -219,6 +222,29 @@ function mapStore(row: StoreRow, origin: { latitude: number; longitude: number }
 
 type StoreListInput = { search?: string; latitude?: number | null; longitude?: number | null };
 
+async function readyStoreRows(supabase: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, rows: StoreRow[]) {
+  const ready = rows.filter((row) => {
+    const fulfillment = firstRelation(row.store_fulfillment_settings);
+    return row.slug !== ADMIN_DEMO_STORE_SLUG && row.store_information_confirmed_at && row.store_information_confirmed_by &&
+      row.name?.trim() && (row.physical_store_address?.trim() || row.store_address?.trim() || row.address?.trim()) &&
+      row.city?.trim() && row.province?.trim() && row.postal_code?.trim() && row.store_phone_number?.trim() &&
+      fulfillment?.orders_enabled && (fulfillment.collection_enabled || fulfillment.delivery_enabled);
+  });
+  if (!ready.length) return [];
+  // Availability belongs to the store's stock, including shared catalog products.
+  const { data, error } = await supabase.from("inventory_stock")
+    .select("store_id,products!inner(id)")
+    .in("store_id", ready.map((row) => row.id))
+    .gt("current_quantity", 0)
+    .is("products.deleted_at", null)
+    .eq("products.is_published", true)
+    .eq("products.product_status", "active")
+    .eq("products.is_visible_on_pos", true);
+  if (error) throw new Error("Store availability is temporarily unavailable.");
+  const stockedStores = new Set((data ?? []).map((row) => row.store_id));
+  return ready.filter((row) => stockedStores.has(row.id));
+}
+
 export async function listCustomerStores(input: string | StoreListInput = {}) {
   await requireCustomerSession();
   const supabase = createSupabaseAdminClient();
@@ -240,7 +266,7 @@ export async function listCustomerStores(input: string | StoreListInput = {}) {
   const origin = typeof options.latitude === "number" && typeof options.longitude === "number"
     ? { latitude: options.latitude, longitude: options.longitude }
     : null;
-  return ((data ?? []) as StoreRow[]).map((row) => mapStore(row, origin))
+  return (await readyStoreRows(supabase, (data ?? []) as StoreRow[])).map((row) => mapStore(row, origin))
     .sort((a, b) => a.distanceKm !== null && b.distanceKm !== null ? a.distanceKm - b.distanceKm : a.name.localeCompare(b.name));
 }
 
@@ -255,7 +281,8 @@ export async function getCustomerStore(storeId: string) {
     error = fallback.error;
   }
   if (error) throw new Error("Unable to load this store.");
-  return data ? mapStore(data) : null;
+  const [ready] = await readyStoreRows(supabase, data ? [data] : []);
+  return ready ? mapStore(ready) : null;
 }
 
 export async function listRecentlyViewedStores(limit = 4) {
@@ -288,7 +315,7 @@ export async function listRecentlyViewedStores(limit = 4) {
     storeError = fallback.error;
   }
   if (storeError) throw new Error("Unable to load recently viewed stores.");
-  const stores = ((storeRows ?? []) as StoreRow[]).map((row) => mapStore(row));
+  const stores = (await readyStoreRows(admin, (storeRows ?? []) as StoreRow[])).map((row) => mapStore(row));
   const map = new Map(stores.map((store) => [store.id, store]));
   return ids.flatMap((id) => map.get(id) ? [map.get(id)!] : []);
 }
@@ -311,10 +338,12 @@ export async function listCustomerProducts(input: { storeId?: string; search?: s
   const supabase = createSupabaseAdminClient();
   if (!supabase) throw new Error("Supabase is not configured.");
   if (input.storeId) {
+    if (!await getCustomerStore(input.storeId)) return [];
     const { data: stockRows, error: stockError } = await supabase
       .from("inventory_stock")
       .select("product_id,current_quantity,low_stock_threshold")
       .eq("store_id", input.storeId)
+      .gt("current_quantity", 0)
       .limit(input.limit ?? 200);
     if (stockError) throw new Error("Unable to load products.");
     const stockByProduct = new Map(((stockRows ?? []) as InventoryStockRow[]).map((stock) => [stock.product_id, stock]));
@@ -335,7 +364,10 @@ export async function listCustomerProducts(input: { storeId?: string; search?: s
       inventory_stock: stockByProduct.get(row.id) ?? null
     }));
   }
+  const readyStoreIds = (await listCustomerStores()).map((store) => store.id);
+  if (!readyStoreIds.length) return [];
   let query = supabase.from("products").select(PRODUCT_SELECT)
+    .in("store_id", readyStoreIds)
     .is("deleted_at", null)
     .eq("is_published", true)
     .eq("product_status", "active")

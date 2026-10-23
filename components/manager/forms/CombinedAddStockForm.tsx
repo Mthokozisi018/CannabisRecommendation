@@ -8,6 +8,7 @@ import { categorySlug, CULTIVATION_TYPES, PRODUCT_SUBCATEGORIES, VAPE_PRODUCT_TY
 import type { ManagerInventoryProduct } from "@/lib/manager/data";
 import { ProductCard } from "@/components/receptionist/pos/ProductCard";
 import { formatStockQuantity, initialState, ManualNumberInput, Message, PendingNotice, PendingSpinner, type ManagerFormAction } from "@/components/manager/forms/shared";
+import { InventoryActionToast, useInventoryActionToast } from "@/components/manager/forms/InventoryActionToast";
 
 const addStockCategories = ["Flower", "Pre-Rolls", "Edibles", "Accessories", "Vape Cartridges"] as const satisfies readonly ProductCategory[];
 const cultivationCategories = new Set<ProductCategory>(["Flower", "Pre-Rolls"]);
@@ -88,6 +89,8 @@ export function CombinedAddStockForm({
   const [stockState, stockFormAction, stockPending] = useActionState(addStockAction, initialState);
   const handledCreateStateRef = useRef<typeof createState | null>(null);
   const handledStockStateRef = useRef<typeof stockState | null>(null);
+  const handledErrorStates = useRef(new WeakSet<object>());
+  const { notice, show: showToast, dismiss: dismissToast } = useInventoryActionToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [localProducts, setLocalProducts] = useState(products);
   const [category, setCategory] = useState<ProductCategory | "">("");
@@ -233,13 +236,14 @@ export function CombinedAddStockForm({
       });
       clearFormFields();
       setSuccessMessage(createState.message || "Product created and form reset.");
+      showToast("success", "Product Added Successfully", "Your new product has been successfully added to your inventory.");
       router.refresh();
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [createState, router]);
+  }, [createState, router, showToast]);
 
   useEffect(() => {
-    if (!stockState.ok) return;
+    if (!stockState.ok || stockState.updatedStock === undefined) return;
     if (handledStockStateRef.current === stockState) return;
     handledStockStateRef.current = stockState;
     const timeoutId = window.setTimeout(() => {
@@ -255,10 +259,18 @@ export function CombinedAddStockForm({
       }
       clearFormFields();
       setSuccessMessage(stockState.message || "Stock added and form reset.");
+      showToast("success", "Stock Updated Successfully", "Your inventory quantity has been updated successfully.");
       router.refresh();
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [productId, router, stockState]);
+  }, [productId, router, stockState, showToast]);
+
+  useEffect(() => {
+    const failed = [createState, stockState].find(state => !state.ok && state.message && !handledErrorStates.current.has(state));
+    if (!failed) return;
+    handledErrorStates.current.add(failed);
+    showToast("error", failed === createState ? "Product Could Not Be Added" : "Stock Could Not Be Updated", failed.message);
+  }, [createState, stockState, showToast]);
 
   function resetForCategory(nextCategory: ProductCategory) {
     setSuccessMessage("");
@@ -310,6 +322,7 @@ export function CombinedAddStockForm({
 
   return (
     <div className={addStockStyles.panel}>
+      <InventoryActionToast notice={notice} onDismiss={dismissToast} />
       <header className={`grid gap-2 border-b ${addStockStyles.divider} pb-2 md:grid-cols-[auto_minmax(180px,1fr)_auto] md:items-center`}>
         <a href={backHref} className={addStockStyles.backLink}>
           <ArrowRight className="rotate-180 text-lime-300" size={14} />

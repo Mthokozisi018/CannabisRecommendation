@@ -150,7 +150,7 @@ export const productEditSchema = z.object({
 
 export const staffCreateSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
-  password: z.string().min(10, "Temporary password must be at least 10 characters.").max(256),
+  password: z.string().min(1, "Enter a temporary password.").max(256),
   confirmPassword: z.string().min(1, "Confirm password is required")
 }).refine((value) => value.password === value.confirmPassword, {
   path: ["confirmPassword"],
@@ -159,7 +159,7 @@ export const staffCreateSchema = z.object({
 
 export function temporaryPasswordIssues(password: string, confirmPassword?: string) {
   const issues: string[] = [];
-  if (password.length < 10) issues.push("Temporary password must be at least 10 characters.");
+  if (!password) issues.push("Enter a temporary password.");
   if (confirmPassword !== undefined && password !== confirmPassword) issues.push("Passwords must match");
   return issues;
 }

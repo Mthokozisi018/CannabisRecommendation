@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { decideDashboardAccess, getDashboardSession, restrictedPathForSession } from "@/lib/dashboard-session";
 import { getCustomerSession } from "@/lib/customer/auth";
+import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
 import { logServerEvent } from "@/lib/logger";
 import { verifyOrigin } from "@/lib/security";
-import { managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
-import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
+import { franchiseLoginDestination, managerLoginDestination, receptionistLoginDestination } from "@/lib/account-flow";
 
 export const dynamic = "force-dynamic";
 const privateHeaders = { "Cache-Control": "private, no-store, max-age=0", "Vary": "Cookie, Authorization" };
@@ -25,15 +25,14 @@ async function auditAccess(action: string, details: Record<string, unknown>, rec
 }
 
 export async function GET() {
-  if (isCustomerExperienceEnabled()) {
-    const customer = await getCustomerSession();
-    if (customer?.profile.status === "active") {
-      return NextResponse.json({ allowed: true, role: "customer", redirectTo: "/customer" }, { headers: privateHeaders });
-    }
-  }
-
   const session = await getDashboardSession();
   if (!session) {
+    if (isCustomerExperienceEnabled()) {
+      const customer = await getCustomerSession();
+      if (customer?.profile.status === "active") {
+        return NextResponse.json({ allowed: true, role: "customer", redirectTo: "/customer/shop" }, { headers: privateHeaders });
+      }
+    }
     await auditAccess("access_denied_missing_session", { reason: "missing_session" });
     await logServerEvent("warn", "auth_access_decision_missing_session", { reason: "missing_session" });
     return NextResponse.json({ allowed: false, reason: "missing_session", redirectTo: "/login" }, { status: 401, headers: privateHeaders });
@@ -74,7 +73,7 @@ export async function GET() {
       ? "/dashboard/admin"
       : session.isManager
         ? managerLoginDestination(session)
-        : receptionistLoginDestination(session)
+        : session.profile.role === "franchise_admin" ? franchiseLoginDestination(session) : receptionistLoginDestination(session)
   }, { headers: privateHeaders });
 }
 

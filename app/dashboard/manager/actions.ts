@@ -7,11 +7,12 @@ import { invalidateManagerStaffCache, invalidateStoreDisplayCache } from "@/lib/
 import { requireActiveManager, requireAdminClient } from "@/lib/manager/auth";
 import { edibleThcDatabaseFields, type ManagerInventoryProduct } from "@/lib/manager/data";
 import { categoryAllowsCultivationType, categoryAllowsProductImageOnCreate, VAPE_PRODUCT_TYPES, VAPE_STRAIN_TYPES } from "@/lib/manager/options";
-import { inventoryAddSchema, productEditSchema, productFormSchema, staffActionSchema, staffCreateSchema, staffResetPasswordSchema, temporaryPasswordIssues, type InventoryAddInput, type ProductEditInput, type ProductFormInput } from "@/lib/manager/validation";
+import { productEditSchema, productFormSchema, staffActionSchema, staffCreateSchema, staffResetPasswordSchema, temporaryPasswordIssues, type InventoryAddInput, type ProductEditInput, type ProductFormInput } from "@/lib/manager/validation";
 import { normalizeProductImage, productImageObjectPath, type NormalizedProductImage } from "@/lib/product-image-upload";
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
 import { requireAssignedStoreId } from "@/lib/store-scope";
 import { sendStaffPasswordResetLink } from "@/lib/staff-password-reset";
+import { addStockProductSchema, addStockReceiptSchema, hasAddStockClassification } from "@/lib/manager/add-stock-validation";
 
 export type ManagerActionState = { ok: boolean; message: string; createdProduct?: ManagerInventoryProduct; updatedStock?: number; productId?: string; isVisibleOnPos?: boolean; imageBucket?: string | null; imagePath?: string | null; imageUrl?: string | null };
 
@@ -209,7 +210,9 @@ export async function createProductAction(_prev: ManagerActionState, formData: F
     await verifyOrigin();
     const { supabase, user, profile: managerProfile } = await requireActiveManager();
     await assertRateLimit(`manager:product-create:${user.id}`, 20, 60 * 60_000);
-    const parsed = productFormSchema.parse({
+    const addStockWorkflow = text(formData, "workflow") === "add-stock";
+    const hasInitialStock = Number(text(formData, "initialStockQuantity")) > 0;
+    const parsed = (addStockWorkflow || hasInitialStock ? addStockProductSchema : productFormSchema).parse({
       productName: text(formData, "productName"),
       category: text(formData, "category"),
       subcategory: text(formData, "subcategory"),
@@ -220,8 +223,10 @@ export async function createProductAction(_prev: ManagerActionState, formData: F
       price: text(formData, "price"),
       productStatus: text(formData, "productStatus"),
       initialStockQuantity: text(formData, "initialStockQuantity") || 0,
-      lowStockThreshold: 5
-    }) as ProductFormInput;
+      lowStockThreshold: 5,
+      supplierId: text(formData, "supplierId"),
+      supplierUnitCost: text(formData, "supplierUnitCost")
+    }) as ProductFormInput & { supplierId?: string; supplierUnitCost?: number };
 
     const image = categoryAllowsProductImageOnCreate(parsed.category) ? await validatedProductImage(formData) : null;
     const parsedCultivationType = typeof parsed.cultivationType === "string" ? parsed.cultivationType : undefined;
@@ -236,7 +241,8 @@ export async function createProductAction(_prev: ManagerActionState, formData: F
       cultivationType
     });
 
-    const { data: productData, error: productError } = await supabase.rpc("create_product_with_inventory", {
+    const productRpc = parsed.initialStockQuantity > 0 ? "create_product_with_supply_atomic" : "create_product_without_stock_atomic";
+    const { data: productData, error: productError } = await supabase.rpc(productRpc, {
       p_store_id: storeId,
       p_product_name: parsed.productName,
       p_category: parsed.category,
@@ -248,7 +254,8 @@ export async function createProductAction(_prev: ManagerActionState, formData: F
       p_thc_per_unit_mg: parsed.thcPerUnitMg ?? null,
       p_thc_per_packet_mg: parsed.thcPerPacketMg ?? null,
       p_initial_stock: parsed.initialStockQuantity,
-      p_low_stock_threshold: parsed.lowStockThreshold
+      p_low_stock_threshold: parsed.lowStockThreshold,
+      ...(parsed.initialStockQuantity > 0 ? { p_supplier_id: parsed.supplierId, p_unit_cost: parsed.supplierUnitCost } : {})
     });
     if (productError) {
       if (productError.message.toLowerCase().includes("duplicate_product")) {
@@ -530,42 +537,55 @@ export async function addInventoryStockAction(_prev: ManagerActionState, formDat
     await assertRateLimit(`manager:inventory-add:${user.id}`, 60, 60 * 60_000);
     const storeId = requireAssignedStoreId(managerProfile, "Manager");
     const admin = requireAdminClient();
-    const parsed = inventoryAddSchema.parse({
+    const addStockWorkflow = text(formData, "workflow") === "add-stock";
+    const parsed = addStockReceiptSchema.parse({
       category: text(formData, "category"),
       subcategory: text(formData, "subcategory"),
       cultivationType: text(formData, "cultivationType") || undefined,
       productId: text(formData, "productId"),
       quantityToAdd: text(formData, "quantityToAdd"),
-      reason: "manual_adjustment"
-    }) as InventoryAddInput;
+      supplierId: text(formData, "supplierId"),
+      supplierUnitCost: text(formData, "supplierUnitCost"),
+      reason: "supplier_delivery"
+    }) as InventoryAddInput & { supplierId?: string; supplierUnitCost?: number };
 
     const { data: product, error: productError } = await admin.from("products").select("id, store_id, category, subcategory, cultivation_type, image_path").eq("id", parsed.productId).eq("store_id", storeId).single();
     if (productError || !product) throw new Error("Product does not exist in Supabase.");
-    if (!selectedProductMatchesFilters(product, parsed)) {
+    const matchesAddStock = (product.category === parsed.category || (parsed.category === "Vape Cartridges" && product.category === "Disposable Vapes")) &&
+      product.subcategory === parsed.subcategory && (!hasAddStockClassification(parsed.category) || product.cultivation_type === parsed.cultivationType);
+    if (!(addStockWorkflow ? matchesAddStock : selectedProductMatchesFilters(product, parsed))) {
       throw new Error("Product does not match the selected filters.");
     }
     const image = await validatedProductImage(formData);
     const shouldRemoveImage = removeImageRequested(formData);
-    if (image) {
-      const uploaded = await uploadProductImage({ storeId, productId: parsed.productId, image });
-      await updateProductImageReference({ storeId, productId: parsed.productId, imagePath: uploaded.imagePath, imageUrl: uploaded.imageUrl, oldImagePath: product.image_path });
-    } else if (shouldRemoveImage) {
-      await clearProductImageReference({ storeId, productId: parsed.productId, oldImagePath: product.image_path });
-    }
-
-    const { data: stockData, error: stockError } = await supabase.rpc("add_inventory_stock_atomic", {
+    let imageWarning = "";
+    const applyImage = async () => {
+      if (image) {
+        const uploaded = await uploadProductImage({ storeId, productId: parsed.productId, image });
+        await updateProductImageReference({ storeId, productId: parsed.productId, imagePath: uploaded.imagePath, imageUrl: uploaded.imageUrl, oldImagePath: product.image_path });
+      } else if (shouldRemoveImage) {
+        await clearProductImageReference({ storeId, productId: parsed.productId, oldImagePath: product.image_path });
+      }
+    };
+    if (!addStockWorkflow) await applyImage();
+    const { data: stockData, error: stockError } = await supabase.rpc("receive_inventory_stock_atomic", {
       p_product_id: parsed.productId,
       p_quantity: parsed.quantityToAdd,
-      p_reason: parsed.reason ?? "manual_adjustment"
+      p_reason: parsed.reason ?? "manual_adjustment",
+      p_supplier_id: parsed.supplierId,
+      p_unit_cost: parsed.supplierUnitCost
     });
     if (stockError) throw new Error("Inventory could not be updated.");
     const stockResult = Array.isArray(stockData) ? stockData[0] : stockData;
     const newQuantity = Number(stockResult?.new_quantity);
     if (!Number.isInteger(newQuantity)) throw new Error("Inventory could not be updated.");
+    if (addStockWorkflow) {
+      try { await applyImage(); } catch { imageWarning = " Stock was saved, but the picture could not be updated."; }
+    }
     await invalidateStoreDisplayCache(storeId);
     revalidatePath("/dashboard/manager/inventory");
     revalidatePath("/dashboard/manager/inventory/manage");
-    return { ok: true, message: "Stock added successfully.", updatedStock: newQuantity };
+    return { ok: true, message: `Stock added successfully.${imageWarning}`, updatedStock: newQuantity };
   } catch (error) {
     return { ok: false, message: managerActionMessage(error, "Unable to update inventory.") };
   }

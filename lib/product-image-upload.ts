@@ -28,12 +28,12 @@ export type NormalizedProductImage = {
   height: number;
 };
 
-export async function normalizeProductImage(file: File): Promise<NormalizedProductImage> {
+async function normalizeImage(file: File, label: "Product" | "Store" | "Supplier"): Promise<NormalizedProductImage> {
   if (file.size <= 0 || file.size > maxProductImageBytes) {
-    throw new ProductImageValidationError("Product image must be 6MB or smaller.");
+    throw new ProductImageValidationError(`${label} image must be 6MB or smaller.`);
   }
   if (!allowedDeclaredMimeTypes.has(file.type.toLowerCase())) {
-    throw new ProductImageValidationError();
+    throw new ProductImageValidationError(`${label} image must be a valid JPEG, PNG, or WebP file.`);
   }
 
   const input = Buffer.from(await file.arrayBuffer());
@@ -47,14 +47,14 @@ export async function normalizeProductImage(file: File): Promise<NormalizedProdu
       ? mimeTypeForFormat[metadata.format as keyof typeof mimeTypeForFormat]
       : undefined;
     if (!actualMimeType || actualMimeType !== file.type.toLowerCase()) {
-      throw new ProductImageValidationError("Product image type does not match its contents.");
+      throw new ProductImageValidationError(`${label} image type does not match its contents.`);
     }
     if (!metadata.width || !metadata.height ||
         metadata.width > maxProductImageDimension ||
         metadata.height > maxProductImageDimension ||
         metadata.width * metadata.height > maxProductImagePixels ||
         (metadata.pages ?? 1) !== 1) {
-      throw new ProductImageValidationError("Product image dimensions are not supported.");
+      throw new ProductImageValidationError(`${label} image dimensions are not supported.`);
     }
 
     const normalized = await decoder
@@ -77,10 +77,34 @@ export async function normalizeProductImage(file: File): Promise<NormalizedProdu
     };
   } catch (error) {
     if (error instanceof ProductImageValidationError) throw error;
-    throw new ProductImageValidationError();
+    throw new ProductImageValidationError(`${label} image must be a valid JPEG, PNG, or WebP file.`);
   }
+}
+
+export async function normalizeProductImage(file: File): Promise<NormalizedProductImage> {
+  return normalizeImage(file, "Product");
+}
+
+export async function normalizeStoreImage(file: File): Promise<NormalizedProductImage> {
+  return normalizeImage(file, "Store");
+}
+
+export async function normalizeSupplierImage(file: File): Promise<NormalizedProductImage> {
+  return normalizeImage(file, "Supplier");
 }
 
 export function productImageObjectPath(storeId: string, productId: string) {
   return `stores/${storeId}/products/${productId}/${crypto.randomUUID()}.webp`;
+}
+
+export function masterProductImageObjectPath(franchiseId: string, productId: string) {
+  return `franchises/${franchiseId}/master-products/${productId}/${crypto.randomUUID()}.webp`;
+}
+
+export function storeImageObjectPath(storeId: string) {
+  return `stores/${storeId}/cover/${crypto.randomUUID()}.webp`;
+}
+
+export function supplierImageObjectPath(storeId: string, supplierId: string) {
+  return `stores/${storeId}/suppliers/${supplierId}/${crypto.randomUUID()}.webp`;
 }

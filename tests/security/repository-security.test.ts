@@ -97,23 +97,38 @@ describe("critical repository security contracts", () => {
     expect(form).toContain('role="alert"');
   });
 
-  it("allows only the sole administrator to mark an existing Auth user for manager onboarding", () => {
+  it("creates storeless manager identities through the Admin boundary", () => {
     const action = source("app/dashboard/admin/actions.ts");
+    const provision = source("lib/admin/manager-accounts.ts");
     const form = source("components/admin/ConnectManagerForm.tsx");
+    expect(action).toContain("createManagerAccountAction");
+    expect(action).toContain("await requireAdmin()");
+    expect(action).toContain("await verifyOrigin()");
+    expect(action).toContain("const createManagerSchema = z.object");
+    expect(action).not.toContain("connectManualManagerAction");
+    expect(provision).toContain("admins?.length !== 1");
+    expect(provision).toContain("auth.admin.listUsers");
+    expect(provision).toContain("auth.admin.createUser");
+    expect(provision).toContain("MANUAL_MANAGER_APP_METADATA");
+    expect(provision).toContain('rpc("bootstrap_manual_manager_profile")');
+    expect(provision).toContain("auth.admin.deleteUser(authUserId)");
+    expect(provision).not.toContain("create_independent_store_manager");
+    expect(provision).not.toContain("storeName");
+    expect(form).toContain('name="temporaryPassword"');
+    expect(form).toContain('autoComplete="new-password"');
+    expect(form).not.toContain('name="storeName"');
+    expect(form).not.toContain('name="physicalStoreAddress"');
+    expect(form).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+  });
 
-    expect(action).toContain("connectManualManagerAction");
-    expect(action).toContain("await requireAdminUser()");
-    expect(action).toContain("activeAdminIds.length !== 1");
-    expect(action).toContain("auth.admin.listUsers");
-    expect(action).toContain("auth.admin.updateUserById");
-    expect(action).toContain("...existingMetadata");
-    expect(action).toContain('greenchoice_role: "manager"');
-    expect(action).toContain('greenchoice_registration: "manual"');
-    expect(action).toContain("authUser.id === soleAdmin.id");
-    expect(action).toContain("staff_profiles");
-    expect(action).toContain("admin_authorized_manual_manager");
-    expect(action).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
-    expect(form).not.toContain("password");
+  it("removes the superseded Admin store RPC and restores storeless account setup", () => {
+    const migration = source("supabase/migrations/20261011103925_restore_manager_self_onboarding.sql");
+
+    expect(migration).toContain("drop function if exists public.create_independent_store_manager");
+    expect(migration).toContain("drop function if exists private.create_independent_store_manager");
+    expect(migration).toContain("target_profile.store_id is not null");
+    expect(migration).toContain("grant execute on function public.complete_manual_manager_account_setup");
+    expect(migration).toContain("to service_role");
   });
 
   it("keeps incomplete manager onboarding distinct from deliberate access restriction", () => {
@@ -136,13 +151,19 @@ describe("critical repository security contracts", () => {
   it("binds checkout to trusted server identity and revokes the obsolete RPC", () => {
     const action = source("app/dashboard/receptionist/actions.ts");
     const migration = source("supabase/migrations/20260729120000_critical_authorization_hardening.sql");
+    const customerMigration = source("supabase/migrations/20260830180534_pos_customer_sales_overview.sql");
 
     expect(action).toContain("p_auth_user_id: staff.id");
-    expect(action).toContain('rpc("complete_receptionist_sale_v2"');
+    expect(action).toContain("p_customer_id: parsed.customerId");
+    expect(action).toContain('rpc("complete_receptionist_sale_v3"');
     expect(migration).toContain("where coalesce(sp.auth_user_id, sp.user_id) = p_auth_user_id");
     expect(migration).toContain("grant execute on function public.complete_receptionist_sale_v2(uuid, uuid, jsonb) to service_role");
     expect(migration).toContain("revoke all on function public.complete_receptionist_sale(uuid, uuid, jsonb)");
     expect(migration).toContain("pg_advisory_xact_lock(hashtextextended(p_checkout_id::text, 0))");
+    expect(customerMigration).toContain("p_customer_id uuid");
+    expect(customerMigration).toContain("pc.store_id = staff_store_id");
+    expect(customerMigration).toContain("customer_id uuid references public.pos_customers");
+    expect(customerMigration).toContain("unique (store_id, phone_normalized)");
   });
 
   it("preserves restricted store state during manager registration", () => {
@@ -177,7 +198,7 @@ describe("critical repository security contracts", () => {
   });
 
   it("fails closed for missing origins, production URLs, secrets, and rate-limit storage", () => {
-    expect(source("lib/security.ts")).toContain('if (!origin) throw new Error("Request origin is required.")');
+    expect(source("lib/security.ts")).toContain('if (!origin) throw new RequestOriginError("Request origin is required.")');
     expect(source("lib/app-url.ts")).toContain("The production application URL is not configured");
     expect(source("lib/environment.ts")).toContain("UPSTASH_REDIS_REST_URL");
     expect(source("lib/environment.ts")).toContain('process.env.VERCEL_ENV === "preview"');
@@ -187,8 +208,8 @@ describe("critical repository security contracts", () => {
 
   it("grants only the server role the customer cart write privileges required by the API", () => {
     const baseMigration = source("supabase/migrations/20260602160000_greenchoice_mvp.sql");
-    const customerMigration = source("supabase/migrations/20260814090000_customer_portal.sql");
-    const serverGrantMigration = source("supabase/migrations/20260817150042_grant_customer_cart_server_access.sql");
+    const customerMigration = source("supabase/migrations/20260814121258_customer_portal.sql");
+    const serverGrantMigration = source("supabase/migrations/20260817132259_grant_customer_cart_server_access.sql");
     const cartRoute = source("app/api/customer/cart/route.ts");
     const cartReader = source("lib/customer/cart.ts");
 
@@ -224,5 +245,27 @@ describe("critical repository security contracts", () => {
     expect(migration).toContain("for update");
     expect(migration).toContain("other_occupied_slots >= 5");
     expect(migration).toContain("denial_reason := 'receptionist_slot_limit_reached'");
+  });
+
+  it("keeps local Sentry builds and runtimes quiet unless explicitly configured", () => {
+    const nextConfig = source("next.config.ts");
+    const clientConfig = source("instrumentation-client.ts");
+    const serverConfig = source("sentry.server.config.ts");
+    const edgeConfig = source("sentry.edge.config.ts");
+
+    expect(nextConfig).toContain('process.env.SENTRY_UPLOAD_SOURCE_MAPS === "true"');
+    expect(nextConfig).toContain("disable: !uploadSentrySourceMaps");
+    expect(nextConfig).toContain("create: uploadSentrySourceMaps");
+    expect(clientConfig).toContain("const enabled = Boolean(dsn)");
+    expect(serverConfig).toContain("const enabled = Boolean(dsn)");
+    expect(edgeConfig).toContain("const enabled = Boolean(dsn)");
+    expect(clientConfig).not.toMatch(/https:\/\/[^\s"']+\.ingest(?:\.[^\s"']+)?\.sentry\.io/);
+    expect(serverConfig).not.toMatch(/https:\/\/[^\s"']+\.ingest(?:\.[^\s"']+)?\.sentry\.io/);
+    expect(edgeConfig).not.toMatch(/https:\/\/[^\s"']+\.ingest(?:\.[^\s"']+)?\.sentry\.io/);
+  });
+
+  it("guards receptionist POS pages before loading protected catalog data", () => {
+    expect(source("app/dashboard/receptionist/page.tsx")).toContain("await requireCompletedReceptionistDashboardSession()");
+    expect(source("app/dashboard/receptionist/products/page.tsx")).toContain("await requireCompletedReceptionistDashboardSession()");
   });
 });

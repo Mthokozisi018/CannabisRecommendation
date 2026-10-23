@@ -20,6 +20,11 @@ type BrowserProduct = ReceptionistProduct & {
 
 type InventoryView = "manage" | "low-stock";
 
+function brandTitle(product: BrowserProduct) {
+  const brand = product.managerProduct.brand?.trim();
+  return brand && brand.toLowerCase() !== product.name.toLowerCase() ? brand : null;
+}
+
 function packageCount(product: ManagerInventoryProduct) {
   const value = product.facet_values?.packageCount;
   if (value === null || value === undefined || value === "") return "";
@@ -123,11 +128,6 @@ function stockUnit(product: Pick<BrowserProduct, "categoryName" | "categorySlug"
   return product.categorySlug === "flower" || normalize(product.categoryName) === "flower" ? "g" : "units";
 }
 
-function brandTitle(product: BrowserProduct) {
-  const brand = product.managerProduct.brand?.trim();
-  return brand || "Brand not set";
-}
-
 function needsLowStockAttention(product: BrowserProduct) {
   const quantity = Number(product.quantityAvailable ?? 0);
   const threshold = Number(product.lowStockThreshold ?? 0);
@@ -228,10 +228,9 @@ function ManagerInventoryCard({
         <span className="absolute bottom-2 left-2 rounded-md bg-emerald-500/75 px-2 py-1 text-xs font-bold">{product.categoryName}</span>
         {!isVisibleOnPos ? <span className="absolute bottom-2 right-2 rounded-md border border-amber-200/35 bg-amber-500/20 px-2 py-1 text-[0.62rem] font-extrabold leading-5 text-amber-100">Hidden from POS</span> : null}
       </button>
-      <div className="min-h-[76px] min-w-0">
+      <div className="min-w-0">
         <p className="line-clamp-2 text-base font-extrabold leading-snug">{product.name}</p>
-        <p className="mt-1 line-clamp-1 min-h-4 text-xs font-bold text-emerald-200/86" title={brandTitle(product)}>{brandTitle(product)}</p>
-        <p className="mt-1 line-clamp-1 min-h-4 text-xs text-white/68">{[displaySubcategory(product.subcategory), product.cultivationType].filter(Boolean).join(" / ")}</p>
+        {brandTitle(product) ? <p className="mt-1 truncate text-xs font-semibold text-white/60">{brandTitle(product)}</p> : null}
         <ProductBadges product={product} className="mt-2 grid min-h-7 grid-cols-2 gap-2" />
       </div>
       <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/20 p-2">

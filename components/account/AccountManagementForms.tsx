@@ -1,14 +1,17 @@
 "use client";
 
 import { useActionState, useState, type ReactNode } from "react";
-import { Check, ChevronDown, Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
-import { changeOwnAccountPasswordAction, updateOwnAccountProfileAction, type AccountActionState } from "@/app/dashboard/account-actions";
+import { Check, ChevronDown, Eye, EyeOff, ImageUp, LockKeyhole, UserRound } from "lucide-react";
+import { changeOwnAccountPasswordAction, updateManagerStoreImageAction, updateOwnAccountProfileAction, type AccountActionState } from "@/app/dashboard/account-actions";
 import { accountRoleTitle, type AccountRole, type DashboardAccountProfile } from "@/components/account/account-types";
+import { CustomerStoreImage } from "@/components/customer/CustomerStoreImage";
 import { southAfricanProvinces } from "@/lib/manager/onboarding-options";
 
 type AccountManagementFormsProps = {
   role: AccountRole;
   profile: DashboardAccountProfile;
+  storeImageUrl?: string | null;
+  storeName?: string;
 };
 
 const initialState: AccountActionState = { ok: false, message: "" };
@@ -73,9 +76,10 @@ function StatusMessage({ state }: { state: AccountActionState }) {
   );
 }
 
-export function AccountManagementForms({ role, profile }: AccountManagementFormsProps) {
+export function AccountManagementForms({ role, profile, storeImageUrl, storeName = "Store" }: AccountManagementFormsProps) {
   const [profileState, profileAction, profilePending] = useActionState(updateOwnAccountProfileAction, initialState);
   const [passwordState, passwordAction, passwordPending] = useActionState(changeOwnAccountPasswordAction, initialState);
+  const [storeImageState, storeImageAction, storeImagePending] = useActionState(updateManagerStoreImageAction, initialState);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -116,6 +120,32 @@ export function AccountManagementForms({ role, profile }: AccountManagementForms
         </form>
       </section>
 
+      <div className="grid gap-5">
+      {role === "manager" ? (
+        <section className="rounded-lg border border-[#36d179] bg-[#031008] p-4 text-white shadow-[0_18px_48px_rgba(0,0,0,0.42)] sm:p-5">
+          <div className="mb-4 flex items-center gap-2.5">
+            <ImageUp size={20} className="text-[#8df2b1]" aria-hidden="true" />
+            <h2 className="text-lg font-black">Store Image</h2>
+          </div>
+          <div className="relative mb-4 aspect-[16/9] overflow-hidden rounded-lg border border-[#296646] bg-[#07130d]">
+            <CustomerStoreImage src={storeImageUrl} alt={`${storeName} storefront`} sizes="(min-width: 1024px) 360px, 100vw" className="object-cover" />
+          </div>
+          <form action={storeImageAction} className="grid gap-3">
+            <label className="block text-xs font-black uppercase tracking-normal text-[#cfe7d7]">
+              Upload storefront image
+              <span className={fieldShell}>
+                <input name="storeImage" type="file" accept="image/png,image/jpeg,image/webp" required className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-[#23c875] file:px-3 file:py-2 file:text-xs file:font-black file:text-[#021009]`} />
+              </span>
+            </label>
+            <StatusMessage state={storeImageState} />
+            <button disabled={storeImagePending} className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#8df2b1] bg-[#23c875] px-4 text-sm font-black text-[#021009] transition hover:bg-[#61e99b] disabled:opacity-60">
+              <ImageUp size={17} aria-hidden="true" />
+              {storeImagePending ? "Uploading..." : "Save Store Image"}
+            </button>
+          </form>
+        </section>
+      ) : null}
+
       <section className="rounded-lg border border-[#36d179] bg-[#031008] p-4 text-white shadow-[0_18px_48px_rgba(0,0,0,0.42)] sm:p-5">
         <div className="mb-4 flex items-center gap-2.5">
           <LockKeyhole size={20} className="text-[#8df2b1]" aria-hidden="true" />
@@ -145,6 +175,7 @@ export function AccountManagementForms({ role, profile }: AccountManagementForms
           </button>
         </form>
       </section>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,17 @@
+.artwork {
+  width: 100%;
+  max-width: 650px;
+  margin: 0 auto 20px;
+}
+
+.artwork svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.onLight {
+  padding: 12px;
+  border-radius: 18px;
+  background: #04120c;
+}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auditAccessDenied, decideDashboardAccess, getDashboardSession } from "@/lib/dashboard-session";
 import { managerPasswordIssues } from "@/lib/manager/password-policy";
-import { verifyOrigin } from "@/lib/security";
+import { RequestOriginError, verifyOrigin } from "@/lib/security";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -28,18 +28,26 @@ export async function POST(request: Request) {
     const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
     if (error) return NextResponse.json({ error: "Password reset session is invalid or expired." }, { status: 401, headers: privateHeaders });
 
-    const session = await getDashboardSession();
-    const decision = decideDashboardAccess(session?.profile);
-    if (!decision.allowed && session) {
-      await auditAccessDenied(session, "password_reset_completed_restricted_account", decision.reason);
+    // Profile lookup and auditing are supplementary to the Auth password change.
+    // A temporary profile database failure must not report a failed reset after
+    // Supabase has already accepted the new password.
+    try {
+      const session = await getDashboardSession();
+      const decision = decideDashboardAccess(session?.profile);
+      if (!decision.allowed && session) {
+        await auditAccessDenied(session, "password_reset_completed_restricted_account", decision.reason);
+      }
+    } catch {
+      // The next login still enforces the user's unchanged role and access state.
     }
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return NextResponse.json({
       updated: true,
-      message: "Password updated successfully. Please log in again.",
+      message: "Your password has been updated successfully. You can now sign in using your new password.",
       redirectTo: "/login"
     }, { headers: privateHeaders });
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestOriginError) return NextResponse.json({ error: "Invalid request origin." }, { status: 403, headers: privateHeaders });
     return NextResponse.json({ error: "Password reset is unavailable." }, { status: 503, headers: privateHeaders });
   }
 }

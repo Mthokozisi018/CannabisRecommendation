@@ -1,5 +1,6 @@
 export type AccountFlowProfile = {
-  role: "admin" | "manager" | "receptionist";
+  role: "admin" | "manager" | "receptionist" | "franchise_admin";
+  franchise_id?: string | null;
   store_id?: string | null;
   account_status?: "active" | "restricted" | "deactivated" | "deleted" | null;
   is_active?: boolean | null;
@@ -42,6 +43,9 @@ export function decideAccountAccess(profile: AccountFlowProfile | null | undefin
     return { allowed: false, reason: "account_inactive", message: "Your account is inactive. Please contact your manager." };
   }
 
+  if (profile.role === "franchise_admin") {
+    return profile.franchise_id ? { allowed: true } : { allowed: false, reason: "store_unassigned", message: "Your franchise assignment is unavailable. Contact the administrator." };
+  }
   if (profile.role === "manager" && !profile.store_id) {
     return { allowed: true };
   }
@@ -68,4 +72,8 @@ export function managerLoginDestination(session: {
 
 export function receptionistLoginDestination(session: { accountSetupComplete: boolean }) {
   return session.accountSetupComplete ? "/dashboard/receptionist" : "/staff/setup/account";
+}
+
+export function franchiseLoginDestination(session: { accountSetupComplete: boolean }) {
+  return session.accountSetupComplete ? "/dashboard/franchise" : "/franchise/setup";
 }

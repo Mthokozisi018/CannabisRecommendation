@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BackLink, DashboardHeader, GlassPanel } from "@/components/GreenChoiceDashboard";
+import { DashboardHeader, GlassPanel } from "@/components/GreenChoiceDashboard";
 
 const demoNavigationLinks = [
   { href: "/dashboard/admin/demo-store/manager", label: "Demo Manager Dashboard" },
@@ -34,7 +34,6 @@ export function AdminDemoManagerFeaturePage({
 }) {
   return (
     <main className="mx-auto max-w-[1200px] px-4 py-8 text-white">
-      <BackLink href="/dashboard/admin/demo-store/manager" />
       <AdminDemoNavigationLinks />
       <DashboardHeader title={title} subtitle={subtitle} profileLabel="Admin Demo" />
       <GlassPanel className="grid gap-6 md:grid-cols-2">{children}</GlassPanel>

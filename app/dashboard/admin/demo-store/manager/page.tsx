@@ -2,6 +2,7 @@ import { AdminDemoNavigationLinks } from "@/components/admin/AdminDemoManagerFea
 import { ManagerDashboardActions } from "@/components/manager/ManagerDashboardActions";
 import { ManagerWelcomePanel } from "@/components/manager/ManagerWelcomePanel";
 import { getAdminDemoManagerDashboardSummary, requireAdminDemoStoreContext } from "@/lib/admin/demo-store";
+import { pendingOrdersUiEnabled } from "@/lib/manager/pending-orders-availability";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function AdminDemoManagerDashboardPage() {
           loggedInToday={summary.loggedInToday}
         />
         <ManagerDashboardActions
+          pendingOrdersEnabled={pendingOrdersUiEnabled()}
           hrefOverrides={{
             products: "/dashboard/admin/demo-store/manager/inventory/manage",
             inventory: "/dashboard/admin/demo-store/manager/inventory",

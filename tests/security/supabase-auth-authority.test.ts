@@ -33,9 +33,12 @@ describe("Supabase Auth ownership contracts", () => {
     expect(managerSetup).toContain("Your secure sign-in session has expired");
     expect(managerSetup).toContain('rpc("complete_manual_manager_account_setup"');
     expect(recoveryRequest).toContain("/update-password?flow=recovery");
-    expect(recoveryPage).toContain('redirectType !== "recovery"');
+    expect(recoveryPage).toContain('event !== "PASSWORD_RECOVERY"');
     expect(recoveryPage).toContain('hash.get("type") === "recovery"');
-    expect(recoveryPage).not.toContain("supabase.auth.getSession()");
+    expect(recoveryPage).toContain('verifyOtp({ token_hash: tokenHash, type: "recovery" })');
+    expect(recoveryPage).not.toContain("exchangeCodeForSession");
+    expect(source("lib/staff-password-reset.ts")).toContain("/update-password?flow=recovery");
+    expect(source("app/api/auth/customer-recover-account/route.ts")).toContain("/update-password?flow=recovery");
     expect(recoveryUpdate).not.toContain("staff_invitations");
     expect(recoveryUpdate).toContain('redirectTo: "/login"');
     expect(recoveryUpdate).not.toContain('.from("staff_profiles").update');
@@ -145,15 +148,12 @@ describe("Supabase Auth ownership contracts", () => {
     expect(loginForm).toContain("window.location.replace");
   });
 
-  it("exchanges each recovery code only once per mounted flow", () => {
+  it("lets Supabase process each recovery link and clears it from the address bar", () => {
     const updatePassword = source("app/update-password/page.tsx");
-    expect(updatePassword).toContain("exchangedCodeRef");
-    expect(updatePassword).toContain("exchangePromiseRef");
-    expect(updatePassword).toContain("await (exchangePromiseRef.current");
+    expect(updatePassword).toContain("supabase.auth.onAuthStateChange");
+    expect(updatePassword).toContain("supabase.auth.initialize()");
     expect(updatePassword).toContain("window.location.hash");
-    expect(updatePassword).toContain("supabase.auth.setSession");
     expect(updatePassword).toContain("window.history.replaceState");
-    expect(updatePassword).toContain("Promise.resolve(false)");
     expect(updatePassword).toContain('method="post"');
     expect(updatePassword).toContain("!isReady || isSubmitting");
     expect(existsSync(resolve(process.cwd(), "components/staff/StaffInvitationSessionGate.tsx"))).toBe(false);

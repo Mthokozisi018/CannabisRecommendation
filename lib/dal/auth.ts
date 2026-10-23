@@ -1,8 +1,10 @@
 import "server-only";
 import { cache } from "react";
+import { StaffAuthenticationRequiredError } from "@/lib/auth-errors";
 import { STORE } from "@/lib/data";
 import { assertPermission, assertRole, staffToAccountContext } from "@/lib/authorization";
 import { auditAccessDenied, decideDashboardAccess, getDashboardSession } from "@/lib/dashboard-session";
+import { billingAccessForSession } from "@/lib/billing/accounts";
 import { updateSessionState } from "@/lib/session";
 import type { CurrentStaffUser } from "@/lib/staff-profile";
 import type { Permission, StaffRole } from "@/lib/types";
@@ -27,7 +29,7 @@ export async function getCurrentStaffUser(): Promise<CurrentStaffUser | null> {
 
 export async function requireStaff(roles?: StaffRole[]) {
   const session = await getDashboardSession();
-  if (!session) throw new Error("Staff authentication required.");
+  if (!session) throw new StaffAuthenticationRequiredError();
   const decision = decideDashboardAccess(session.profile);
   if (!decision.allowed) {
     await auditAccessDenied(session, "restricted_server_action_attempt", decision.reason);
@@ -35,6 +37,9 @@ export async function requireStaff(roles?: StaffRole[]) {
   }
   const staff = session.staff;
   assertRole(staff, roles);
+  if (await billingAccessForSession(session) !== "allowed") {
+    throw new Error("GreenChoice billing needs attention before store operations can continue.");
+  }
   if (staff.role !== "admin" && !staff.storeId) {
     throw new Error("Staff store assignment is required before accessing store data.");
   }

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, Boxes, ClipboardCheck, ClipboardList, ShoppingCart, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, Boxes, ClipboardCheck, ClipboardList, ShoppingCart, Truck, UsersRound, type LucideIcon } from "lucide-react";
 
-type CardTone = "green" | "purple" | "blue" | "amber" | "teal";
-type ManagerActionKey = "products" | "inventory" | "orders" | "staff" | "sales" | "serve";
+export type CardTone = "green" | "purple" | "blue" | "cyan" | "amber" | "teal";
+type ManagerActionKey = "products" | "inventory" | "suppliers" | "orders" | "staff" | "sales" | "serve";
 
 type ManagerCard = {
   key: ManagerActionKey;
@@ -33,6 +33,13 @@ const cards: ManagerCard[] = [
     href: "/dashboard/manager/inventory",
     icon: ClipboardList,
     tone: "purple"
+  },
+  {
+    key: "suppliers",
+    title: "Supplier Information",
+    href: "/dashboard/manager/suppliers",
+    icon: Truck,
+    tone: "teal"
   },
   {
     key: "staff",
@@ -79,6 +86,13 @@ const toneStyles: Record<CardTone, { card: string; iconRing: string; icon: strin
     underline: "bg-[#4da8ff]",
     arrow: "border-[#4da8ff]/35 bg-[#4da8ff]/18 text-white shadow-[0_0_28px_rgba(77,168,255,0.24)]"
   },
+  cyan: {
+    card: "border-[#12d9e1]/45 bg-[linear-gradient(145deg,rgba(8,59,67,0.78),rgba(3,17,23,0.95))] shadow-[0_24px_62px_rgba(18,217,225,0.18)] hover:border-[#46edf1]/75",
+    iconRing: "border-[#12d9e1]/80 shadow-[0_0_32px_rgba(18,217,225,0.2)]",
+    icon: "text-[#46edf1]",
+    underline: "bg-[#46edf1]",
+    arrow: "border-[#46edf1]/35 bg-[#46edf1]/18 text-white shadow-[0_0_28px_rgba(70,237,241,0.24)]"
+  },
   amber: {
     card: "border-[#e5ad2f]/45 bg-[linear-gradient(145deg,rgba(70,45,10,0.72),rgba(18,13,6,0.95))] shadow-[0_24px_62px_rgba(213,145,20,0.18)] hover:border-[#ffc84b]/75",
     iconRing: "border-[#e5ad2f]/80 shadow-[0_0_32px_rgba(229,173,47,0.2)]",
@@ -95,7 +109,7 @@ const toneStyles: Record<CardTone, { card: string; iconRing: string; icon: strin
   }
 };
 
-function ManagerActionCard({ href, icon: Icon, title, tone, count }: Omit<ManagerCard, "key"> & { count?: number }) {
+export function DashboardActionCard({ href, icon: Icon, title, tone, count, navigationLoading, className, hoverLift = true }: Omit<ManagerCard, "key"> & { count?: number; navigationLoading?: string; className?: string; hoverLift?: boolean }) {
   const styles = toneStyles[tone];
 
   return (
@@ -103,7 +117,8 @@ function ManagerActionCard({ href, icon: Icon, title, tone, count }: Omit<Manage
       href={href as never}
       prefetch
       aria-label={title}
-      className={`gc-manager-action-card group relative flex h-[230px] w-full max-w-[176px] flex-col items-center justify-between overflow-hidden rounded-[18px] border px-5 py-8 text-center text-white backdrop-blur-xl transition duration-300 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-[252px] sm:max-w-[190px] lg:h-[270px] lg:max-w-[200px] ${styles.card}`}
+      data-navigation-loading={navigationLoading}
+      className={`gc-manager-action-card group relative flex h-[230px] w-full max-w-[176px] flex-col items-center justify-between overflow-hidden rounded-[18px] border px-5 py-8 text-center text-white backdrop-blur-xl transition duration-300 ${hoverLift ? "hover:-translate-y-1" : ""} focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:h-[252px] sm:max-w-[190px] lg:h-[270px] lg:max-w-[200px] ${styles.card} ${className ?? ""}`}
     >
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,255,255,0.11),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.11),transparent_30%,rgba(255,255,255,0.03))]" />
       <span className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-white/8" />
@@ -130,16 +145,18 @@ function ManagerActionCard({ href, icon: Icon, title, tone, count }: Omit<Manage
 export function ManagerDashboardActions({
   hrefOverrides,
   titleOverrides,
-  pendingOrderCount
+  pendingOrderCount,
+  pendingOrdersEnabled
 }: {
   hrefOverrides?: Partial<Record<ManagerActionKey, string>>;
   titleOverrides?: Partial<Record<ManagerActionKey, string>>;
   pendingOrderCount?: number;
+  pendingOrdersEnabled: boolean;
 }) {
   return (
-    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[1320px] grid-cols-2 justify-items-center gap-5 sm:gap-6 md:grid-cols-3 xl:grid-cols-6 xl:gap-5">
-      {cards.map(({ key, ...card }) => (
-        <ManagerActionCard
+    <nav aria-label="Manager dashboard actions" className="gc-manager-actions-grid mx-auto mt-8 grid w-full max-w-[1500px] grid-cols-2 justify-items-center gap-5 sm:gap-6 md:grid-cols-3 xl:grid-cols-7 xl:gap-4">
+      {cards.filter(({ key }) => key !== "orders" || pendingOrdersEnabled).map(({ key, ...card }) => (
+        <DashboardActionCard
           key={key}
           {...card}
           href={hrefOverrides?.[key] ?? card.href}

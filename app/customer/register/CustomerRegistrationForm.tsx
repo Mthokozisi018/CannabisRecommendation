@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
-import { CheckCircle2, Eye, EyeOff, UserPlus } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, LoaderCircle, UserPlus } from "lucide-react";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
-import { SOUTH_AFRICAN_PROVINCES } from "@/lib/customer/validation";
+import styles from "@/components/registration/RegistrationForm.module.css";
+import { SOUTH_AFRICAN_PROVINCES } from "@/lib/customer/provinces";
 
 const inputClass = "mt-2 h-12 w-full rounded-xl border-2 border-[#d9e2dc] bg-white px-4 text-[#102018] outline-none transition placeholder:text-[#839087] focus:border-[#159447]";
 
@@ -121,17 +122,17 @@ export function CustomerRegistrationForm() {
         </section>
 
         <section className="grid gap-3 rounded-2xl border-2 border-[#dce8df] bg-[#f4faf6] p-4 text-sm text-[#263a2f]">
-          <label className="flex items-start gap-3"><input className="mt-1 size-4 accent-[#159447]" type="checkbox" name="acceptTerms" required /><span>I accept the <Link className="font-bold text-[#087c39] underline" href={"/legal/terms-of-service.pdf" as never} target="_blank">Terms and Conditions</Link>.</span></label>
-          <label className="flex items-start gap-3"><input className="mt-1 size-4 accent-[#159447]" type="checkbox" name="acceptPrivacy" required /><span>I accept the <Link className="font-bold text-[#087c39] underline" href={"/legal/privacy-policy.pdf" as never} target="_blank">Privacy Policy</Link>.</span></label>
-          <label className="flex items-start gap-3"><input className="mt-1 size-4 accent-[#159447]" type="checkbox" name="acceptPhysicalIdNotice" required /><span>I understand that a valid physical ID may be requested before a restricted product is handed over.</span></label>
-          <label className="flex items-start gap-3"><input className="mt-1 size-4 accent-[#159447]" type="checkbox" name="marketingConsent" /><span>Send me optional GreenChoice product and store updates.</span></label>
+          <label className={`${styles.agreementRow} ${styles.agreementRowLight}`}><input className={`${styles.checkbox} ${styles.checkboxLight}`} type="checkbox" name="acceptTerms" required /><span className="leading-6">I accept the <Link className="font-bold text-[#087c39] underline decoration-transparent underline-offset-4 hover:decoration-current focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087c39]" href={"/legal/terms-of-service.pdf" as never} target="_blank">Terms and Conditions</Link>.</span></label>
+          <label className={`${styles.agreementRow} ${styles.agreementRowLight}`}><input className={`${styles.checkbox} ${styles.checkboxLight}`} type="checkbox" name="acceptPrivacy" required /><span className="leading-6">I accept the <Link className="font-bold text-[#087c39] underline decoration-transparent underline-offset-4 hover:decoration-current focus-visible:rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087c39]" href={"/legal/privacy-policy.pdf" as never} target="_blank">Privacy Policy</Link>.</span></label>
+          <label className={`${styles.agreementRow} ${styles.agreementRowLight}`}><input className={`${styles.checkbox} ${styles.checkboxLight}`} type="checkbox" name="acceptPhysicalIdNotice" required /><span className="leading-6">I understand that a valid physical ID may be requested before a restricted product is handed over.</span></label>
+          <label className={`${styles.agreementRow} ${styles.agreementRowLight}`}><input className={`${styles.checkbox} ${styles.checkboxLight}`} type="checkbox" name="marketingConsent" /><span className="leading-6">Send me optional GreenChoice product and store updates.</span></label>
         </section>
 
         <div className="rounded-2xl border-2 border-[#bfe5ca] bg-[#eaf8ee] p-4 text-sm font-semibold text-[#19582e]">
           <CheckCircle2 className="mr-2 inline" size={19} /> Remember your email and password. You will need them whenever you sign in to GreenChoice.
         </div>
 
-        <button disabled={isSubmitting} className="inline-flex h-14 items-center justify-center gap-3 rounded-xl bg-[#087c39] text-lg font-black text-white shadow-[0_12px_30px_rgba(8,124,57,0.24)] transition hover:bg-[#096e35] disabled:opacity-60"><UserPlus size={22} />{isSubmitting ? "Creating account..." : "Create Customer Account"}</button>
+        <button disabled={isSubmitting} className="inline-flex h-14 items-center justify-center gap-3 rounded-xl bg-[#087c39] text-lg font-black text-white shadow-[0_12px_30px_rgba(8,124,57,0.24)] transition hover:bg-[#096e35] disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none">{isSubmitting ? <LoaderCircle aria-hidden size={22} className="animate-spin motion-reduce:animate-none" /> : <UserPlus aria-hidden size={22} />}{isSubmitting ? "Creating account..." : "Create Customer Account"}</button>
       </form>
     </>
   );

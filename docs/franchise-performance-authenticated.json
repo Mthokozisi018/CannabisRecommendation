@@ -1,0 +1,722 @@
+{
+  "measuredAt": "2026-10-13T06:21:33.916Z",
+  "conditions": "Local workstation to staging; authenticated synthetic FA fixture, 6 stores / 3749 sales / matching customer counts; same session, date range and fetch instrumentation; data pipeline excludes session resolution and React calculation; browser after is Next dev, full navigation",
+  "results": [
+    {
+      "iteration": 0,
+      "mode": "before",
+      "page": "home",
+      "ms": 578,
+      "requestCount": 5,
+      "bytes": 3276,
+      "requests": [
+        {
+          "ms": 277,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 288,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 299,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 215,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/audit_logs"
+        },
+        {
+          "ms": 225,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        }
+      ]
+    },
+    {
+      "iteration": 0,
+      "mode": "before",
+      "page": "sales",
+      "ms": 25909,
+      "requestCount": 17,
+      "bytes": 1270279,
+      "requests": [
+        {
+          "ms": 212,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 222,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 233,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 989,
+          "bytes": 168969,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 1611,
+          "bytes": 168979,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 2252,
+          "bytes": 168979,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 3062,
+          "bytes": 168989,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 3369,
+          "bytes": 168980,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 3884,
+          "bytes": 168982,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 4908,
+          "bytes": 168987,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 4614,
+          "bytes": 84142,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 281,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 894,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 891,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 901,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 902,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 900,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        }
+      ]
+    },
+    {
+      "iteration": 0,
+      "mode": "after",
+      "page": "home",
+      "ms": 608,
+      "requestCount": 5,
+      "bytes": 3304,
+      "requests": [
+        {
+          "ms": 270,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 270,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/audit_logs"
+        },
+        {
+          "ms": 277,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 269,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 605,
+          "bytes": 30,
+          "status": 200,
+          "path": "/rest/v1/rpc/franchise_dashboard_totals"
+        }
+      ]
+    },
+    {
+      "iteration": 0,
+      "mode": "after",
+      "page": "sales",
+      "ms": 4148,
+      "requestCount": 4,
+      "bytes": 61361,
+      "requests": [
+        {
+          "ms": 505,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 510,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 522,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 4139,
+          "bytes": 58089,
+          "status": 200,
+          "path": "/rest/v1/rpc/franchise_dashboard_totals"
+        }
+      ]
+    },
+    {
+      "iteration": 1,
+      "mode": "before",
+      "page": "home",
+      "ms": 704,
+      "requestCount": 5,
+      "bytes": 3276,
+      "requests": [
+        {
+          "ms": 397,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 403,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 397,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 295,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 297,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/audit_logs"
+        }
+      ]
+    },
+    {
+      "iteration": 1,
+      "mode": "before",
+      "page": "sales",
+      "ms": 25969,
+      "requestCount": 17,
+      "bytes": 1270279,
+      "requests": [
+        {
+          "ms": 245,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 250,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 274,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 1009,
+          "bytes": 168969,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 1631,
+          "bytes": 168979,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 2448,
+          "bytes": 168979,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 2966,
+          "bytes": 168989,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 3447,
+          "bytes": 168980,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 3998,
+          "bytes": 168982,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 4382,
+          "bytes": 168987,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 4712,
+          "bytes": 84142,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 365,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 787,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 773,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 783,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 801,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 999,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        }
+      ]
+    },
+    {
+      "iteration": 1,
+      "mode": "after",
+      "page": "home",
+      "ms": 542,
+      "requestCount": 5,
+      "bytes": 3304,
+      "requests": [
+        {
+          "ms": 304,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 298,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/audit_logs"
+        },
+        {
+          "ms": 313,
+          "bytes": 30,
+          "status": 200,
+          "path": "/rest/v1/rpc/franchise_dashboard_totals"
+        },
+        {
+          "ms": 314,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 530,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        }
+      ]
+    },
+    {
+      "iteration": 1,
+      "mode": "after",
+      "page": "sales",
+      "ms": 3954,
+      "requestCount": 4,
+      "bytes": 61361,
+      "requests": [
+        {
+          "ms": 276,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 269,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 281,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 3940,
+          "bytes": 58089,
+          "status": 200,
+          "path": "/rest/v1/rpc/franchise_dashboard_totals"
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "mode": "before",
+      "page": "home",
+      "ms": 458,
+      "requestCount": 5,
+      "bytes": 3276,
+      "requests": [
+        {
+          "ms": 214,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 218,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 240,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 208,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 215,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/audit_logs"
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "mode": "before",
+      "page": "sales",
+      "ms": 27242,
+      "requestCount": 17,
+      "bytes": 1270279,
+      "requests": [
+        {
+          "ms": 220,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 225,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 239,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 1050,
+          "bytes": 168969,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 1630,
+          "bytes": 168979,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 2370,
+          "bytes": 168979,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 3020,
+          "bytes": 168989,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 3379,
+          "bytes": 168980,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 4926,
+          "bytes": 168982,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 4651,
+          "bytes": 168987,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 4898,
+          "bytes": 84142,
+          "status": 200,
+          "path": "/rest/v1/pos_sales"
+        },
+        {
+          "ms": 315,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 607,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 604,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 746,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 754,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        },
+        {
+          "ms": 957,
+          "bytes": 0,
+          "status": 200,
+          "path": "/rest/v1/pos_customers"
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "mode": "after",
+      "page": "home",
+      "ms": 545,
+      "requestCount": 5,
+      "bytes": 3304,
+      "requests": [
+        {
+          "ms": 491,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/audit_logs"
+        },
+        {
+          "ms": 508,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 496,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 518,
+          "bytes": 30,
+          "status": 200,
+          "path": "/rest/v1/rpc/franchise_dashboard_totals"
+        },
+        {
+          "ms": 531,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "mode": "after",
+      "page": "sales",
+      "ms": 4039,
+      "requestCount": 4,
+      "bytes": 61361,
+      "requests": [
+        {
+          "ms": 278,
+          "bytes": 2,
+          "status": 200,
+          "path": "/rest/v1/staff_profiles"
+        },
+        {
+          "ms": 275,
+          "bytes": 3009,
+          "status": 200,
+          "path": "/rest/v1/stores"
+        },
+        {
+          "ms": 296,
+          "bytes": 261,
+          "status": 200,
+          "path": "/rest/v1/franchises"
+        },
+        {
+          "ms": 4024,
+          "bytes": 58089,
+          "status": 200,
+          "path": "/rest/v1/rpc/franchise_dashboard_totals"
+        },
+        {
+          "ms": 4022,
+          "bytes": 58089,
+          "status": 200,
+          "path": "/rest/v1/rpc/franchise_dashboard_totals"
+        }
+      ]
+    }
+  ],
+  "browserResults": [
+    {
+      "route": "/dashboard/franchise",
+      "iteration": 0,
+      "dataVisibleMs": 1882
+    },
+    {
+      "route": "/dashboard/franchise",
+      "iteration": 1,
+      "dataVisibleMs": 1210
+    },
+    {
+      "route": "/dashboard/franchise",
+      "iteration": 2,
+      "dataVisibleMs": 1519
+    },
+    {
+      "route": "/dashboard/franchise/sales",
+      "iteration": 0,
+      "dataVisibleMs": 8804
+    },
+    {
+      "route": "/dashboard/franchise/sales",
+      "iteration": 1,
+      "dataVisibleMs": 10867
+    },
+    {
+      "route": "/dashboard/franchise/sales",
+      "iteration": 2,
+      "dataVisibleMs": 7146
+    }
+  ]
+}

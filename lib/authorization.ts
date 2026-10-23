@@ -16,6 +16,7 @@ export const roleLabels: Record<AccountRole, string> = {
   employee_receptionist: "Receptionist",
   employee_budtender: "Budtender",
   manager: "Manager",
+  franchise_admin: "Franchise Administrator",
   compliance_officer: "Compliance Officer",
   tenant_admin: "Tenant Admin",
   owner: "Owner",
@@ -23,6 +24,7 @@ export const roleLabels: Record<AccountRole, string> = {
 };
 
 const rolePermissions: Record<AccountRole, Permission[]> = {
+  franchise_admin: ["brand.view"],
   guest: ["brand.view", "age_gate.complete", "account.register", "account.login"],
   customer: ["brand.view", "account.self.read", "account.self.update", "account.security.manage", "privacy.manage_self", "customer.history.self"],
   employee_receptionist: ["brand.view", "customer.intake.store", "customer.view.store", "recommendation.start", "orders.support.store", "catalog.view.store"],

@@ -31,7 +31,10 @@ describe("mobile portrait layout", () => {
     expect(login).toContain("gc-login-page");
     expect(source("app/login/LoginForm.tsx")).toContain("gc-login-input-shell");
     expect(css).toContain(".gc-manager-actions-grid");
+    expect(css).toContain(".gc-manager-dashboard-page");
+    expect(css).toContain(".gc-manager-dashboard-shell");
     expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(source("app/dashboard/manager/page.tsx")).toContain("gc-manager-dashboard-page");
     expect(managerActions).toContain("gc-manager-actions-grid");
     expect(managerActions).toContain("gc-manager-action-card");
   });

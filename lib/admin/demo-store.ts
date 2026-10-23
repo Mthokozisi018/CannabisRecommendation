@@ -1,4 +1,5 @@
 import "server-only";
+import { readStoreNetRevenue } from "@/lib/manager/net-sales";
 import { cache } from "react";
 import { requireAdminUser } from "@/lib/admin/data";
 import type { LoggedInStaffSummary, ManagerDashboardSummary } from "@/lib/manager/dashboard-summary";
@@ -143,19 +144,11 @@ export const getAdminDemoManagerDashboardSummary = cache(async (): Promise<Manag
   const admin = requireAdminDemoClient();
   const { start, end } = todayBounds();
 
-  const { data: sales, error: salesError } = await admin
-    .from("pos_sales")
-    .select("total")
-    .eq("store_id", context.storeId)
-    .eq("status", "completed")
-    .gte("created_at", start.toISOString())
-    .lt("created_at", end.toISOString());
-  if (salesError) throw new Error(salesError.message);
+  const totalSalesToday = await readStoreNetRevenue(admin, context.storeId, start, end);
 
   const { data: authUser, error: authError } = await admin.auth.admin.getUserById(context.adminUserId);
   if (authError) throw new Error(authError.message);
 
-  const totalSalesToday = (sales ?? []).reduce((sum, sale) => sum + Number(sale.total ?? 0), 0);
   const signedInAt = authUser.user?.last_sign_in_at ? new Date(authUser.user.last_sign_in_at) : null;
   const loggedInToday: LoggedInStaffSummary[] = signedInAt && signedInAt >= start && signedInAt < end
     ? [{

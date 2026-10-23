@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { decideAccountAccess, managerLoginDestination, receptionistLoginDestination, type AccountFlowProfile } from "@/lib/account-flow";
 
@@ -17,6 +19,12 @@ describe("manual manager onboarding account states", () => {
       storeSetupComplete: false,
       onboardingCompleteSeen: false
     })).toBe("/manager/setup/account");
+  });
+
+  it("requires personal onboarding for an active manager already assigned to a franchise store", () => {
+    expect(decideAccountAccess({...activeManager,store_id:"assigned-store",stores:{store_access_status:"active"}})).toEqual({allowed:true});
+    expect(managerLoginDestination({accountSetupComplete:false,storeSetupComplete:true,onboardingCompleteSeen:false})).toBe("/manager/setup/account");
+    expect(managerLoginDestination({accountSetupComplete:true,storeSetupComplete:true,onboardingCompleteSeen:false})).toBe("/manager/setup/complete");
   });
 
   it("returns an interrupted manager to the exact incomplete onboarding step", () => {
@@ -63,5 +71,12 @@ describe("manual manager onboarding account states", () => {
   it("sends a receptionist to setup until their account is complete", () => {
     expect(receptionistLoginDestination({ accountSetupComplete: false })).toBe("/staff/setup/account");
     expect(receptionistLoginDestination({ accountSetupComplete: true })).toBe("/dashboard/receptionist");
+  });
+
+  it("returns dashboard account users to the correct role dashboard", () => {
+    const accountPage = readFileSync(resolve(process.cwd(), "app/dashboard/account/page.tsx"), "utf8");
+
+    expect(accountPage).toContain('session.isManager ? "/dashboard/manager" : "/dashboard/receptionist"');
+    expect(accountPage).toContain('session.isManager ? "Back to Manager Dashboard" : "Back to POS"');
   });
 });

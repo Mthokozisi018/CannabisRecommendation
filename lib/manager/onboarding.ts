@@ -21,12 +21,25 @@ export const managerAccountSetupSchema = z.object({
 export const storeRegistrationSchema = z.object({
   storeName: z.string().trim().min(2, "Store name must be at least 2 characters.").max(100, "Store name must be 100 characters or fewer."),
   storePhoneNumber: z.string().trim().refine((value) => southAfricanPhoneRegex.test(value.replace(/\s/g, "")), "Enter a valid South African store phone number."),
-  physicalStoreAddress: z.string().trim().min(5, "Physical store address must be at least 5 characters."),
-  city: z.string().trim().min(2, "City or town must be at least 2 characters."),
+  physicalStoreAddress: z.string().trim().min(5, "Physical store address must be at least 5 characters.").max(240),
+  city: z.string().trim().min(2, "City or town must be at least 2 characters.").max(120),
   province: z.enum(southAfricanProvinces),
   postalCode: z.string().trim().regex(/^[0-9]{4}$/, "Postal code must be 4 digits."),
   informationAccurate: z.literal("on", { errorMap: () => ({ message: "You must confirm that all store information provided is accurate before creating the store." }) })
 });
+
+export function normalizeSAPhone(value: string) {
+  const compact = value.replace(/\s/g, "");
+  if (compact.startsWith("+27")) return compact;
+  if (compact.startsWith("27")) return `+${compact}`;
+  if (compact.startsWith("0")) return `+27${compact.slice(1)}`;
+  return compact;
+}
+
+export function slugForStoreName(name: string) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "store";
+  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
+}
 
 export type ManagerSetupProfile = {
   id: string;
@@ -134,19 +147,6 @@ export function linkedManagerStore(profile: ManagerSetupProfile) {
 
 function accountIsActive(profile: ManagerSetupProfile) {
   return profile.account_status ? profile.account_status === "active" : profile.is_active === true;
-}
-
-export function normalizeSAPhone(value: string) {
-  const compact = value.replace(/\s/g, "");
-  if (compact.startsWith("+27")) return compact;
-  if (compact.startsWith("27")) return `+${compact}`;
-  if (compact.startsWith("0")) return `+27${compact.slice(1)}`;
-  return compact;
-}
-
-export function slugForStoreName(name: string) {
-  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "store";
-  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 const getCurrentManagerSetupProfileCached = cache(async () => {

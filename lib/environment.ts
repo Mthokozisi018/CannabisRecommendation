@@ -8,6 +8,12 @@ export function greenChoiceEnvironment(): GreenChoiceEnvironment {
     if (process.env.NODE_ENV === "production" && value === "development") {
       throw new Error("A production-mode runtime cannot use the development environment identity.");
     }
+    if (process.env.VERCEL_ENV === "preview" && value !== "staging") {
+      throw new Error("A Vercel preview must use the staging environment identity.");
+    }
+    if (process.env.VERCEL_ENV === "production" && value !== "production") {
+      throw new Error("A Vercel production deployment must use the production environment identity.");
+    }
     return value;
   }
   if (!value && process.env.VERCEL_ENV === "preview") {
@@ -44,7 +50,7 @@ export function assertSupabaseEnvironmentIdentity() {
     throw new Error("Supabase project does not match the configured GreenChoice environment.");
   }
   if (environment === "staging" && (!productionProjectRef || actualProjectRef === productionProjectRef)) {
-    throw new Error("Staging must use a Supabase project isolated from production.");
+    throw new Error("Staging must use a Supabase project that is isolated from production.");
   }
   if (environment === "production" && productionProjectRef && actualProjectRef !== productionProjectRef) {
     throw new Error("Production must use the designated production Supabase project.");
@@ -67,6 +73,7 @@ export function validateProductionEnvironment() {
   requireServerSecret("CSRF_SECRET");
   requireServerSecret("SESSION_SIGNING_SECRET");
   requireServerSecret("RATE_LIMIT_KEY_SECRET");
+  requireServerSecret("READINESS_DIAGNOSTIC_SECRET");
 
   if (!process.env.SUPABASE_SECRET_KEY?.trim() && !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
     throw new Error("A Supabase server secret is required.");

@@ -1,0 +1,43 @@
+{
+  "measuredAt": "2026-10-13T06:37:42.952Z",
+  "conditions": "Local workstation to staging; authenticated synthetic FA fixture, 6 stores / 3749 sales / matching customer counts; same session, date range and fetch instrumentation; data pipeline excludes session resolution and React calculation; browser is Next production build, full navigation",
+  "results": [],
+  "browserResults": [
+    {
+      "route": "/dashboard/franchise",
+      "iteration": 0,
+      "dataVisibleMs": 998,
+      "contentVisibleMs": 112
+    },
+    {
+      "route": "/dashboard/franchise",
+      "iteration": 1,
+      "dataVisibleMs": 1056,
+      "contentVisibleMs": 184
+    },
+    {
+      "route": "/dashboard/franchise",
+      "iteration": 2,
+      "dataVisibleMs": 1028,
+      "contentVisibleMs": 166
+    },
+    {
+      "route": "/dashboard/franchise/sales",
+      "iteration": 0,
+      "dataVisibleMs": 5150,
+      "contentVisibleMs": 164
+    },
+    {
+      "route": "/dashboard/franchise/sales",
+      "iteration": 1,
+      "dataVisibleMs": 1158,
+      "contentVisibleMs": 279
+    },
+    {
+      "route": "/dashboard/franchise/sales",
+      "iteration": 2,
+      "dataVisibleMs": 1056,
+      "contentVisibleMs": 163
+    }
+  ]
+}

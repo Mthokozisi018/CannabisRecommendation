@@ -31,18 +31,18 @@ export function CustomerCurrentOrder({
     mode === "delivery"
       ? (fulfillment?.deliveryMinimum ?? 0)
       : (fulfillment?.collectionMinimum ?? 0);
-  const qualifies = (fulfillment?.ordersEnabled ?? true) && cart.subtotal >= minimum;
+  const qualifies = (fulfillment?.ordersEnabled ?? false) && (mode === "collection" ? collectionAvailable : deliveryAvailable) && cart.subtotal >= minimum;
 
   if (!cart.items.length)
     return (
       <div className="border border-[#2c3830] bg-[#08100b] px-5 py-12 text-center">
         <ShoppingBag className="mx-auto text-[#a8e91d]" size={44} />
-        <h2 className="mt-4 text-xl font-black">Your current order is empty</h2>
+        <h2 className="mt-4 text-xl font-black">Your cart is empty</h2>
         <p className="mt-2 text-sm text-[#a9b3ab]">
           Choose a store and add available products to start an order.
         </p>
         <Link
-          href="/customer/stores"
+          href="/customer/shop"
           className="mt-6 inline-flex h-11 items-center bg-[#a7e627] px-5 font-black text-[#081000]"
         >
           Browse stores
@@ -65,7 +65,7 @@ export function CustomerCurrentOrder({
             onClick={() => void clearCart()}
             disabled={busy}
             className="grid size-10 place-items-center border border-[#6f3632] text-[#ff8f87]"
-            aria-label="Clear current order"
+            aria-label="Clear cart"
           >
             <Trash2 size={18} />
           </button>
@@ -94,7 +94,7 @@ export function CustomerCurrentOrder({
                 )}
               </div>
               <div className="min-w-0">
-                <h2 className="truncate font-black">{item.name}</h2>
+                <div className="flex items-start justify-between gap-2"><h2 className="min-w-0 truncate font-black">{item.name}</h2><button type="button" disabled={busy} onClick={() => void setQuantity(item.id, 0)} aria-label={`Remove ${item.name} from cart`} className="grid size-9 shrink-0 place-items-center text-[#ff8f87] disabled:opacity-35"><Trash2 size={17} /></button></div>
                 <p className="mt-1 text-sm font-bold text-[#a8e91d]">
                   {money.format(item.unitPrice)}
                 </p>
@@ -180,7 +180,7 @@ export function CustomerCurrentOrder({
         </dl>
         {!qualifies ? (
           <p className="mt-4 border border-[#725226] bg-[#241a0b] p-3 text-sm text-[#f0c778]">
-            {fulfillment?.ordersEnabled === false
+            {!fulfillment || fulfillment.ordersEnabled === false
               ? "Online ordering is currently unavailable for this store."
               : `Add ${money.format(minimum - cart.subtotal)} more to meet the store minimum.`}
           </p>

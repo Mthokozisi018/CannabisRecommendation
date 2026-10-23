@@ -1,8 +1,10 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
-import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { AccountLookupUnavailableError, AuthDependencyUnavailableError, classifySupabaseAuthSessionError, safeErrorName } from "@/lib/auth-errors";
+import { logServerEvent } from "@/lib/logger";
+import { clearSupabaseServerSessionCookies, createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type CustomerProfile = {
   user_id: string;
@@ -27,15 +29,15 @@ export type CustomerSession = {
 
 const CUSTOMER_PROFILE_SELECT = "user_id,first_name,surname,email,phone_number,id_last_four,date_of_birth,status,email_verified_at,phone_verified_at,marketing_consent,created_at";
 
-export async function getCustomerSessionForVerifiedUser(user: User): Promise<CustomerSession | null> {
-  const supabase = await createSupabaseServerClient();
+export async function getCustomerSessionForVerifiedUser(user: User, verifiedClient?: SupabaseClient): Promise<CustomerSession | null> {
+  const supabase = verifiedClient ?? await createSupabaseServerClient();
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("customer_profiles")
     .select(CUSTOMER_PROFILE_SELECT)
     .eq("user_id", user.id)
     .maybeSingle<CustomerProfile>();
-  if (error) throw new Error("Unable to read the customer account.");
+  if (error) throw new AccountLookupUnavailableError("customer_profile_lookup", error, "Unable to read the customer account.");
   if (!data || data.status === "deleted") return null;
 
   let profile = data;
@@ -49,18 +51,45 @@ export async function getCustomerSessionForVerifiedUser(user: User): Promise<Cus
       .eq("status", "pending_verification")
       .select(CUSTOMER_PROFILE_SELECT)
       .maybeSingle<CustomerProfile>() ?? { data: null, error: null };
-    if (activationError) throw new Error("Unable to activate the verified customer account.");
+    if (activationError) throw new AccountLookupUnavailableError("customer_activation", activationError, "Unable to activate the verified customer account.");
     if (activated) profile = activated;
   }
 
   return { user, profile, displayName: profile.first_name };
 }
 
+async function handleCustomerAuthFailure(error: unknown) {
+  const category = classifySupabaseAuthSessionError(error);
+  if (category === "invalid_session") {
+    await clearSupabaseServerSessionCookies();
+    await logServerEvent("warn", "invalid_session_cleared", {
+      route: "customer_session",
+      failureCategory: category,
+      errorName: safeErrorName(error)
+    });
+    return null;
+  }
+
+  await logServerEvent("warn", "session_refresh_failed", {
+    route: "customer_session",
+    failureCategory: category,
+    errorName: safeErrorName(error)
+  });
+  throw new AuthDependencyUnavailableError();
+}
+
 const getCustomerSessionCached = cache(async () => {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
-  const { data } = await supabase.auth.getUser();
-  return data.user ? getCustomerSessionForVerifiedUser(data.user) : null;
+  let userResult: Awaited<ReturnType<typeof supabase.auth.getUser>>;
+  try {
+    userResult = await supabase.auth.getUser();
+  } catch (error) {
+    return handleCustomerAuthFailure(error);
+  }
+  const { data, error } = userResult;
+  if (error) return handleCustomerAuthFailure(error);
+  return data.user ? getCustomerSessionForVerifiedUser(data.user, supabase) : null;
 });
 
 export async function getCustomerSession() {

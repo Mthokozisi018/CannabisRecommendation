@@ -4,6 +4,7 @@ export type AccountRole =
   | "employee_receptionist"
   | "employee_budtender"
   | "manager"
+  | "franchise_admin"
   | "compliance_officer"
   | "tenant_admin"
   | "owner"
