@@ -33,7 +33,7 @@ beforeAll(async () => {
     );
   `);
   try {
-    await db.exec(readFileSync("supabase/migrations/20261021130000_initial_month_in_onboarding.sql", "utf8"));
+    await db.exec(readFileSync("supabase/migrations/20261021095816_20261021130000_initial_month_in_onboarding.sql", "utf8"));
   } catch (error) {
     throw new Error("Initial-month migration failed", { cause: error });
   }

@@ -436,4 +436,3 @@ comment on function public.create_manager_receptionist_profile(uuid, text) is
   'Creates a store-scoped, onboarding-incomplete receptionist profile for a trusted manager-created Auth user under the five-account store lock.';
 comment on function public.complete_manager_created_receptionist_setup(text, text, text, text, text, text, text, text) is
   'Completes first-login receptionist setup with the approved minimal fields and without allowing role or store changes.';
-

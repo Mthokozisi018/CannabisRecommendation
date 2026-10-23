@@ -35,4 +35,3 @@ grant execute on function public.get_manager_sales_total_today() to authenticate
 
 comment on function public.get_manager_sales_total_today() is
   'Computes the current active manager store total in the database for the Johannesburg business day.';
-

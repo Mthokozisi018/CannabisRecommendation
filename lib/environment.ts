@@ -2,6 +2,10 @@ import "server-only";
 
 export type GreenChoiceEnvironment = "development" | "staging" | "production";
 
+// The dedicated staging Vercel project serves its staging branch as that project's
+// production target. Its project ID keeps this exception isolated from GreenChoice production.
+const STAGING_VERCEL_PROJECT_ID = "prj_lsDmicOEXf0xB3wV2hFvqSR82wBB";
+
 export function greenChoiceEnvironment(): GreenChoiceEnvironment {
   const value = process.env.GREENCHOICE_ENV?.trim().toLowerCase();
   if (value === "development" || value === "staging" || value === "production") {
@@ -11,7 +15,8 @@ export function greenChoiceEnvironment(): GreenChoiceEnvironment {
     if (process.env.VERCEL_ENV === "preview" && value !== "staging") {
       throw new Error("A Vercel preview must use the staging environment identity.");
     }
-    if (process.env.VERCEL_ENV === "production" && value !== "production") {
+    if (process.env.VERCEL_ENV === "production" && value !== "production"
+      && !(value === "staging" && process.env.VERCEL_PROJECT_ID === STAGING_VERCEL_PROJECT_ID)) {
       throw new Error("A Vercel production deployment must use the production environment identity.");
     }
     return value;

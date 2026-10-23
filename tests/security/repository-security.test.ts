@@ -50,7 +50,7 @@ describe("critical repository security contracts", () => {
     expect(emptyProfileMigration).toContain("full_name = null");
     expect(emptyProfileMigration).toContain("profile.auth_user_id = auth_user.id");
     expect(emptyProfileMigration).toContain("coalesce(auth_user.raw_app_meta_data ->> 'greenchoice_registration', '') = 'manual'");
-    expect(emptyProfileMigration).toContain("null,\n    'manager'");
+    expect(emptyProfileMigration.replace(/\r\n/g, "\n")).toContain("null,\n    'manager'");
     expect(migration).toContain("revoke execute on function public.complete_manager_invitation(uuid) from authenticated");
     expect(dashboardSession).toContain("bootstrapManualManagerProfile");
     expect(source("app/api/auth/login/route.ts")).toContain("This account has not been authorized for GreenChoice");

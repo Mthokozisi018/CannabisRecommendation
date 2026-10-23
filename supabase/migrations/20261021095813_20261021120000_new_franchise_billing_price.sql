@@ -50,7 +50,5 @@ begin
 end $$;
 revoke all on function public.record_verified_billing_payment(text,bigint,timestamptz,text,text,text,text) from public,anon,authenticated;
 grant execute on function public.record_verified_billing_payment(text,bigint,timestamptz,text,text,text,text) to service_role;
-
-
 commit;
 

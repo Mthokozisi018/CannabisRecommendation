@@ -15,7 +15,7 @@ type BillingPayment = {
 
 export async function beginOnboardingCheckout(account: BillingAccount, payerEmail: string, expectedAmountCents?: number) {
   const callbackUrl = paystackCheckoutCallbackUrl();
-  if (!callbackUrl) throw new Error("The Paystack test callback is not configured.");
+  if (!callbackUrl) throw new Error("The public staging Paystack callback is not configured.");
   if (account.onboarding_paid_at) throw new Error("The onboarding payment has already been completed.");
   const email = payerEmail.trim().toLowerCase();
   if (!email || !email.includes("@")) throw new Error("A billing owner email is required.");
@@ -55,7 +55,7 @@ export async function beginOnboardingCheckout(account: BillingAccount, payerEmai
 
 export async function beginRecoveryCheckout(account: BillingAccount, payerEmail: string) {
   const callbackUrl = paystackCheckoutCallbackUrl();
-  if (!callbackUrl) throw new Error("The Paystack test callback is not configured.");
+  if (!callbackUrl) throw new Error("The public staging Paystack callback is not configured.");
   if (!account.onboarding_paid_at || !["grace", "restricted"].includes(account.status)) {
     throw new Error("There is no overdue subscription payment to recover.");
   }

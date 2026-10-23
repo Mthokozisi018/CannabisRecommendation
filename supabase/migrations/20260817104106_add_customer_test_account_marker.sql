@@ -10,4 +10,3 @@ revoke insert (is_test_account) on table public.customer_profiles from anon, aut
 revoke update (is_test_account) on table public.customer_profiles from anon, authenticated;
 
 -- Server-side service-role access remains available through the existing table-level grants.
-
