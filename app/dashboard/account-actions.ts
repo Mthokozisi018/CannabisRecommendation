@@ -26,7 +26,7 @@ const profileSchema = z.object({
   city: z.string().trim().min(2, "City must be at least 2 characters.").max(120),
   province: z.enum(southAfricanProvinces),
   postalCode: z.string().trim().regex(/^[0-9]{4}$/, "Postal code must be 4 digits."),
-  country: z.literal("South Africa", { errorMap: () => ({ message: "Country must be South Africa." }) })
+  country: z.literal("South Africa", { error: "Country must be South Africa." })
 }).superRefine((value, ctx) => {
   if (value.alternativePhone && !southAfricanPhoneRegex.test(value.alternativePhone.replace(/\s/g, ""))) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["alternativePhone"], message: "Enter a valid South African alternative phone number." });

@@ -14,8 +14,8 @@ export const managerAccountSetupSchema = z.object({
   city: z.string().trim().min(2, "City or town must be at least 2 characters."),
   province: z.enum(southAfricanProvinces),
   postalCode: z.string().trim().regex(/^[0-9]{4}$/, "Postal code must be 4 digits."),
-  termsAccepted: z.literal("on", { errorMap: () => ({ message: "You must accept the Terms of Service before continuing." }) }),
-  privacyAccepted: z.literal("on", { errorMap: () => ({ message: "You must accept the Privacy Policy before continuing." }) })
+  termsAccepted: z.literal("on", { error: "You must accept the Terms of Service before continuing." }),
+  privacyAccepted: z.literal("on", { error: "You must accept the Privacy Policy before continuing." })
 });
 
 export const storeRegistrationSchema = z.object({
@@ -25,7 +25,7 @@ export const storeRegistrationSchema = z.object({
   city: z.string().trim().min(2, "City or town must be at least 2 characters.").max(120),
   province: z.enum(southAfricanProvinces),
   postalCode: z.string().trim().regex(/^[0-9]{4}$/, "Postal code must be 4 digits."),
-  informationAccurate: z.literal("on", { errorMap: () => ({ message: "You must confirm that all store information provided is accurate before creating the store." }) })
+  informationAccurate: z.literal("on", { error: "You must confirm that all store information provided is accurate before creating the store." })
 });
 
 export function normalizeSAPhone(value: string) {

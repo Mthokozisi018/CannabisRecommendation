@@ -33,8 +33,8 @@ const schema = z.object({
   phoneNumber: z.string().trim().refine((value) => southAfricanPhoneRegex.test(value.replace(/\s/g, "")), "Enter a valid South African phone number."),
   password: z.string().min(12).max(256),
   confirmPassword: z.string().min(12).max(256),
-  termsAccepted: z.literal(true, { errorMap: () => ({ message: "Accept the Terms of Service to continue." }) }),
-  privacyAccepted: z.literal(true, { errorMap: () => ({ message: "Accept the Privacy Policy to continue." }) })
+  termsAccepted: z.literal(true, { error: "Accept the Terms of Service to continue." }),
+  privacyAccepted: z.literal(true, { error: "Accept the Privacy Policy to continue." })
 });
 
 function text(formData: FormData, key: string) {

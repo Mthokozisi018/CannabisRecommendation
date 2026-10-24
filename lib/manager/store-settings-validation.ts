@@ -4,7 +4,7 @@ import { storeDayKeys } from "@/lib/manager/store-settings-fields";
 
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a valid opening and closing time.");
 const moneySchema = z.coerce.number().min(0, "Amounts cannot be negative.").max(1_000_000, "Amount is too large.");
-const optionalNumber = (schema: z.ZodNumber) => z.preprocess((value) => value === "" || value === null ? undefined : value, schema.optional());
+const optionalNumber = (schema: z.ZodType<number>) => z.preprocess((value) => value === "" || value === null ? undefined : value, schema.optional());
 
 const storeSchema = z.object({
   name: z.string().trim().min(2, "Store name must be at least 2 characters.").max(100),
