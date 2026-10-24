@@ -9,9 +9,9 @@ export const registrationSchema = z.object({
   phoneNumber: z.string().max(30).refine(value => Boolean(normalizePOSCustomerPhone(value)), "Enter a valid South African cellphone number."),
   documentType: z.enum(["sa_id", "passport"]),
   documentNumber: z.string().trim().toUpperCase().max(30),
-  acceptTerms: z.literal(true, { errorMap: () => ({ message: "Agree to the Customer Terms & Conditions." }) }),
-  acceptPrivacy: z.literal(true, { errorMap: () => ({ message: "Acknowledge the Privacy Notice." }) }),
-  acceptVerification: z.literal(true, { errorMap: () => ({ message: "Acknowledge the ID Verification Notice." }) }),
+  acceptTerms: z.literal(true, { error: "Agree to the Customer Terms & Conditions." }),
+  acceptPrivacy: z.literal(true, { error: "Acknowledge the Privacy Notice." }),
+  acceptVerification: z.literal(true, { error: "Acknowledge the ID Verification Notice." }),
   marketing: z.boolean(),
   channels: z.array(z.enum(["email", "sms", "whatsapp"])).max(3),
   submissionId: z.string().uuid()
