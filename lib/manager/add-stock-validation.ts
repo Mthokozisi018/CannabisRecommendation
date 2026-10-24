@@ -35,5 +35,5 @@ export const addStockProductSchema = productFormBaseSchema.extend(supplierFields
   // Reuse the existing non-classification product rules, including edible THC requirements.
   const legacyInput = value.category === "Vape Cartridges" ? { ...value, cultivationType: "Hybrid" } : value;
   const legacy = productFormSchema.safeParse(legacyInput);
-  if (!legacy.success) for (const issue of legacy.error.issues) ctx.addIssue(issue);
+  if (!legacy.success) for (const issue of legacy.error.issues) ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
 });
