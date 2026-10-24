@@ -1,5 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { configuredPaystackMode } from "./mode";
 
 const PAYSTACK_API_URL = "https://api.paystack.co";
 
@@ -19,20 +20,16 @@ export type VerifiedTransaction = {
   authorization?: { authorization_code?: string; reusable?: boolean; last4?: string; brand?: string; channel?: string };
 };
 
-function paystackTestKey() {
-  if (process.env.PAYSTACK_MODE !== "test"
-    || !["staging", "production"].includes(process.env.GREENCHOICE_ENV ?? "")) {
-    throw new Error("Paystack test mode is not configured.");
-  }
+function paystackSecretKey() {
+  if (!configuredPaystackMode()) throw new Error("Paystack billing is not configured for this environment.");
   const key = process.env.PAYSTACK_SECRET_KEY?.trim();
-  if (!key?.startsWith("sk_test_")) throw new Error("A Paystack test secret key is required.");
-  return key;
+  return key!;
 }
 
 async function paystackRequest<T>(path: string, body?: Record<string, unknown>, method?: "GET" | "POST" | "PUT", allowEmptyData = false): Promise<T> {
   const response = await fetch(`${PAYSTACK_API_URL}${path}`, {
     method: method ?? (body ? "POST" : "GET"),
-    headers: { Authorization: `Bearer ${paystackTestKey()}`, Accept: "application/json", ...(body ? { "Content-Type": "application/json" } : {}) },
+    headers: { Authorization: `Bearer ${paystackSecretKey()}`, Accept: "application/json", ...(body ? { "Content-Type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
@@ -82,7 +79,7 @@ export function paymentMatchesExpected(transaction: VerifiedTransaction, expecte
   if (typeof metadata === "string") {
     try { metadata = JSON.parse(metadata) as { greenchoice_billing_id?: string }; } catch { return false; }
   }
-  return transaction.domain === "test"
+  return transaction.domain === configuredPaystackMode()
     && transaction.status === "success"
     && transaction.reference === expected.reference
     && transaction.amount === expected.amountCents
@@ -93,7 +90,7 @@ export function paymentMatchesExpected(transaction: VerifiedTransaction, expecte
 
 export function verifyPaystackWebhookSignature(rawBody: Buffer, signature: string | null) {
   if (!signature || !/^[a-f0-9]{128}$/i.test(signature)) return false;
-  const expected = createHmac("sha512", paystackTestKey()).update(rawBody).digest();
+  const expected = createHmac("sha512", paystackSecretKey()).update(rawBody).digest();
   const received = Buffer.from(signature, "hex");
   return received.length === expected.length && timingSafeEqual(received, expected);
 }
@@ -115,7 +112,7 @@ export async function createPaystackSubscription(input: { customerCode: string; 
     customer: input.customerCode, plan: input.planCode, authorization: input.authorizationCode,
     start_date: input.firstDueAt,
   });
-  if (result.domain !== "test" || !result.subscription_code || !result.email_token) throw new Error("Paystack returned an unexpected subscription.");
+  if (result.domain !== configuredPaystackMode() || !result.subscription_code || !result.email_token) throw new Error("Paystack returned an unexpected subscription.");
   return result;
 }
 

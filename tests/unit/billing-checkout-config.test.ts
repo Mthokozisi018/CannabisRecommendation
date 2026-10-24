@@ -17,12 +17,15 @@ describe("Paystack checkout configuration", () => {
     expect(paystackCheckoutCallbackUrl(configured)).toBe(configured.PAYSTACK_CALLBACK_URL);
   });
 
-  it("accepts only test-mode billing on the production origin", () => {
+  it("accepts live-mode billing only with a live key on the production origin", () => {
     const production = { ...configured, GREENCHOICE_ENV: "production", APP_URL: "https://greenchoice-workstation.vercel.app",
-      PAYSTACK_CALLBACK_URL: "https://greenchoice-workstation.vercel.app/billing/payment/callback" };
+      PAYSTACK_CALLBACK_URL: "https://greenchoice-workstation.vercel.app/billing/payment/callback",
+      PAYSTACK_MODE: "live", PAYSTACK_SECRET_KEY: "sk_live_fixture_not_a_real_key" };
     expect(paystackCheckoutCallbackUrl(production)).toBe(production.PAYSTACK_CALLBACK_URL);
-    expect(paystackCheckoutCallbackUrl({ ...production, PAYSTACK_MODE: "live" })).toBeNull();
-    expect(paystackCheckoutCallbackUrl({ ...production, PAYSTACK_SECRET_KEY: "sk_live_forbidden" })).toBeNull();
+    expect(paystackCheckoutCallbackUrl({ ...production, PAYSTACK_MODE: "test" })).toBeNull();
+    expect(paystackCheckoutCallbackUrl({ ...production, PAYSTACK_SECRET_KEY: configured.PAYSTACK_SECRET_KEY })).toBeNull();
+    expect(paystackCheckoutCallbackUrl({ ...configured, GREENCHOICE_ENV: "production", APP_URL: production.APP_URL,
+      PAYSTACK_CALLBACK_URL: production.PAYSTACK_CALLBACK_URL })).toBeNull();
   });
 
   it.each([

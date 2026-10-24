@@ -3,8 +3,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createPaystackSubscription, initializePaystackCheckout, paymentMatchesExpected, verifyPaystackTransaction, verifyPaystackWebhookSignature } from "@/lib/billing/paystack";
 
 vi.mock("server-only", () => ({}));
-const originalEnv = { secret: process.env.PAYSTACK_SECRET_KEY, mode: process.env.PAYSTACK_MODE, app: process.env.GREENCHOICE_ENV };
+const originalEnv = { secret: process.env.PAYSTACK_SECRET_KEY, mode: process.env.PAYSTACK_MODE,
+  app: process.env.GREENCHOICE_ENV, enabled: process.env.PAYSTACK_BILLING_ENABLED };
 beforeEach(() => {
+  process.env.PAYSTACK_BILLING_ENABLED = "true";
   process.env.PAYSTACK_SECRET_KEY = "sk_test_unit_test_only";
   process.env.PAYSTACK_MODE = "test";
   process.env.GREENCHOICE_ENV = "staging";
@@ -13,6 +15,7 @@ afterEach(() => {
   if (originalEnv.secret === undefined) delete process.env.PAYSTACK_SECRET_KEY; else process.env.PAYSTACK_SECRET_KEY = originalEnv.secret;
   if (originalEnv.mode === undefined) delete process.env.PAYSTACK_MODE; else process.env.PAYSTACK_MODE = originalEnv.mode;
   if (originalEnv.app === undefined) delete process.env.GREENCHOICE_ENV; else process.env.GREENCHOICE_ENV = originalEnv.app;
+  if (originalEnv.enabled === undefined) delete process.env.PAYSTACK_BILLING_ENABLED; else process.env.PAYSTACK_BILLING_ENABLED = originalEnv.enabled;
   vi.unstubAllGlobals();
 });
 
@@ -40,22 +43,31 @@ it("schedules the first subscription debit at the following month's date", async
   expect(JSON.parse(options.body)).toMatchObject({ customer: "CUS_test", plan: "PLN_test", authorization: "AUTH_test", start_date: "2026-11-21T10:00:00Z" });
 });
 
-it("rejects live credentials and permits production only in test mode", async () => {
+it("rejects mismatched environment credentials and permits production only in live mode", async () => {
   const fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
   process.env.PAYSTACK_SECRET_KEY = "sk_live_forbidden";
-  await expect(verifyPaystackTransaction("gc-1")).rejects.toThrow("test secret key");
+  await expect(verifyPaystackTransaction("gc-1")).rejects.toThrow("not configured");
   process.env.PAYSTACK_SECRET_KEY = "sk_test_unit_test_only";
   process.env.GREENCHOICE_ENV = "production";
   process.env.PAYSTACK_MODE = "live";
-  await expect(verifyPaystackTransaction("gc-1")).rejects.toThrow("test mode");
+  await expect(verifyPaystackTransaction("gc-1")).rejects.toThrow("not configured");
   expect(fetchMock).not.toHaveBeenCalled();
-  process.env.PAYSTACK_MODE = "test";
+  process.env.PAYSTACK_SECRET_KEY = "sk_live_unit_test_only";
   fetchMock.mockResolvedValue(new Response(JSON.stringify({ status: true, data: {
-    id: 1, domain: "test", status: "success", reference: "gc-1", amount: 100, currency: "ZAR"
+    id: 1, domain: "live", status: "success", reference: "gc-1", amount: 100, currency: "ZAR"
   } }), { status: 200 }));
-  await expect(verifyPaystackTransaction("gc-1")).resolves.toMatchObject({ domain: "test" });
+  await expect(verifyPaystackTransaction("gc-1")).resolves.toMatchObject({ domain: "live" });
   expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it("matches transaction domains to the configured environment", () => {
+  const transaction = { id: 1, domain: "test", status: "success", reference: "gc-1", amount: 250_000, currency: "ZAR" };
+  process.env.GREENCHOICE_ENV = "production";
+  process.env.PAYSTACK_MODE = "live";
+  process.env.PAYSTACK_SECRET_KEY = "sk_live_unit_test_only";
+  expect(paymentMatchesExpected(transaction, { reference: "gc-1", amountCents: 250_000 })).toBe(false);
+  expect(paymentMatchesExpected({ ...transaction, domain: "live" }, { reference: "gc-1", amountCents: 250_000 })).toBe(true);
 });
 
 it("accepts only a fully matching verified test payment", () => {

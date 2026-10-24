@@ -2,6 +2,7 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import type { DashboardSession } from "@/lib/dashboard-session";
 import { BILLING_PRICES_CENTS, franchiseMonthlyPriceCents } from "./pricing";
+import { configuredPaystackMode } from "./mode";
 
 export type BillingAccount = {
   id: string;
@@ -14,10 +15,7 @@ export type BillingAccount = {
 };
 
 export function billingEnabled() {
-  return (process.env.GREENCHOICE_ENV === "staging" || process.env.GREENCHOICE_ENV === "production")
-    && process.env.PAYSTACK_BILLING_ENABLED === "true"
-    && process.env.PAYSTACK_MODE === "test"
-    && Boolean(process.env.PAYSTACK_SECRET_KEY?.trim().startsWith("sk_test_"));
+  return configuredPaystackMode() !== null;
 }
 
 function db() {
@@ -83,7 +81,10 @@ export async function requireBillingOwner(session: DashboardSession, create = fa
 export function billingDb() { return db(); }
 
 export async function billingAccessForSession(session: DashboardSession): Promise<"allowed" | "owner_due" | "staff_restricted"> {
-  if (!billingEnabled() || session.profile.role === "admin") return "allowed";
+  if (session.profile.role === "admin") return "allowed";
+  // Commercial access must fail closed if live billing has not been configured.
+  if (process.env.GREENCHOICE_ENV === "production" && !billingEnabled()) return "staff_restricted";
+  if (!billingEnabled()) return "allowed";
   if (!session.accountSetupComplete) return "allowed";
   if (session.normalizedRole === "manager" && !session.storeSetupComplete) return "allowed";
   if (!session.profile.franchise_id && !session.assignedStoreId) return "allowed";

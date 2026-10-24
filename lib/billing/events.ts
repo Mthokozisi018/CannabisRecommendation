@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { billingDb } from "./accounts";
 import { reconcileBillingPayment } from "./transactions";
 import { verifyPaystackTransaction } from "./paystack";
+import { configuredPaystackMode } from "./mode";
 
 type PaystackEvent = {
   event?: string;
@@ -24,7 +25,8 @@ export async function processPaystackEvent(raw: Buffer) {
   const parsed = JSON.parse(raw.toString("utf8")) as PaystackEvent;
   const kind = parsed.event ?? "unknown";
   const data = parsed.data;
-  if (data?.domain && data.domain !== "test") throw new Error("Live-domain Paystack event rejected.");
+  const mode = configuredPaystackMode();
+  if (!mode || (data?.domain && data.domain !== mode)) throw new Error("Paystack event domain does not match this environment.");
   const eventKey = createHash("sha256").update(raw).digest("hex");
   const client = billingDb();
   const { data: existing, error: readError } = await client.from("billing_provider_events")
@@ -103,7 +105,7 @@ async function recordRenewal(subscriptionCode: string, reference: string) {
     .eq("paystack_subscription_code", subscriptionCode).maybeSingle();
   if (error || !sub?.paystack_customer_code) return false;
   const verified = await verifyPaystackTransaction(reference);
-  if (verified.domain !== "test" || verified.status !== "success" || verified.reference !== reference
+  if (verified.domain !== configuredPaystackMode() || verified.status !== "success" || verified.reference !== reference
     || verified.currency !== "ZAR" || verified.amount !== sub.monthly_amount_cents
     || verified.customer?.customer_code !== sub.paystack_customer_code || !Number.isSafeInteger(verified.id)) return false;
   const paidAt = new Date(verified.paid_at ?? Date.now());

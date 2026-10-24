@@ -49,4 +49,15 @@ describe("four-day billing grace access", () => {
     expect(await billingAccessForSession(session)).toBe("owner_due");
     expect(await billingAccessForSession({ ...session, staffProfileId: "other" })).toBe("staff_restricted");
   });
+  it("restricts commercial access when production billing is missing or uses a test key", async () => {
+    vi.stubEnv("GREENCHOICE_ENV", "production");
+    vi.stubEnv("PAYSTACK_BILLING_ENABLED", "true");
+    vi.stubEnv("PAYSTACK_MODE", "test");
+    vi.stubEnv("PAYSTACK_SECRET_KEY", "sk_test_fixture_not_a_real_key");
+    expect(await billingAccessForSession(session)).toBe("staff_restricted");
+    vi.stubEnv("PAYSTACK_MODE", "live");
+    vi.stubEnv("PAYSTACK_SECRET_KEY", "sk_live_fixture_not_a_real_key");
+    state.graceEndsAt = new Date(Date.now() + 86_400_000).toISOString();
+    expect(await billingAccessForSession(session)).toBe("allowed");
+  });
 });

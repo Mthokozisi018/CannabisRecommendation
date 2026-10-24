@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 const expect = baseExpect.configure({ timeout: 30_000 });
 test.use({ actionTimeout: 20_000, navigationTimeout: 45_000 });
 
-test("Admin creates credentials and the manager completes their own onboarding", async ({ page, browser }, testInfo) => {
+test("Admin creates a manager who completes onboarding and reaches Paystack Test Mode", async ({ page }, testInfo) => {
   test.setTimeout(360_000);
   test.skip(
     process.env.GREENCHOICE_ADMIN_MANAGER_E2E !== "true",
@@ -242,23 +242,23 @@ test("Admin creates credentials and the manager completes their own onboarding",
 
     await page.getByRole("button", { name: "Go to Manager Dashboard" }).click();
     await expect(page).toHaveURL(/\/billing$/);
-    // Unlock only this generated account to exercise non-billing dashboards.
-    // This fixture is not evidence of a Paystack payment.
-    const billing = await service.from("billing_accounts").update({ status: "active", onboarding_paid_at: new Date().toISOString() })
-      .eq("store_id", storeId!).select("id").single();
-    expect(billing.error).toBeNull();
+    const unpaid = await service.from("billing_accounts").select("id,status,onboarding_paid_at")
+      .eq("store_id", storeId!).single();
+    expect(unpaid.error).toBeNull();
+    expect(unpaid.data).toMatchObject({ status: "onboarding_due", onboarding_paid_at: null });
+    await expect(page.getByRole("button", { name: "Pay securely with Paystack" })).toBeVisible();
+    await page.getByRole("button", { name: "Pay securely with Paystack" }).click();
+    await expect(page).toHaveURL(/checkout\.paystack\.com\//, { timeout: 45_000 });
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.locator("body")).not.toBeEmpty();
+    await page.screenshot({ path: testInfo.outputPath("manager-paystack-test-checkout.png"), fullPage: true });
+    const pending = await service.from("billing_payments").select("id,status,purpose,amount_cents")
+      .eq("account_id", unpaid.data!.id).single();
+    expect(pending.error).toBeNull();
+    expect(pending.data).toMatchObject({ status: "pending", purpose: "onboarding" });
+    expect(pending.data!.amount_cents).toBeGreaterThan(0);
     await page.goto("/dashboard/manager");
-    await expect(page).toHaveURL(/\/dashboard\/manager$/);
-    await page.goto("/dashboard/manager/products/new");
-    await expect(page).toHaveURL(/\/dashboard\/manager\/inventory\/manage$/);
-    for (const route of [
-      "/dashboard/manager/inventory/manage",
-      "/dashboard/manager/staff",
-    ]) {
-      await page.goto(route);
-      await expect(page).toHaveURL(new URL(route, testInfo.project.use.baseURL ?? "http://127.0.0.1:3001").href);
-      await expect(page.locator("main")).toBeVisible();
-    }
+    await expect(page).toHaveURL(/\/billing$/);
 
     const visible = await managerClient.from("stores").select("id,franchise_id");
     expect(visible.data).toEqual([{ id: storeId, franchise_id: null }]);
@@ -271,15 +271,11 @@ test("Admin creates credentials and the manager completes their own onboarding",
     expect(otherStore.error).toBeNull();
     expect((await managerClient.from("staff_profiles").select("id").eq("store_id", otherStore.data!.id)).data).toEqual([]);
     expect((await managerClient.from("products").select("id").eq("store_id", otherStore.data!.id)).data).toEqual([]);
+    const adminOnlyInventory = await managerClient.rpc("add_admin_demo_inventory_stock", {
+      p_store_id: storeId!, p_product_id: randomUUID(), p_quantity: 1,
+    });
+    expect(adminOnlyInventory.error?.code).toBe("42501");
 
-    const context = await browser.newContext();
-    const returning = await context.newPage();
-    await returning.goto(new URL("/login", testInfo.project.use.baseURL ?? "http://127.0.0.1:3001").href);
-    await returning.getByLabel("Email Address").fill(email);
-    await returning.getByPlaceholder("Enter your password").fill(permanentPassword);
-    await returning.getByRole("button", { name: "Sign In", exact: true }).click();
-    await expect(returning).toHaveURL(/\/dashboard\/manager$/);
-    await context.close();
   } finally {
     const owned = await service
       .from("staff_profiles")
@@ -291,6 +287,15 @@ test("Admin creates credentials and the manager completes their own onboarding",
     if (authId) {
       await managerClient.auth.signOut();
       if (storeId) {
+        const account = await service.from("billing_accounts").select("id").eq("store_id", storeId).maybeSingle();
+        if (account.data?.id) {
+          const references = await service.from("billing_payments").select("reference").eq("account_id", account.data.id);
+          if (references.data?.length) await service.from("billing_provider_events").delete()
+            .in("provider_reference", references.data.map((payment) => payment.reference));
+          await service.from("billing_price_changes").delete().eq("account_id", account.data.id);
+          await service.from("billing_payments").delete().eq("account_id", account.data.id);
+          await service.from("billing_subscriptions").delete().eq("account_id", account.data.id);
+        }
         const billing = await service.from("billing_accounts").delete().eq("store_id", storeId);
         expect(billing.error).toBeNull();
       }
