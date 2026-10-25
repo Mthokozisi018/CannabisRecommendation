@@ -11,6 +11,12 @@ import { encryptRegistrationDocument } from "./document-encryption";
 export class RegistrationError extends Error {
   constructor(message: string, public field = "documentNumber", public status = 400) { super(message); }
 }
+export class RegistrationServiceError extends VerificationError {
+  constructor(public stage: "legal_approval" | "server_credentials" | "registration_lookup" | "provider_configuration" |
+    "document_encryption" | "cleanup_queue" | "registration_audit" | "private_storage" | "verification_gateway" | "database_commit") {
+    super("unavailable");
+  }
+}
 function digest(value: string | Buffer) {
   const key = process.env.CUSTOMER_ID_HMAC_SECRET;
   if (!key || key.length < 32) throw new VerificationError("unavailable");
@@ -21,34 +27,41 @@ export async function submitQRRegistration(token: string, input: RegistrationInp
   const parsed = registrationSchema.parse(input);
   const store = await resolveRegistrationStore(token);
   if (!store) throw new RegistrationError("This registration link is unavailable. Please ask the store for its current QR code.", "", 404);
-  if (process.env.QR_REGISTRATION_LEGAL_APPROVED !== REGISTRATION_NOTICE_VERSION) throw new VerificationError("unavailable");
+  if (process.env.QR_REGISTRATION_LEGAL_APPROVED !== REGISTRATION_NOTICE_VERSION) throw new RegistrationServiceError("legal_approval");
   const admin = createSupabaseAdminClient();
-  if (!admin) throw new VerificationError("unavailable");
+  if (!admin) throw new RegistrationServiceError("server_credentials");
   const phone = normalizePOSCustomerPhone(parsed.phoneNumber)!;
   const image = await prepareDocumentImage(file).catch(error => { throw new RegistrationError(error.message, "image"); });
   const hash = digest(JSON.stringify({ ...parsed, phoneNumber: phone.normalized, channels: parsed.marketing ? [...new Set(parsed.channels)].sort() : [], token, image: digest(image) }));
   // Check a previous atomic commit before invoking OCR again after a lost response.
   const previous = await admin.from("qr_customer_registrations").select("payload_hash, store_id").eq("id", parsed.submissionId).maybeSingle();
-  if (previous.error) throw new VerificationError("unavailable");
+  if (previous.error) throw new RegistrationServiceError("registration_lookup");
   if (previous.data) {
     if (previous.data.payload_hash !== hash || previous.data.store_id !== store.id) throw new RegistrationError("This submission has changed. Please submit again.", "", 409);
     return { storeName: store.name, phoneDisplay: phone.display };
   }
-  const reader = provider ?? configuredDocumentProvider();
+  let reader: DocumentProvider;
+  try { reader = provider ?? configuredDocumentProvider(); }
+  catch { throw new RegistrationServiceError("provider_configuration"); }
   // Queue before upload so a process crash cannot leave an untracked file.
   const path = `${randomUUID()}.gcenc`;
   const encryptedImage = (() => {
     try { return encryptRegistrationDocument(image, `${store.id}:${parsed.submissionId}:${path}`); }
-    catch { throw new VerificationError("unavailable"); }
+    catch { throw new RegistrationServiceError("document_encryption"); }
   })();
   const queued = await admin.from("qr_document_cleanup").insert({ path });
-  if (queued.error) throw new VerificationError("unavailable");
+  if (queued.error) throw new RegistrationServiceError("cleanup_queue");
   try {
     const audited = await admin.from("qr_registration_audits").insert({ submission_id: parsed.submissionId, store_id: store.id, event: "document_check_requested" });
-    if (audited.error) throw new VerificationError("unavailable");
+    if (audited.error) throw new RegistrationServiceError("registration_audit");
     const uploaded = await admin.storage.from("registration-documents").upload(path, encryptedImage, { contentType: "application/octet-stream", upsert: false });
-    if (uploaded.error) throw new VerificationError("unavailable");
-    const result = await reader.read(image, parsed.documentType, parsed.submissionId);
+    if (uploaded.error) throw new RegistrationServiceError("private_storage");
+    let result;
+    try { result = await reader.read(image, parsed.documentType, parsed.submissionId); }
+    catch (error) {
+      if (error instanceof VerificationError && error.code !== "unavailable") throw error;
+      throw new RegistrationServiceError("verification_gateway");
+    }
     const checks = confirmDocument(result, parsed.documentType, parsed.documentNumber);
     const saved = await admin.rpc("complete_qr_customer_registration", {
       p_token: token, p_submission_id: parsed.submissionId, p_payload_hash: hash,
@@ -66,7 +79,7 @@ export async function submitQRRegistration(token: string, input: RegistrationInp
       if (saved.error.code === "23505") throw new RegistrationError("We cannot complete this registration online. Please ask the store for assistance.", "phoneNumber", 409);
       // The transaction re-resolves and locks the active token/store.
       if (saved.error.code === "22023") throw new RegistrationError("Registration could not be completed. Please check the store link and your details.", "", 409);
-      throw new VerificationError("unavailable");
+      throw new RegistrationServiceError("database_commit");
     }
     return { storeName: store.name, phoneDisplay: phone.display };
   } finally {

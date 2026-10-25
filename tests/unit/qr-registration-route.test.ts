@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-const { origin, limit, submit } = vi.hoisted(() => ({ origin: vi.fn(), limit: vi.fn(), submit: vi.fn() }));
+const { origin, limit, submit, log } = vi.hoisted(() => ({ origin: vi.fn(), limit: vi.fn(), submit: vi.fn(), log: vi.fn() }));
 vi.mock("@/lib/security", () => ({ verifyOrigin: origin }));
+vi.mock("@/lib/logger", () => ({ logServerEvent: log }));
 vi.mock("@/lib/rate-limit", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/rate-limit")>(), requireRateLimit: limit }));
 vi.mock("@/lib/registration/submit", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/registration/submit")>(), submitQRRegistration: submit }));
 import { POST } from "@/app/api/registration/[token]/route";
 import { RateLimitExceededError } from "@/lib/rate-limit";
 import { VerificationError } from "@/lib/registration/provider";
+import { RegistrationServiceError } from "@/lib/registration/submit";
 
 const input = { fullName: "Test Customer", email: "test@example.invalid", phoneNumber: "0821234567", documentType: "passport", documentNumber: "A00123456", acceptTerms: true, acceptPrivacy: true, acceptVerification: true, marketing: false, channels: [], submissionId: "2df384f2-7b16-4b63-9d2d-4a7d8cbafbe2" };
 const token = "a".repeat(64);
@@ -35,7 +37,7 @@ describe("public store registration request boundary", () => {
     expect(limit).toHaveBeenCalledWith(expect.objectContaining({ namespace: "store-qr-register-ip", limit: 10 }));
   });
   it("limits chunked request bodies without trusting Content-Length", async () => {
-    const body = new Uint8Array(6 * 1024 * 1024 + 32769);
+    const body = new Uint8Array(4_000_000 + 32769);
     const oversized = new Request("http://localhost:3001/api/registration/test", { method: "POST", body, headers: { "Content-Type": "multipart/form-data; boundary=test" } });
     expect((await POST(oversized, context)).status).toBe(413); expect(submit).not.toHaveBeenCalled();
   });
@@ -44,5 +46,12 @@ describe("public store registration request boundary", () => {
     expect(result.status).toBe(503); expect(await result.json()).toMatchObject({ code: "unavailable" });
     submit.mockRejectedValueOnce(new Error("sensitive OCR passport A00123456")); const safe = await POST(request(), context);
     expect(JSON.stringify(await safe.json())).not.toContain("A00123456");
+  });
+  it("logs only the failing service stage for operational failures", async () => {
+    submit.mockRejectedValueOnce(new RegistrationServiceError("private_storage"));
+    const result = await POST(request(), context);
+    expect(result.status).toBe(503);
+    expect(log).toHaveBeenCalledWith("warn", "qr_registration_unavailable", { stage: "private_storage" });
+    expect(JSON.stringify(await result.json())).not.toContain("private_storage");
   });
 });

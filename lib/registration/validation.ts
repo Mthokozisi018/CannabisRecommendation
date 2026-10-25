@@ -2,6 +2,8 @@ import { z } from "zod";
 import { normalizePOSCustomerPhone } from "@/lib/pos-customer-format";
 
 export const MAX_DOCUMENT_BYTES = 6 * 1024 * 1024;
+// Reserve multipart overhead below Vercel's 4.5 MB function request limit.
+export const MAX_REGISTRATION_UPLOAD_BYTES = 4_000_000;
 export const REGISTRATION_NOTICE_VERSION = "2026-10-07";
 export const registrationSchema = z.object({
   fullName: z.string().trim().min(2, "Enter your full name.").max(160),

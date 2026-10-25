@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, ImagePlus, LoaderCircle, ShieldCheck, X } from "lucide-react";
 import { DashboardBackdrop } from "@/components/DashboardBackdrop";
 import { CustomerRegistrationArtwork } from "@/components/registration/CustomerRegistrationArtwork";
-import { MAX_DOCUMENT_BYTES, registrationSchema } from "@/lib/registration/validation";
+import { registrationSchema } from "@/lib/registration/validation";
+import { MAX_REGISTRATION_SOURCE_BYTES, prepareRegistrationUpload, uploadTooLargeMessage } from "@/lib/registration/client-image";
 import { registrationLegalDocuments, REGISTRATION_NOTICE_VERSION, type RegistrationLegalSlug } from "@/lib/registration/legal";
 import styles from "./RegistrationForm.module.css";
 
@@ -29,6 +30,7 @@ export function RegistrationForm({ token, storeName, onRegistered, onBusyChange,
   const dialog = useRef<HTMLDialogElement>(null);
   const locked = useRef(false);
   const submission = useRef<string | null>(null);
+  const preparedImage = useRef<{ source: File; upload: File } | null>(null);
   const legalReturn = useRef<{ top: number; element: HTMLElement | null }>({ top: 0, element: null });
 
   useEffect(() => {
@@ -47,14 +49,14 @@ export function RegistrationForm({ token, storeName, onRegistered, onBusyChange,
     return () => cancelAnimationFrame(frame);
   }, [busy, error]);
 
-  function invalidate() { setError(null); submission.current = null; }
+  function invalidate() { setError(null); submission.current = null; preparedImage.current = null; }
   function showError(field: string, message: string) {
     setError({ field, message });
   }
   function choose(file?: File) {
     if (!file) return;
     invalidate();
-    if (file.size > MAX_DOCUMENT_BYTES || !file.size) { showError("image", "Choose an image no larger than 6 MB."); return; }
+    if (file.size > MAX_REGISTRATION_SOURCE_BYTES || !file.size) { showError("image", "Choose an image no larger than 12 MB."); return; }
     setImage(file);
     setPreview(URL.createObjectURL(file));
   }
@@ -94,9 +96,20 @@ export function RegistrationForm({ token, storeName, onRegistered, onBusyChange,
     onBusyChange?.(true);
     setError(null);
     try {
+      let upload = preparedImage.current?.source === image ? preparedImage.current.upload : null;
+      if (!upload) {
+        try { upload = await prepareRegistrationUpload(image); }
+        catch { showError("image", uploadTooLargeMessage); return; }
+        preparedImage.current = { source: image, upload };
+      }
       const body = new FormData();
-      body.set("details", JSON.stringify(parsed.data)); body.set("image", image);
+      body.set("details", JSON.stringify(parsed.data)); body.set("image", upload);
       const response = await fetch(`/api/registration/${token}`, { method: "POST", body });
+      if (response.status === 413) { showError("image", uploadTooLargeMessage); return; }
+      if (!response.headers.get("content-type")?.includes("application/json")) {
+        showError("", "Registration is temporarily unavailable. Your details are still here; please retry safely.");
+        return;
+      }
       const result = await response.json();
       if (!response.ok) { showError(result.field ?? "", result.error ?? "Registration could not be completed."); return; }
       if (onRegistered) { onRegistered(parsed.data.phoneNumber); return; }

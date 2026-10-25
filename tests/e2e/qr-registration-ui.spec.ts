@@ -1,6 +1,7 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, devices, type Page } from "@playwright/test";
 import sharp from "sharp";
 import { execFileSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 
 const registrationLink = `http://127.0.0.1:3107/register/${"a".repeat(64)}`;
 
@@ -55,6 +56,57 @@ async function fillForm(page: Page) {
   await attachImage(page);
   await page.locator("#acceptTerms").check(); await page.locator("#acceptPrivacy").check(); await page.locator("#acceptVerification").check();
 }
+
+test("shows a useful image error when the gateway returns a plain-text 413", async ({ page }) => {
+  await page.route("**/api/registration/**", route => route.fulfill({ status: 413, contentType: "text/plain", body: "FUNCTION_PAYLOAD_TOO_LARGE" }));
+  await page.goto("/");
+  await fillForm(page);
+  await page.getByRole("button", { name: "Register Customer", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("lower-resolution photo");
+  await expect(page.getByLabel("Full Name")).toHaveValue("Test Customer");
+});
+
+test("a network retry reuses its submission ID and retains the form", async ({ page }) => {
+  const ids: string[] = [];
+  await page.route("**/api/registration/**", route => {
+    const details = route.request().postData()?.match(/\{[^\r\n]*"submissionId":"[^"]+"[^\r\n]*\}/)?.[0];
+    if (!details) throw new Error("Registration details missing from request.");
+    ids.push(JSON.parse(details).submissionId);
+    return ids.length === 1 ? route.abort("failed") : route.fulfill({ status: 201, json: { redirectTo: "/register/success" } });
+  });
+  await page.goto("/");
+  await fillForm(page);
+  await page.getByRole("button", { name: "Register Customer", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("retry safely");
+  await expect(page.getByLabel("Full Name")).toHaveValue("Test Customer");
+  await page.getByRole("button", { name: "Register Customer", exact: true }).click();
+  await expect(page).toHaveURL(/\/register\/success$/);
+  expect(ids).toHaveLength(2);
+  expect(ids[1]).toBe(ids[0]);
+});
+
+test.describe("Android QR registration", () => {
+  const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices["Pixel 7"];
+  test.use({ viewport, userAgent, deviceScaleFactor, isMobile, hasTouch });
+
+  test("compresses a large document and submits without promotional consent", async ({ page }) => {
+    const original = await sharp(randomBytes(2500 * 1900 * 3), { raw: { width: 2500, height: 1900, channels: 3 } })
+      .jpeg({ quality: 95 }).toBuffer();
+    expect(original.byteLength).toBeGreaterThan(4_500_000);
+    let uploadBytes = 0;
+    await page.route("**/api/registration/**", route => {
+      uploadBytes = route.request().postDataBuffer()?.byteLength ?? 0;
+      return route.fulfill({ status: 201, json: { redirectTo: "/register/success" } });
+    });
+    await page.goto("/");
+    await fillForm(page);
+    await page.getByLabel("Choose document from gallery").setInputFiles({ name: "android-photo.jpg", mimeType: "image/jpeg", buffer: original });
+    await page.getByRole("button", { name: "Register Customer", exact: true }).click();
+    await expect(page).toHaveURL(/\/register\/success$/);
+    expect(uploadBytes).toBeGreaterThan(0);
+    expect(uploadBytes).toBeLessThan(4_500_000);
+  });
+});
 for (const width of [360, 390, 430]) {
   test(`one scrollable form fits ${width}px including large text`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 }); await page.goto("/");

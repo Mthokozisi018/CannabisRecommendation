@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyOrigin } from "@/lib/security";
 import { requireRateLimit, trustedClientIp, RateLimitExceededError, rateLimitHeaders } from "@/lib/rate-limit";
-import { registrationSchema, MAX_DOCUMENT_BYTES, maskPhone } from "@/lib/registration/validation";
-import { submitQRRegistration, RegistrationError } from "@/lib/registration/submit";
+import { registrationSchema, maskPhone, MAX_REGISTRATION_UPLOAD_BYTES } from "@/lib/registration/validation";
+import { submitQRRegistration, RegistrationError, RegistrationServiceError } from "@/lib/registration/submit";
 import { VerificationError } from "@/lib/registration/provider";
 import { signRegistrationReceipt } from "@/lib/registration/receipt";
+import { logServerEvent } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     await requireRateLimit({ namespace: "store-qr-register-ip", identifiers: [trustedClientIp(request.headers)], limit: 10, windowMs: 3_600_000 });
     if (!request.headers.get("content-type")?.startsWith("multipart/form-data")) return NextResponse.json({ error: "Submit the registration form with a document image." }, { status: 415, headers });
     const length = Number(request.headers.get("content-length"));
-    if (length > MAX_DOCUMENT_BYTES + 32_768) return NextResponse.json({ error: "Choose an image no larger than 6 MB.", field: "image" }, { status: 413, headers });
+    if (length > MAX_REGISTRATION_UPLOAD_BYTES + 32_768) return NextResponse.json({ error: "Choose an image under 4 MB.", field: "image" }, { status: 413, headers });
     // Bound chunked requests too; don't rely on Content-Length.
     const stream = request.body?.getReader();
     if (!stream) throw new RegistrationError("Invalid request.");
@@ -28,7 +29,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         const chunk = await stream.read();
         if (chunk.done) break;
         size += chunk.value.byteLength;
-        if (size > MAX_DOCUMENT_BYTES + 32_768) throw new RegistrationError("Choose an image no larger than 6 MB.", "image", 413);
+        if (size > MAX_REGISTRATION_UPLOAD_BYTES + 32_768) throw new RegistrationError("Choose an image under 4 MB.", "image", 413);
         chunks.push(chunk.value);
       }
     } finally { await stream.cancel(); }
@@ -53,9 +54,14 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message, field: error.issues[0]?.path[0] }, { status: 400, headers });
     if (error instanceof RegistrationError) return NextResponse.json({ error: error.message, field: error.field }, { status: error.status, headers });
+    if (error instanceof RegistrationServiceError) {
+      await logServerEvent("warn", "qr_registration_unavailable", { stage: error.stage });
+      return NextResponse.json({ error: error.message, code: error.code, field: "" }, { status: 503, headers });
+    }
     if (error instanceof VerificationError) return NextResponse.json({ error: error.message, code: error.code, field: error.code === "unreadable" ? "image" : "documentNumber" }, { status: error.code === "unavailable" ? 503 : 422, headers });
     if (error instanceof RateLimitExceededError) return NextResponse.json({ error: error.message }, { status: 429, headers: { ...headers, ...rateLimitHeaders(error.result) } });
     // Never send raw DB, image or provider exceptions to logs/telemetry.
+    await logServerEvent("error", "qr_registration_unexpected_failure", { category: "server_exception" });
     return NextResponse.json({ error: "Registration is temporarily unavailable. Please try again or ask the store for assistance." }, { status: 503, headers });
   }
 }
