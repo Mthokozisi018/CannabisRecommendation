@@ -27,6 +27,16 @@ import {
   buildManagerSalesReport,
   parseSalesReportFilters,
 } from "@/lib/manager/sales-overview";
+import type { DashboardSession } from "@/lib/dashboard-session";
+
+// Showcase transactions are voided and cannot enter ordinary sales reporting. Only
+// their assigned franchise administrator may include them in demo analytics.
+function showcaseSaleStatus(session?: DashboardSession): "completed" | "voided" {
+  const metadata = session?.user?.app_metadata;
+  return metadata?.greenchoice_demo_mode === "historical"
+    && metadata?.greenchoice_franchise_id === session?.profile?.franchise_id
+    ? "voided" : "completed";
+}
 
 export async function readAll<T>(
   query: (
@@ -124,7 +134,7 @@ export async function getStoreSaleItems(
   storeId: string,
   period: ReturnType<typeof reportPeriod>,
 ) {
-  const { supabase, franchiseId } = await requireFranchiseStore(storeId);
+  const { supabase, franchiseId, session } = await requireFranchiseStore(storeId);
   // Resolve authorized sales before reading items. Filtering through an embedded
   // sales join made the item query time out when franchise RLS was active.
   const sales = await readAll<{ id: string }>((offset) =>
@@ -133,7 +143,7 @@ export async function getStoreSaleItems(
       .select("id,stores!inner(franchise_id)")
       .eq("stores.franchise_id", franchiseId)
       .eq("store_id", storeId)
-      .eq("status", "completed")
+      .eq("status", showcaseSaleStatus(session))
       .gte("created_at", period.start.toISOString())
       .lt("created_at", period.end.toISOString())
       .order("id")
@@ -158,18 +168,20 @@ export async function getStoreSaleItems(
   return items;
 }
 export async function getStoreReportDetails(storeId: string, period: ReturnType<typeof reportPeriod>) {
-  const { supabase, franchiseId } = await requireFranchiseStore(storeId);
+  const { supabase, franchiseId, session } = await requireFranchiseStore(storeId);
+  const demo = showcaseSaleStatus(session) === "voided";
   const [aggregate, recent] = await Promise.all([
-    supabase.rpc("franchise_store_item_totals", { p_store_id: storeId, p_start: period.start.toISOString(), p_end: period.end.toISOString() }),
+    demo ? Promise.resolve({ data: null, error: { code: "PGRST202" } })
+      : supabase.rpc("franchise_store_item_totals", { p_store_id: storeId, p_start: period.start.toISOString(), p_end: period.end.toISOString() }),
     supabase.from("pos_sales").select("id,store_id,customer_id,staff_user_id,checkout_id,total,refunded_amount,payment_method,created_at")
-      .eq("store_id",storeId).eq("status","completed").gte("created_at",period.start.toISOString()).lt("created_at",period.end.toISOString())
+      .eq("store_id",storeId).eq("status",showcaseSaleStatus(session)).gte("created_at",period.start.toISOString()).lt("created_at",period.end.toISOString())
       .order("created_at",{ascending:false}).order("id").limit(20),
   ]);
   if (aggregate.error && aggregate.error.code !== "PGRST202") throw new Error("Product totals could not be loaded. Please retry.");
   if (!aggregate.error && !aggregate.data) throw new Error("Product totals could not be loaded. Please retry.");
   if (recent.error) throw new Error("Transactions could not be loaded. Please retry.");
   const totals = aggregate.error?.code === "PGRST202"
-    ? await readCompatibleStoreItemTotals(supabase, franchiseId, storeId, period)
+    ? await readCompatibleStoreItemTotals(supabase, franchiseId, storeId, period, showcaseSaleStatus(session))
     : aggregate.data as ReturnType<typeof summarizeSaleItems>;
   const sales = (recent.data || []) as FranchiseSale[];
   const items = sales.length ? await readAll<FranchiseSaleItem>((offset) => supabase.from("pos_sale_items")
@@ -183,6 +195,7 @@ async function readCompatibleStoreItemTotals(
   franchiseId: string,
   storeId: string,
   period: ReturnType<typeof reportPeriod>,
+  saleStatus: "completed" | "voided" = "completed",
 ): Promise<ReturnType<typeof summarizeSaleItems>> {
   const categories = new Map<string, number>();
   const products = new Map<string, { key: string; name: string; quantity: number; cents: number }>();
@@ -190,7 +203,7 @@ async function readCompatibleStoreItemTotals(
   for (let offset = 0; ; offset += 100) {
     const { data, error } = await supabase.from("pos_sales")
       .select("id,total,refunded_amount,stores!inner(franchise_id)")
-      .eq("stores.franchise_id", franchiseId).eq("store_id", storeId).eq("status", "completed")
+      .eq("stores.franchise_id", franchiseId).eq("store_id", storeId).eq("status", saleStatus)
       .gte("created_at", period.start.toISOString()).lt("created_at", period.end.toISOString())
       .order("id").range(offset, offset + 99);
     if (error) throw new Error("Product totals could not be loaded. Please retry.");
@@ -293,7 +306,7 @@ export async function getFranchiseReport(
 }
 export const getFranchiseSalesHistory = cache(async (storeId?: string) => {
   if (storeId) await requireFranchiseStore(storeId);
-  const { supabase, franchiseId } = await requireFranchiseAdmin();
+  const { supabase, franchiseId, session } = await requireFranchiseAdmin();
   const stores = storeId ? [storeId] : (await readAll<{ id: string }>((offset) =>
     supabase.from("stores")
       .select("id")
@@ -311,7 +324,7 @@ export const getFranchiseSalesHistory = cache(async (storeId?: string) => {
         .select("created_at,stores!inner(franchise_id)")
         .eq("stores.franchise_id", franchiseId)
         .eq("store_id", id)
-        .eq("status", "completed")
+        .eq("status", showcaseSaleStatus(session))
         .lte("created_at", before)
         .order("created_at", { ascending: true })
         .limit(1),
@@ -391,6 +404,7 @@ async function getDashboardTotals(
   selected?: { from: string; to: string },
 ): Promise<DashboardTotals> {
   const { supabase, franchiseId, session } = await requireFranchiseAdmin();
+  const saleStatus = showcaseSaleStatus(session);
   return cachedFranchiseTotals(
     {
       userId: session.authUserId,
@@ -402,6 +416,18 @@ async function getDashboardTotals(
       customers,
     },
     async () => {
+      if (saleStatus === "voided") {
+        const { data, error } = await supabase.rpc("franchise_dashboard_showcase_totals", {
+          p_franchise_id: franchiseId,
+          p_start: start.toISOString(),
+          p_end: end.toISOString(),
+          p_store_id: storeId || null,
+          p_customers: customers,
+        });
+        if (error || !data)
+          throw new Error("Showcase dashboard totals could not be loaded. Please retry.");
+        return data as DashboardTotals;
+      }
       const args = {
         p_franchise_id: franchiseId,
         p_start: start.toISOString(),
@@ -464,6 +490,7 @@ async function readCompatibleDashboardTotals(
   end: Date,
   storeId: string | undefined,
   customers: boolean,
+  saleStatus: "completed" | "voided" = "completed",
 ): Promise<DashboardTotals> {
   if (storeId) await requireFranchiseStore(storeId);
   const daily = new Map<string, { store_id: string; day: string; cents: number; transactions: number }>();
@@ -472,7 +499,7 @@ async function readCompatibleDashboardTotals(
     let query = supabase.from("pos_sales")
       .select("id,store_id,created_at,total,refunded_amount,stores!inner(franchise_id)")
       .eq("stores.franchise_id", franchiseId)
-      .eq("status", "completed")
+      .eq("status", saleStatus)
       .gte("created_at", start.toISOString())
       .lt("created_at", end.toISOString())
       .order("id");
