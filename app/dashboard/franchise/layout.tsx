@@ -35,6 +35,13 @@ export default async function FranchiseLayout({
               </form>
             </div>
           </header>
+          {session.user.app_metadata?.greenchoice_demo_mode === "historical" &&
+          session.user.app_metadata?.greenchoice_franchise_id === session.profile.franchise_id ? (
+            <aside className={styles.demoNotice} aria-label="Demonstration data notice">
+              Demonstration account: stores, customers, products, sales, and supply are fictional.
+              Sales figures do not represent real revenue or payments.
+            </aside>
+          ) : null}
           <FranchiseDashboardBack />
           {children}
         </main>

@@ -109,7 +109,7 @@ export function FranchiseRevenueReporting({ snapshot, historyStart, now, loadRan
           : <button type="button" ref={expandButton} className={`${styles.button} ${styles.revenueIconButton}`} aria-label={`Expand ${reportName.toLowerCase()} graph`} aria-haspopup="dialog" onClick={() => setExpanded(true)}><Maximize2 size={18} /></button>}
       </div>
     </div>
-    <p className={styles.periodIndicator}>{selection.view === "weeks" ? "ISO weeks: Monday–Sunday. Cross-year dates are included in the named week." : "Completed sales in Africa/Johannesburg time."}{points.some((point) => point.tooltipLabel?.includes("(in progress)")) ? " Current period is in progress." : ""}</p>
+    <p className={styles.periodIndicator}>{selection.view === "weeks" ? "ISO weeks: Monday–Sunday. Cross-year dates are included in the named week." : "Sales in Africa/Johannesburg time."}{points.some((point) => point.tooltipLabel?.includes("(in progress)")) ? " Current period is in progress." : ""}</p>
     {error ? <div role="alert" className={styles.filterError}>{error} <button className={styles.button} onClick={() => void choose(wanted.current)}>Retry</button></div> : null}
   </>;
   const axisTitle = { days: "Day", weeks: "Week", months: "Month", years: "Year" }[selection.view];
