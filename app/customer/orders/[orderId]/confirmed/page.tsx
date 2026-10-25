@@ -79,7 +79,7 @@ export default async function CustomerOrderConfirmedPage({
             Track order
           </Link>
           <Link
-            href="/customer/stores"
+            href="/customer/shop"
             className="flex h-12 items-center justify-center border border-[#425046] bg-[#08100b] font-bold"
           >
             Continue shopping

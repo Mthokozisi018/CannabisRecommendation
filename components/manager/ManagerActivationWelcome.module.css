@@ -1,0 +1,116 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .68);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.modal {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: min(94vw, 1580px);
+  height: min(860px, calc(100dvh - 48px));
+  min-height: 610px;
+  overflow: hidden;
+  border: 1px solid rgba(76, 218, 152, .55);
+  border-radius: 26px;
+  background: #031e18;
+  box-shadow: 0 32px 100px rgba(0, 0, 0, .65), 0 0 35px rgba(30, 197, 127, .14);
+  color: white;
+  animation: welcomeIn .35s ease-out both;
+}
+
+.wallpaper, .shade { position: absolute; inset: 0; z-index: -1; }
+.wallpaper {
+  background: url('/images/welcome-wallpaper.png') center center / cover no-repeat;
+}
+.shade {
+  background: linear-gradient(90deg, rgba(0, 31, 23, .94) 0%, rgba(0, 34, 25, .84) 38%, rgba(0, 31, 23, .20) 57%, rgba(0, 28, 22, .04) 82%), linear-gradient(0deg, rgba(0, 20, 15, .55), transparent 27%);
+}
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(54%, 850px);
+  padding: clamp(28px, 3vw, 44px);
+  padding-bottom: 36px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.brand { display: flex; width: fit-content; align-items: center; gap: 12px; color: #3ddd96; }
+.brand strong { display: block; color: #fff; font-size: 28px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.brand strong span { color: #34d995; }
+.brand small { display: block; margin-top: 5px; color: #e2f0e7; font-size: 13px; line-height: 1; }
+.intro { margin-top: clamp(36px, 5vh, 56px); }
+.intro h1 { max-width: 760px; font-size: clamp(42px, 4.7vw, 80px); font-weight: 800; letter-spacing: -.055em; line-height: 1.02; white-space: nowrap; }
+.intro h1 span { color: #32dda1; }
+.intro h1 .celebration { display: inline-block; margin-left: 10px; font-size: .72em; vertical-align: 8px; }
+.intro h2 { margin-top: 18px; font-size: clamp(22px, 1.8vw, 29px); font-weight: 750; }
+.intro > p:last-child { max-width: 680px; margin-top: 8px; color: #edf6f0; font-size: clamp(15px, 1.2vw, 19px); line-height: 1.5; }
+.benefits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 18px; margin-top: 20px; padding: 26px; border: 1px solid rgba(84, 224, 156, .25); border-radius: 22px; background: rgba(4, 65, 48, .57); backdrop-filter: blur(4px); }
+.benefit { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
+.iconTile { display: grid; width: 62px; height: 62px; flex: 0 0 62px; place-items: center; border-radius: 12px; background: #81f1ba; color: #05392a; }
+.iconTile svg { width: 29px; height: 29px; }
+.benefit h3 { font-size: 15px; font-weight: 760; line-height: 1.25; }
+.benefit p { margin-top: 5px; color: #e2f0e8; font-size: 13px; line-height: 1.4; }
+.confirmation { position: absolute; top: 130px; right: 40px; z-index: 2; display: flex; width: 380px; gap: 22px; padding: 27px; border: 1px solid rgba(94, 231, 161, .6); border-radius: 23px; background: rgba(2, 32, 24, .78); box-shadow: 0 8px 25px rgba(0, 0, 0, .24); backdrop-filter: blur(8px); }
+.confirmationIcon { display: grid; width: 80px; height: 80px; flex: 0 0 80px; place-items: center; border-radius: 20px; background: #0bab72; color: #9af8c9; }
+.confirmationIcon svg { width: 46px; height: 46px; }
+.confirmation strong { color: #fff; font-size: 18px; }
+.confirmation p { margin-top: 7px; color: #e4f3e8; font-size: 15px; line-height: 1.5; }
+.action { position: absolute; right: 37px; bottom: 35px; z-index: 3; }
+.action button { display: inline-flex; min-height: 68px; align-items: center; justify-content: center; gap: 20px; padding: 0 30px; border: 1px solid #7ff4bb; border-radius: 21px; background: linear-gradient(180deg, #21d889, #07a96b); box-shadow: 0 12px 28px rgba(0, 0, 0, .32); color: #fff; font-size: 20px; font-weight: 800; transition: transform .18s, background .18s, box-shadow .18s; }
+.action button:hover { transform: translateY(-2px); background: #35d99a; box-shadow: 0 15px 32px rgba(0, 0, 0, .4); }
+.action button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+
+@keyframes welcomeIn { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 1000px) {
+  .modal { width: min(94vw, 900px); }
+  .content { width: 67%; }
+  .confirmation { top: 30px; right: 24px; width: 230px; gap: 10px; padding: 13px; }
+  .confirmationIcon { width: 36px; height: 36px; flex-basis: 36px; border-radius: 9px; }
+  .confirmationIcon svg { width: 22px; height: 22px; }
+  .confirmation strong { font-size: 14px; }
+  .confirmation p { font-size: 11px; }
+  .action { right: 24px; bottom: 24px; }
+  .benefits { padding: 16px; gap: 14px; }
+  .iconTile { width: 40px; height: 40px; flex-basis: 40px; }
+  .iconTile svg { width: 22px; height: 22px; }
+  .shade { background: linear-gradient(90deg, rgba(0, 31, 23, .98) 0%, rgba(0, 34, 25, .90) 45%, rgba(0, 31, 23, .50) 72%, rgba(0, 28, 22, .16) 100%); }
+}
+@media (max-width: 700px) {
+  .backdrop { padding: 12px; }
+  .modal { display: flex; width: 100%; height: min(850px, calc(100dvh - 24px)); min-height: 0; flex-direction: column; border-radius: 19px; overflow-y: auto; }
+  .wallpaper { background-position: 62% top; background-size: auto 48%; background-repeat: no-repeat; }
+  .shade { background: linear-gradient(180deg, rgba(0, 31, 23, .30) 0%, rgba(0, 31, 23, .9) 25%, #031e18 45%); }
+  .content { width: 100%; flex: 1 0 auto; padding: 24px 22px 0; overflow: visible; }
+  .brand svg { width: 34px; height: 34px; }
+  .brand strong { font-size: 20px; }
+  .brand small { font-size: 9px; }
+  .intro { margin-top: 132px; }
+  .intro h1 { font-size: clamp(33px, 8vw, 47px); }
+  .intro h2 { margin-top: 16px; }
+  .benefits { gap: 18px 10px; margin-top: 27px; }
+  .benefit { gap: 9px; }
+  .iconTile { width: 32px; height: 32px; flex-basis: 32px; }
+  .benefit h3 { font-size: 12px; }
+  .benefit p { font-size: 11px; }
+  .confirmation { top: 76px; right: 18px; width: min(190px, 47%); padding: 10px; }
+  .confirmation p { font-size: 10px; }
+  .action { position: sticky; right: auto; bottom: 0; display: flex; justify-content: stretch; margin-top: 28px; padding: 15px 20px; background: linear-gradient(0deg, #031e18 70%, transparent); }
+  .action button { width: 100%; }
+}
+@media (max-width: 440px) {
+  .intro { margin-top: 152px; }
+  .benefits { grid-template-columns: 1fr; gap: 15px; }
+  .benefit h3 { font-size: 13px; }
+  .benefit p { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .modal { animation: none; } .action button { transition: none; } }

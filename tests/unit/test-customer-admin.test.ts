@@ -8,10 +8,12 @@ function source(path: string) {
 
 describe("admin test customer controls", () => {
   it("adds a dedicated server-managed test-account marker", () => {
-    const migration = source("supabase/migrations/20260817103000_add_customer_test_account_marker.sql");
+    const migration = source("supabase/migrations/20260817104106_add_customer_test_account_marker.sql");
 
     expect(migration).toContain("add column if not exists is_test_account boolean not null default false");
-    expect(migration).toContain("customer_profiles_test_account_idx");
+    const followup = source("supabase/migrations/20261006072152_consolidated_security_followup.sql");
+    expect(followup).toContain("customer_profiles_test_account_idx");
+    expect(followup).toContain("where is_test_account = true");
     expect(migration).not.toContain("grant select");
     expect(migration).not.toContain("grant update");
   });
@@ -47,9 +49,9 @@ describe("admin test customer controls", () => {
     expect(model).not.toContain("customer_profiles\").delete()");
   });
 
-  it("surfaces the control only under the existing admin route tree", () => {
+  it("preserves the protected utility route without showing it on the main dashboard", () => {
     expect(existsSync(resolve(process.cwd(), "app/dashboard/admin/test-customer/page.tsx"))).toBe(true);
     expect(source("app/dashboard/admin/layout.tsx")).toContain("await requireAdmin()");
-    expect(source("components/admin/AdminDashboardUI.tsx")).toContain("/dashboard/admin/test-customer");
+    expect(source("components/admin/AdminDashboardUI.tsx")).not.toContain("/dashboard/admin/test-customer");
   });
 });

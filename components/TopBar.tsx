@@ -7,7 +7,7 @@ import { staffToAccountContext } from "@/lib/authorization";
 import { visibleNavItems } from "@/lib/account-data";
 
 function shouldRenderGlobalTopBar(pathname: string) {
-  return pathname !== "/login" && !pathname.startsWith("/customer") && !pathname.startsWith("/auth/") && !pathname.startsWith("/dashboard/manager") && !pathname.startsWith("/dashboard/receptionist");
+  return !pathname.startsWith("/billing") && !pathname.startsWith("/dashboard/franchise") && !pathname.startsWith("/franchise/setup") && pathname !== "/login" && !pathname.startsWith("/register") && !pathname.startsWith("/registration-complete") && !pathname.startsWith("/legal/") && !pathname.startsWith("/customer") && !pathname.startsWith("/auth/") && !pathname.startsWith("/dashboard/manager") && !pathname.startsWith("/dashboard/receptionist");
 }
 
 export async function TopBar() {

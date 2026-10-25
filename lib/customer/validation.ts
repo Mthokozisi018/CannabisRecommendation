@@ -1,17 +1,8 @@
 import crypto from "node:crypto";
 import { z } from "zod";
 
-export const SOUTH_AFRICAN_PROVINCES = [
-  "Eastern Cape",
-  "Free State",
-  "Gauteng",
-  "KwaZulu-Natal",
-  "Limpopo",
-  "Mpumalanga",
-  "Northern Cape",
-  "North West",
-  "Western Cape"
-] as const;
+import { SOUTH_AFRICAN_PROVINCES } from "./provinces";
+export { SOUTH_AFRICAN_PROVINCES } from "./provinces";
 
 export const customerRegistrationSchema = z.object({
   firstName: z.string().trim().min(1).max(80),

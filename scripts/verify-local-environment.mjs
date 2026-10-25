@@ -48,7 +48,7 @@ function normalizeOrigin(value) {
 }
 
 export function buildLocalEnvironment(env, options = {}) {
-  const origin = normalizeOrigin(options.origin ?? process.env.GREENCHOICE_LOCAL_ORIGIN ?? "http://127.0.0.1:3002");
+  const origin = normalizeOrigin(options.origin ?? process.env.GREENCHOICE_LOCAL_ORIGIN ?? "http://127.0.0.1:3001");
   const companion = origin.replace("127.0.0.1", "localhost");
   return {
     ...env,
@@ -76,7 +76,7 @@ export function validateLocalEnvironment(env) {
   if (actualRef && actualRef === productionRef) failures.push("Local development must not use the production Supabase project.");
   if (!firstConfigured(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) failures.push("A staging Supabase public key is required.");
   if (!firstConfigured(env.SUPABASE_SECRET_KEY, env.SUPABASE_SERVICE_ROLE_KEY)) failures.push("A staging Supabase server key is required.");
-  if (!/^http:\/\/(127\.0\.0\.1|localhost):3002$/.test(env.APP_URL ?? "") || env.APP_URL !== env.NEXT_PUBLIC_APP_URL) failures.push("Local URLs must use http://127.0.0.1:3002 (or localhost:3002).");
+  if (!/^http:\/\/(127\.0\.0\.1|localhost):3001$/.test(env.APP_URL ?? "") || env.APP_URL !== env.NEXT_PUBLIC_APP_URL) failures.push("Local URLs must use http://127.0.0.1:3001 (or localhost:3001).");
   if (!(env.ALLOWED_ORIGINS ?? "").split(",").includes(env.APP_URL)) failures.push("ALLOWED_ORIGINS must include APP_URL.");
   for (const name of requiredSecrets) {
     if (isPlaceholder(env[name]) || env[name].trim().length < 32) failures.push(`${name} must contain at least 32 characters.`);
@@ -93,8 +93,7 @@ function run() {
   const candidates = requestedPath
     ? [resolve(process.cwd(), requestedPath)]
     : [
-        resolve(process.cwd(), ".env.staging.local"),
-        resolve(process.cwd(), "../greenchoice-production-hardening/.env.staging.local")
+        resolve(process.cwd(), ".env.staging.local")
       ];
   const envPath = candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
   if (!existsSync(envPath)) throw new Error(`Local staging environment file not found: ${envPath}`);

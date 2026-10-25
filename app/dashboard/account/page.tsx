@@ -4,6 +4,7 @@ import { AccountManagementForms } from "@/components/account/AccountManagementFo
 import type { DashboardAccountProfile } from "@/components/account/account-types";
 import { DashboardBackdrop } from "@/components/GreenChoiceDashboard";
 import { requireDashboardRoleSession, type DashboardSession } from "@/lib/dashboard-session";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +28,24 @@ function roleTitle(session: DashboardSession) {
   return session.isManager ? "Manager" : "Receptionist";
 }
 
+async function getManagerStoreImage(session: DashboardSession) {
+  if (!session.isManager || !session.assignedStoreId) return null;
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.from("stores")
+    .select("store_image_url")
+    .eq("id", session.assignedStoreId)
+    .maybeSingle<{ store_image_url: string | null }>();
+  if (error) return null;
+  return data?.store_image_url ?? null;
+}
+
 export default async function DashboardAccountPage() {
   const session = await requireDashboardRoleSession(["manager", "employee_receptionist"]);
+  const storeImageUrl = await getManagerStoreImage(session);
   const role = session.isManager ? "manager" : "receptionist";
-  const backHref = session.isManager ? "/dashboard/receptionist" : "/dashboard/receptionist";
+  const backHref = session.isManager ? "/dashboard/manager" : "/dashboard/receptionist";
+  const backLabel = session.isManager ? "Back to Manager Dashboard" : "Back to POS";
   const title = roleTitle(session);
 
   return (
@@ -39,7 +54,7 @@ export default async function DashboardAccountPage() {
       <div className="relative z-10 mx-auto w-full max-w-[1100px]">
         <Link href={backHref as never} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#36d179] bg-[#04100a] px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(0,0,0,0.34)] transition hover:border-[#7cf0aa] hover:bg-[#07180f] focus-visible:ring-2 focus-visible:ring-[#9bf2b5] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020503]">
           <ArrowLeft size={17} aria-hidden="true" />
-          Back to POS
+          {backLabel}
         </Link>
 
         <header className="mt-6 rounded-lg border border-[#36d179] bg-[#031008] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.46)] sm:p-6">
@@ -55,7 +70,7 @@ export default async function DashboardAccountPage() {
         </header>
 
         <div className="mt-5">
-          <AccountManagementForms role={role} profile={accountProfileFromSession(session)} />
+          <AccountManagementForms role={role} profile={accountProfileFromSession(session)} storeImageUrl={storeImageUrl} storeName={session.storeName} />
         </div>
       </div>
     </main>

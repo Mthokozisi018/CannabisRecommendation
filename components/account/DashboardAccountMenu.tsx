@@ -58,6 +58,11 @@ export function DashboardAccountMenu({ role, profile, manageHref = "/dashboard/a
             <p className="mt-1 truncate text-base font-black text-white">{name}</p>
           </div>
           <div className="grid gap-2 py-3">
+            {role === "manager" ? (
+              <Link href="/dashboard/manager/store" role="menuitem" onClick={closeMenu} className="inline-flex h-10 items-center rounded-md border border-[#296646] bg-[#07130d] px-3 text-sm font-black text-white transition hover:border-[#7cf0aa] hover:bg-[#0b1c13] focus-visible:ring-2 focus-visible:ring-[#9bf2b5]">
+                Manage Store
+              </Link>
+            ) : null}
             <Link href={manageHref as never} role="menuitem" onClick={closeMenu} className="inline-flex h-10 items-center rounded-md border border-[#296646] bg-[#07130d] px-3 text-sm font-black text-white transition hover:border-[#7cf0aa] hover:bg-[#0b1c13] focus-visible:ring-2 focus-visible:ring-[#9bf2b5]">
               Manage Account
             </Link>

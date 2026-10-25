@@ -57,13 +57,6 @@ export const consentRecords = [
   { version: "adult-gate-v2026-06", label: "Adult-access acknowledgement", status: "Pending verification", date: "June 4, 2026" }
 ];
 
-export const auditEvents = [
-  { time: "10:30", actor: "Ava Mokoena", action: "policy.change", target: "South Africa customer visibility", result: "success" },
-  { time: "10:15", actor: "John Manager", action: "role.assignment.requested", target: "Frontline employee access", result: "success" },
-  { time: "09:52", actor: "System", action: "restricted_access.denied", target: "adult_customer catalog detail", result: "denied" },
-  { time: "09:30", actor: "Privacy Desk", action: "privacy_request.created", target: "PR-1009", result: "success" }
-];
-
 export type NavItem = {
   label: string;
   href: string;

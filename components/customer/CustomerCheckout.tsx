@@ -95,7 +95,7 @@ export function CustomerCheckout({
           Your current order is empty
         </h1>
         <Link
-          href="/customer/stores"
+          href="/customer/shop"
           className="mt-6 inline-flex h-11 items-center bg-[#a7e627] px-5 font-black text-[#081000]"
         >
           Browse stores

@@ -10,7 +10,7 @@ const optionalMgAmount = (label: string) => z.preprocess((input) => {
     return Number(trimmed);
   }
   return input;
-}, z.number({ invalid_type_error: `${label} must be a valid non-negative number` }).finite().nonnegative(`${label} cannot be negative`).optional());
+}, z.number({ error: `${label} must be a valid non-negative number` }).finite().nonnegative(`${label} cannot be negative`).optional());
 const priceAmount = z.preprocess((input) => {
   if (typeof input === "string") {
     const trimmed = input.trim();
@@ -18,7 +18,7 @@ const priceAmount = z.preprocess((input) => {
     return Number(trimmed);
   }
   return input;
-}, z.number({ invalid_type_error: "Price must be a valid amount" }).nonnegative("Price cannot be negative"));
+}, z.number({ error: "Price must be a valid amount" }).nonnegative("Price cannot be negative"));
 const wholeStockQuantity = (label: string, minimum: number, minimumMessage: string) =>
   z.preprocess((input) => {
     if (typeof input === "string") {
@@ -27,7 +27,7 @@ const wholeStockQuantity = (label: string, minimum: number, minimumMessage: stri
       return Number(trimmed);
     }
     return input;
-  }, z.number({ invalid_type_error: `${label} must be a whole number` }).int(`${label} must be a whole number`).min(minimum, minimumMessage));
+  }, z.number({ error: `${label} must be a whole number` }).int(`${label} must be a whole number`).min(minimum, minimumMessage));
 const optionalWholeStockQuantity = (label: string, minimum: number, minimumMessage: string) =>
   z.preprocess((input) => {
     if (typeof input === "string") {
@@ -37,7 +37,7 @@ const optionalWholeStockQuantity = (label: string, minimum: number, minimumMessa
       return Number(trimmed);
     }
     return input;
-  }, z.number({ invalid_type_error: `${label} must be a whole number` }).int(`${label} must be a whole number`).min(minimum, minimumMessage).optional());
+  }, z.number({ error: `${label} must be a whole number` }).int(`${label} must be a whole number`).min(minimum, minimumMessage).optional());
 
 function isVapeProductType(value: string) {
   return VAPE_PRODUCT_TYPES.includes(value as never);
@@ -70,7 +70,7 @@ function validateCategoryFilters(value: { category: ProductCategory; subcategory
   }
 }
 
-export const productFormSchema = z.object({
+export const productFormBaseSchema = z.object({
   productName: requiredText,
   category: requiredText.refine(isProductCategory, "Invalid category"),
   subcategory: requiredText,
@@ -82,7 +82,9 @@ export const productFormSchema = z.object({
   productStatus: z.enum(PRODUCT_STATUSES),
   initialStockQuantity: wholeStockQuantity("Initial stock", 0, "Initial stock cannot be negative").default(0),
   lowStockThreshold: wholeStockQuantity("Low stock threshold", 0, "Low stock threshold cannot be negative").default(5)
-}).superRefine((value, ctx) => {
+});
+
+export const productFormSchema = productFormBaseSchema.superRefine((value, ctx) => {
   validateCategoryFilters(value, ctx);
   if (value.category === "Edibles") {
     if (value.thcPerUnitMg === undefined) {
@@ -104,14 +106,16 @@ export const productFormSchema = z.object({
   }
 });
 
-export const inventoryAddSchema = z.object({
+export const inventoryAddBaseSchema = z.object({
   category: requiredText.refine(isProductCategory, "Invalid category"),
   subcategory: requiredText,
   cultivationType: z.string().trim().optional(),
   productId: z.string().uuid("Product is required"),
   quantityToAdd: wholeStockQuantity("Quantity to add", 1, "Quantity to add must be greater than 0"),
   reason: z.string().trim().max(300).optional()
-}).superRefine((value, ctx) => {
+});
+
+export const inventoryAddSchema = inventoryAddBaseSchema.superRefine((value, ctx) => {
   validateCategoryFilters(value, ctx);
 });
 
@@ -150,7 +154,7 @@ export const productEditSchema = z.object({
 
 export const staffCreateSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
-  password: z.string().min(10, "Temporary password must be at least 10 characters.").max(256),
+  password: z.string().min(1, "Enter a temporary password.").max(256),
   confirmPassword: z.string().min(1, "Confirm password is required")
 }).refine((value) => value.password === value.confirmPassword, {
   path: ["confirmPassword"],
@@ -159,7 +163,7 @@ export const staffCreateSchema = z.object({
 
 export function temporaryPasswordIssues(password: string, confirmPassword?: string) {
   const issues: string[] = [];
-  if (password.length < 10) issues.push("Temporary password must be at least 10 characters.");
+  if (!password) issues.push("Enter a temporary password.");
   if (confirmPassword !== undefined && password !== confirmPassword) issues.push("Passwords must match");
   return issues;
 }

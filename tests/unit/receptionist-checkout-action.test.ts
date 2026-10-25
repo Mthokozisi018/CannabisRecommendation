@@ -63,6 +63,8 @@ describe("receptionist checkout action", () => {
 
     const result = await checkoutReceptionistSaleAction({
       checkoutId: "44444444-4444-4444-8444-444444444444",
+      customerId: "66666666-6666-4666-8666-666666666666",
+      payment: { method: "cash", cashAmount: 300, cardAmount: 0 },
       items: [
         {
           productId: "55555555-5555-4555-8555-555555555555",
@@ -77,9 +79,13 @@ describe("receptionist checkout action", () => {
       message: "Sale completed successfully.",
       saleId: "33333333-3333-4333-8333-333333333333"
     });
-    expect(rpcMock).toHaveBeenCalledWith("complete_receptionist_sale_v2", {
+    expect(rpcMock).toHaveBeenCalledWith("complete_receptionist_sale_v3", {
       p_checkout_id: "44444444-4444-4444-8444-444444444444",
       p_auth_user_id: "11111111-1111-4111-8111-111111111111",
+      p_customer_id: "66666666-6666-4666-8666-666666666666",
+      p_payment_method: "cash",
+      p_cash_amount: 300,
+      p_card_amount: 0,
       p_items: [
         {
           productId: "55555555-5555-4555-8555-555555555555",
@@ -106,6 +112,8 @@ describe("receptionist checkout action", () => {
 
     const result = await checkoutReceptionistSaleAction({
       checkoutId: "44444444-4444-4444-8444-444444444444",
+      customerId: "66666666-6666-4666-8666-666666666666",
+      payment: { method: "cash", cashAmount: 300, cardAmount: 0 },
       items: [
         {
           productId: "55555555-5555-4555-8555-555555555555",
@@ -120,4 +128,41 @@ describe("receptionist checkout action", () => {
       message: "The cart changed while checkout was processing. Review the cart and try again."
     });
   });
+  it.each([
+    { method: "cash", cashAmount: 750, cardAmount: 0 },
+    { method: "card", cashAmount: 0, cardAmount: 750 },
+    { method: "split", cashAmount: 300, cardAmount: 450 }
+  ] as const)("sends $method allocation to the atomic RPC", async (payment) => {
+    const { checkoutReceptionistSaleAction } = await import("@/app/dashboard/receptionist/actions");
+    const result = await checkoutReceptionistSaleAction({
+      checkoutId: "44444444-4444-4444-8444-444444444444",
+      customerId: "66666666-6666-4666-8666-666666666666",
+      payment,
+      items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity: 1, unitPrice: 750 }]
+    });
+    expect(result.ok).toBe(true);
+    expect(rpcMock).toHaveBeenCalledWith("complete_receptionist_sale_v3", expect.objectContaining({
+      p_payment_method: payment.method, p_cash_amount: payment.cashAmount, p_card_amount: payment.cardAmount
+    }));
+  });
+
+  it.each([
+    { method: "split", cashAmount: 300, cardAmount: 449 },
+    { method: "split", cashAmount: -1, cardAmount: 751 },
+    { method: "split", cashAmount: 751, cardAmount: 0 },
+    { method: "split", cashAmount: 300.001, cardAmount: 449.999 },
+    { method: "cash", cashAmount: 0, cardAmount: 750 },
+    { method: "card", cashAmount: 750, cardAmount: 0 }
+  ] as const)("rejects invalid allocation before any write: %o", async (payment) => {
+    const { checkoutReceptionistSaleAction } = await import("@/app/dashboard/receptionist/actions");
+    const result = await checkoutReceptionistSaleAction({
+      checkoutId: "44444444-4444-4444-8444-444444444444",
+      customerId: "66666666-6666-4666-8666-666666666666",
+      payment,
+      items: [{ productId: "55555555-5555-4555-8555-555555555555", quantity: 1, unitPrice: 750 }]
+    });
+    expect(result.ok).toBe(false);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
 });

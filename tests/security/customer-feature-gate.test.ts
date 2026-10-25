@@ -22,7 +22,8 @@ describe("customer experience feature gate", () => {
 
   it("redirects visibly unauthenticated staff routes before rendering", () => {
     const proxy = source("proxy.ts");
-    expect(proxy).toContain('name.startsWith("sb-") && name.includes("auth-token")');
-    expect(proxy).toContain("if (!hasSupabaseSession) return loginRedirect");
+    expect(proxy).toContain("refreshSupabaseSession");
+    expect(proxy).toContain("if (!refreshed.authenticated)");
+    expect(proxy).toContain("loginRedirect(request, requestId, nonce, error)");
   });
 });

@@ -1,7 +1,7 @@
 import { ReceptionistPOS } from "@/components/receptionist/ReceptionistPOS";
 import type { DashboardAccountProfile } from "@/components/account/account-types";
 import { getCurrentStaff } from "@/lib/dal/auth";
-import { getDashboardSession, type DashboardSession } from "@/lib/dashboard-session";
+import { requireCompletedReceptionistDashboardSession, type DashboardSession } from "@/lib/dashboard-session";
 import { listReceptionistCatalog } from "@/lib/receptionist/products";
 
 function accountProfileFromSession(session: DashboardSession): DashboardAccountProfile {
@@ -21,7 +21,8 @@ function accountProfileFromSession(session: DashboardSession): DashboardAccountP
 }
 
 export async function ReceptionistPOSPage({ category }: { category?: string }) {
-  const [catalog, staff, session] = await Promise.all([listReceptionistCatalog(), getCurrentStaff(), getDashboardSession()]);
+  const session = await requireCompletedReceptionistDashboardSession();
+  const [catalog, staff] = await Promise.all([listReceptionistCatalog(), getCurrentStaff()]);
   const profileLabel = staff?.role === "manager" ? "Manager" : "Receptionist";
   const backToDashboardHref = staff?.role === "manager" ? "/dashboard/manager" : undefined;
 
@@ -34,6 +35,7 @@ export async function ReceptionistPOSPage({ category }: { category?: string }) {
       profileLabel={profileLabel}
       accountRole={session?.isManager ? "manager" : "receptionist"}
       accountProfile={session ? accountProfileFromSession(session) : undefined}
+      storeName={session?.storeName ?? "DISPENSARY"}
       backToDashboardHref={backToDashboardHref}
     />
   );

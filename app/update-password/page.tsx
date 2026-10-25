@@ -2,91 +2,127 @@
 
 import Link from "next/link";
 import { Eye, EyeOff, LockKeyhole } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
-import { startNavigationLoading } from "@/components/navigation-loading-events";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-
-function passwordErrors(password: string) {
-  const errors: string[] = [];
-  if (password.length < 12) errors.push("Use at least 12 characters.");
-  if (!/[A-Z]/.test(password)) errors.push("Include at least one uppercase letter.");
-  if (!/[a-z]/.test(password)) errors.push("Include at least one lowercase letter.");
-  if (!/[0-9]/.test(password)) errors.push("Include at least one number.");
-  if (!/[^A-Za-z0-9]/.test(password)) errors.push("Include at least one symbol.");
-  return errors;
-}
+import { managerPasswordIssues } from "@/lib/manager/password-policy";
+import { createSupabaseBrowserClient, createSupabaseImplicitRecoveryClient } from "@/lib/supabase/client";
 
 function clearRecoveryParameters() {
-  const url = new URL(window.location.href);
-  url.searchParams.delete("code");
-  url.hash = "";
-  window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  window.history.replaceState(null, "", window.location.pathname);
 }
 
 function UpdatePasswordForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPreparingSession, setIsPreparingSession] = useState(false);
+  const [isPreparingSession, setIsPreparingSession] = useState(true);
   const [isReady, setIsReady] = useState(false);
-  const exchangedCodeRef = useRef<string | null>(null);
-  const exchangePromiseRef = useRef<Promise<boolean> | null>(null);
-  const preparationStartedRef = useRef(false);
+  const [isExpired, setIsExpired] = useState(false);
   const submissionInFlightRef = useRef(false);
 
   useEffect(() => {
-    if (preparationStartedRef.current) return;
-    preparationStartedRef.current = true;
-    const code = searchParams.get("code");
+    let active = true;
+    let recoverySessionReceived = false;
+    let initializationSucceeded = false;
+    let expiryTimer: number | undefined;
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("code");
+    const tokenHash = url.searchParams.get("token_hash");
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const accessToken = hash.get("access_token");
     const refreshToken = hash.get("refresh_token");
-    const isRecoveryToken = hash.get("type") === "recovery";
-    setIsPreparingSession(true);
-    const supabase = createSupabaseBrowserClient();
-
-    exchangePromiseRef.current = (async () => {
-      if (searchParams.get("flow") !== "recovery") {
-        throw new Error("Missing password recovery context.");
-      }
-      if (code && exchangedCodeRef.current !== code) {
-        exchangedCodeRef.current = code;
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        const redirectType = (data as typeof data & { redirectType?: string | null }).redirectType;
-        if (error || redirectType !== "recovery") throw error ?? new Error("Invalid recovery purpose.");
-        clearRecoveryParameters();
-      } else if (accessToken && refreshToken && isRecoveryToken) {
-        const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (error) throw error;
-        clearRecoveryParameters();
-      } else {
-        throw new Error("Missing recovery token.");
-      }
-
+    const hasRecoveryLink = Boolean(code || (tokenHash && url.searchParams.get("type") === "recovery") ||
+      (accessToken && refreshToken && hash.get("type") === "recovery"));
+    const expire = () => {
+      if (!active) return;
+      clearRecoveryParameters();
+      setIsExpired(true);
+      setIsPreparingSession(false);
+    };
+    const ready = () => {
+      if (!active) return;
+      window.clearTimeout(expiryTimer);
+      clearRecoveryParameters();
       setIsReady(true);
-      return true;
-    })()
-      .catch(() => {
-        setErrors(["Password reset session is invalid or expired. Request a new reset link."]);
-        return false;
-      })
-      .finally(() => {
-        setIsPreparingSession(false);
+      setIsPreparingSession(false);
+    };
+    if (!hasRecoveryLink || url.searchParams.has("error") || hash.has("error")) {
+      expire();
+      return () => { active = false; };
+    }
+
+    if (accessToken && refreshToken) {
+      let implicit: ReturnType<typeof createSupabaseImplicitRecoveryClient>;
+      try {
+        implicit = createSupabaseImplicitRecoveryClient();
+      } catch {
+        expire();
+        return () => { active = false; };
+      }
+      let recoverySession: { access_token: string; refresh_token: string } | null = null;
+      const { data: { subscription } } = implicit.auth.onAuthStateChange((event, session) => {
+        if (event === "PASSWORD_RECOVERY" && session) recoverySession = session;
       });
-  }, [searchParams]);
+      void (async () => {
+        const { error } = await implicit.auth.initialize();
+        if (!active) return;
+        if (error) { expire(); return; }
+        const session = recoverySession ?? (await implicit.auth.getSession()).data.session;
+        if (!session) { expire(); return; }
+        // The SSR client always uses PKCE and rejects an implicit URL fragment.
+        // Remove it before transferring the Auth-verified recovery session to cookies.
+        clearRecoveryParameters();
+        const supabase = createSupabaseBrowserClient();
+        const transferred = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token
+        });
+        if (transferred.error || !transferred.data.session) expire();
+        else ready();
+      })().catch(expire);
+      return () => { active = false; subscription.unsubscribe(); };
+    }
+
+    // The SSR browser client consumes PKCE codes during initialization.
+    // Exchanging the same code here would consume it twice.
+    let supabase: ReturnType<typeof createSupabaseBrowserClient>;
+    try {
+      supabase = createSupabaseBrowserClient();
+    } catch {
+      expire();
+      return () => { active = false; };
+    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event !== "PASSWORD_RECOVERY" || !session || !active) return;
+      recoverySessionReceived = true;
+      if (initializationSucceeded) ready();
+    });
+
+    void (async () => {
+      const { error } = await supabase.auth.initialize();
+      if (!active) return;
+      if (error) { expire(); return; }
+      initializationSucceeded = true;
+      if (tokenHash) {
+        if (url.searchParams.get("type") !== "recovery") { expire(); return; }
+        const result = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+        if (result.error || !result.data.session) expire();
+        else ready();
+        return;
+      }
+      if (recoverySessionReceived) ready();
+      else expiryTimer = window.setTimeout(expire, 5000);
+    })().catch(expire);
+    return () => { active = false; window.clearTimeout(expiryTimer); subscription.unsubscribe(); };
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submissionInFlightRef.current) return;
-    const validationErrors = passwordErrors(password);
-    if (password !== confirmPassword) validationErrors.push("Passwords must match.");
+    const validationErrors = managerPasswordIssues(password, confirmPassword);
     if (validationErrors.length) {
       setErrors(validationErrors);
       return;
@@ -96,8 +132,7 @@ function UpdatePasswordForm() {
     setIsSubmitting(true);
     setErrors([]);
     try {
-      const exchangeOk = await (exchangePromiseRef.current ?? Promise.resolve(false));
-      if (!exchangeOk) {
+      if (!isReady) {
         submissionInFlightRef.current = false;
         setIsSubmitting(false);
         return;
@@ -107,18 +142,17 @@ function UpdatePasswordForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password, confirmPassword })
       });
-      const updateResult = await updateResponse.json() as { updated?: boolean; message?: string; redirectTo?: string; error?: string };
+      const updateResult = await updateResponse.json() as { updated?: boolean; error?: string };
       if (!updateResponse.ok || !updateResult.updated) {
         setErrors([updateResult.error ?? "Password reset session is invalid or expired. Request a new reset link."]);
         submissionInFlightRef.current = false;
         setIsSubmitting(false);
         return;
       }
-      setMessage(updateResult.message ?? "Password updated successfully. Please log in again.");
-      setTimeout(() => {
-        startNavigationLoading();
-        router.replace((updateResult.redirectTo ?? "/login") as never);
-      }, 1500);
+      setPassword("");
+      setConfirmPassword("");
+      setIsSubmitting(false);
+      setIsSuccess(true);
     } catch {
       setErrors(["Password reset session is invalid or expired. Request a new reset link."]);
       submissionInFlightRef.current = false;
@@ -129,8 +163,10 @@ function UpdatePasswordForm() {
   return (
     <>
       <LoadingOverlay active={isSubmitting} />
+      {isSuccess ? <div className="mt-9 rounded-xl border border-lime-300/25 bg-lime-500/10 px-5 py-5 text-lime-50"><h2 className="text-2xl font-bold">Password Reset Successful</h2><p className="mt-2">Your password has been updated successfully. You can now sign in using your new password.</p><Link href="/login" className="mt-5 inline-flex rounded-xl bg-lime-500 px-5 py-3 font-bold text-black">Back to Login</Link></div> : null}
+      {isExpired ? <div className="mt-9 rounded-xl border border-red-300/25 bg-red-500/10 px-5 py-5 text-red-100"><h2 className="text-2xl font-bold">Password Reset Link Expired</h2><p className="mt-2">This password reset link is no longer valid. Please request a new password reset email.</p><Link href="/forgot-password" className="mt-5 inline-flex rounded-xl bg-lime-500 px-5 py-3 font-bold text-black">Request New Reset Link</Link></div> : null}
+      {!isSuccess && !isExpired ? (
       <form method="post" onSubmit={handleSubmit} className="mt-9 grid gap-6">
-        {message ? <p className="rounded-xl border border-lime-300/25 bg-lime-500/10 px-5 py-4 text-lime-50">{message}</p> : null}
         {isPreparingSession ? <p className="rounded-xl border border-lime-300/25 bg-lime-500/10 px-5 py-4 text-lime-50">Preparing your secure reset session...</p> : null}
         {errors.length ? <div className="rounded-xl border border-red-300/25 bg-red-500/10 px-5 py-4 text-red-100">{errors.map((error) => <p key={error}>{error}</p>)}</div> : null}
         <label className="block text-base font-semibold text-white/95">
@@ -150,10 +186,11 @@ function UpdatePasswordForm() {
             <input value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} type={showPassword ? "text" : "password"} className="min-w-0 flex-1 bg-transparent text-lg text-white outline-none placeholder:text-white/42" placeholder="Confirm new password" />
           </span>
         </label>
-        <button disabled={!isReady || isSubmitting || isPreparingSession || Boolean(message)} className="h-14 rounded-xl bg-lime-500 font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70">
+        <button disabled={!isReady || isSubmitting || isPreparingSession} className="h-14 rounded-xl bg-lime-500 font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70">
           {!isReady || isPreparingSession ? "Preparing..." : isSubmitting ? "Resetting..." : "Reset password"}
         </button>
       </form>
+      ) : null}
     </>
   );
 }
@@ -164,9 +201,7 @@ export default function UpdatePasswordPage() {
       <section className="w-full max-w-xl rounded-[30px] border border-white/22 bg-[linear-gradient(145deg,rgba(32,42,39,0.84),rgba(7,12,13,0.94))] p-8 shadow-[0_42px_120px_rgba(0,0,0,0.62)] sm:p-10">
         <h1 className="text-4xl font-extrabold">Reset password</h1>
         <p className="mt-4 text-lg leading-8 text-white/68">Choose a replacement password for your existing GreenChoice account.</p>
-        <Suspense fallback={<LoadingOverlay />}>
-          <UpdatePasswordForm />
-        </Suspense>
+        <UpdatePasswordForm />
         <Link href="/login" className="mt-7 inline-flex text-sm font-semibold text-lime-300 hover:text-lime-200">Back to login</Link>
       </section>
     </main>

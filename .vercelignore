@@ -1,0 +1,15 @@
+tmp/
+node_modules/
+.next/
+.next-stale-*/
+.local/
+.env
+.env.*
+coverage/
+playwright-report/
+test-results/
+artifacts/
+docs/
+ADD_STOCK_REVIEW.md
+CUSTOMER_REFACTOR_AUDIT.md
+LOCAL_POS_CHECKOUT_REPORT.md

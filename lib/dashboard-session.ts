@@ -1,18 +1,21 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { AccountLookupUnavailableError, AuthDependencyUnavailableError, classifySupabaseAuthSessionError, safeErrorName } from "@/lib/auth-errors";
 import { decideAccountAccess, type AccountAccessDecision, type AccountAccessDenialReason } from "@/lib/account-flow";
 import { STORE } from "@/lib/data";
 import { normalizeRole } from "@/lib/authorization";
+import { logServerEvent } from "@/lib/logger";
 import { bootstrapManualManagerProfile } from "@/lib/manual-manager-registration";
 import { getSessionState, updateSessionState } from "@/lib/session";
-import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
+import { clearSupabaseServerSessionCookies, createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { profileRoleToStaffRole } from "@/lib/staff-profile";
+import { billingAccessForSession } from "@/lib/billing/accounts";
 import type { AccountRole, StaffDTO, StaffRole, StoreAccessStatus, StoreMembershipDTO } from "@/lib/types";
 
 const DASHBOARD_PROFILE_SELECT =
-  "id, auth_user_id, user_id, store_id, email, full_name, first_name, surname, physical_address, city, province, postal_code, country, mobile_number, phone_number, alternative_phone, employee_id, role, is_active, account_status, account_setup_complete, profile_setup_complete, store_setup_complete, onboarding_completed_at, onboarding_complete_seen_at, temporary_password_active, password_changed_at, terms_accepted_at, privacy_policy_accepted_at, terms_version, privacy_policy_version, stores(id, slug, name, store_access_status, store_information_confirmed_at, store_information_confirmed_by)";
+  "id, auth_user_id, user_id, store_id, franchise_id, created_at, email, full_name, first_name, surname, physical_address, city, province, postal_code, country, mobile_number, phone_number, alternative_phone, employee_id, role, is_active, account_status, account_setup_complete, profile_setup_complete, store_setup_complete, onboarding_completed_at, onboarding_complete_seen_at, temporary_password_active, password_changed_at, terms_accepted_at, privacy_policy_accepted_at, terms_version, privacy_policy_version, stores(id, slug, name, store_access_status, store_information_confirmed_at, store_information_confirmed_by)";
 
 type DashboardStoreRow = {
   id: string;
@@ -26,6 +29,7 @@ type DashboardStoreRow = {
 export type DashboardStaffProfile = {
   id: string;
   auth_user_id: string;
+  created_at?: string | null;
   user_id?: string | null;
   store_id?: string | null;
   email: string;
@@ -41,7 +45,8 @@ export type DashboardStaffProfile = {
   phone_number?: string | null;
   alternative_phone?: string | null;
   employee_id?: string | null;
-  role: "admin" | "manager" | "receptionist";
+  role: "admin" | "manager" | "receptionist" | "franchise_admin";
+  franchise_id?: string | null;
   is_active?: boolean | null;
   account_status?: "active" | "restricted" | "deactivated" | "deleted" | null;
   account_setup_complete?: boolean | null;
@@ -59,7 +64,7 @@ export type DashboardStaffProfile = {
 };
 
 export type DashboardSession = {
-  user: User;
+  user: DashboardAuthenticatedUser;
   authUserId: string;
   staffProfileId: string;
   email: string;
@@ -85,6 +90,8 @@ export type DashboardSession = {
   staff: StaffDTO;
   profile: DashboardStaffProfile;
 };
+
+type DashboardAuthenticatedUser = Pick<User, "id" | "email" | "app_metadata">;
 
 export type DashboardAccessDenialReason = AccountAccessDenialReason;
 export type DashboardAccessDecision = AccountAccessDecision;
@@ -127,7 +134,7 @@ export async function auditAccessDenied(session: DashboardSession, action: strin
   });
 }
 
-function displayName(profile: DashboardStaffProfile, user: User) {
+function displayName(profile: DashboardStaffProfile, user: DashboardAuthenticatedUser) {
   const fullName = profile.full_name?.trim();
   const profileName = [profile.first_name, profile.surname].map((value) => value?.trim()).filter(Boolean).join(" ");
   return fullName || profileName || profile.email || user.email || "Staff";
@@ -138,7 +145,7 @@ function accountSetupComplete(profile: DashboardStaffProfile) {
   const legalAccepted = Boolean(profile.terms_accepted_at && profile.privacy_policy_accepted_at && profile.terms_version && profile.privacy_policy_version);
   const baseComplete = profile.account_setup_complete === true || profile.profile_setup_complete === true;
   if (!legalAccepted || !baseComplete) return false;
-  if (profile.role === "receptionist") {
+  if (profile.role === "receptionist" || profile.role === "franchise_admin") {
     return Boolean(
       profile.first_name &&
         profile.surname &&
@@ -163,39 +170,67 @@ function storeSetupComplete(profile: DashboardStaffProfile) {
   return profile.store_setup_complete === true && Boolean(profile.store_id && store?.store_information_confirmed_at && store.store_information_confirmed_by);
 }
 
-async function readProfileForUser(supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>, user: User) {
+async function readProfileForUser(supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>, user: DashboardAuthenticatedUser) {
   const { data, error } = await supabase
     .from("staff_profiles")
     .select(DASHBOARD_PROFILE_SELECT)
     .eq("auth_user_id", user.id)
     .maybeSingle<DashboardStaffProfile>();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new AccountLookupUnavailableError("staff_profile_lookup", error, "Unable to read the staff account.");
   return data;
+}
+
+async function handleClaimsFailure(error: unknown) {
+  const category = classifySupabaseAuthSessionError(error);
+  if (category === "invalid_session") {
+    await clearSupabaseServerSessionCookies();
+    await logServerEvent("warn", "invalid_session_cleared", {
+      route: "dashboard_session",
+      failureCategory: category,
+      errorName: safeErrorName(error)
+    });
+    return null;
+  }
+
+  await logServerEvent("warn", "session_refresh_failed", {
+    route: "dashboard_session",
+    failureCategory: category,
+    errorName: safeErrorName(error)
+  });
+  throw new AuthDependencyUnavailableError();
 }
 
 const getDashboardSessionCached = cache(async (): Promise<DashboardSession | null> => {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
 
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
-  if (!user) return null;
+  let claimsResult: Awaited<ReturnType<typeof supabase.auth.getClaims>>;
+  try {
+    claimsResult = await supabase.auth.getClaims();
+  } catch (error) {
+    return handleClaimsFailure(error);
+  }
+  const { data, error } = claimsResult;
+  if (error) return handleClaimsFailure(error);
+  if (!data?.claims.sub) return null;
+  const user: DashboardAuthenticatedUser = {
+    id: data.claims.sub,
+    email: typeof data.claims.email === "string" ? data.claims.email : undefined,
+    app_metadata: data.claims.app_metadata ?? {}
+  };
 
   return buildDashboardSession(supabase, user);
 });
 
-async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>, user: User): Promise<DashboardSession | null> {
+async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>, user: DashboardAuthenticatedUser): Promise<DashboardSession | null> {
   let profile = await readProfileForUser(supabase, user);
 
   if (!profile && await bootstrapManualManagerProfile(supabase, user)) {
     profile = await readProfileForUser(supabase, user);
   }
 
-  if (!profile || profileAccountStatus(profile) === "deleted") {
-    await supabase.auth.signOut();
-    return null;
-  }
+  if (!profile || profileAccountStatus(profile) === "deleted") return null;
 
   const role = profileRoleToStaffRole(profile.role);
   const normalizedRole = normalizeRole(role);
@@ -284,15 +319,15 @@ export async function getDashboardSession() {
   return getDashboardSessionCached();
 }
 
-export async function getDashboardSessionForVerifiedUser(user: User) {
-  const supabase = await createSupabaseServerClient();
+export async function getDashboardSessionForVerifiedUser(user: User, verifiedClient?: SupabaseClient) {
+  const supabase = verifiedClient ?? await createSupabaseServerClient();
   if (!supabase) return null;
   return buildDashboardSession(supabase, user);
 }
 
 export async function requireDashboardSession() {
   const session = await getDashboardSession();
-  if (!session) throw new Error("Staff authentication required.");
+  if (!session) redirect("/login");
   return session;
 }
 
@@ -311,6 +346,9 @@ export async function requireDashboardRoleSession(roles: AccountRole[]) {
     redirect("/denied" as never);
   }
 
+  const billing = await billingAccessForSession(session);
+  if (billing !== "allowed") redirect((billing === "owner_due" ? "/billing" : "/billing/restricted") as never);
+
   return session;
 }
 
@@ -324,6 +362,8 @@ export async function requireUnrestrictedDashboardSession(role: "manager" | "rec
     await auditAccessDenied(session, "restricted_dashboard_access_attempt", decision.reason);
     redirect(restrictedPathForSession(session));
   }
+  const billing = await billingAccessForSession(session);
+  if (billing !== "allowed") redirect((billing === "owner_due" ? "/billing" : "/billing/restricted") as never);
   return session;
 }
 
@@ -336,6 +376,8 @@ export async function requireActiveManagerDashboardSession() {
     await auditAccessDenied(session, "restricted_dashboard_access_attempt", decision.reason);
     redirect(restrictedPathForSession(session));
   }
+  const billing = await billingAccessForSession(session);
+  if (billing !== "allowed") redirect((billing === "owner_due" ? "/billing" : "/billing/restricted") as never);
   if (!session.assignedStoreId) redirect("/manager/setup/store" as never);
   return session;
 }

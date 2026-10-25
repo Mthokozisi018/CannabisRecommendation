@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isCustomerExperienceEnabled } from "@/lib/feature-flags";
+import { refreshSupabaseSession } from "@/lib/supabase/proxy";
 
 const legacyRoutePrefixes = [
   "/account",
@@ -7,12 +8,25 @@ const legacyRoutePrefixes = [
   "/browse",
   "/carts",
   "/products",
-  "/register",
   "/dashboard/owner"
+];
+
+const supabaseSessionPrefixes = [
+  "/dashboard",
+  "/manager/",
+  "/staff/",
+  "/customer",
+  "/auth/callback",
+  "/update-password",
+  "/api/auth/access-decision",
+  "/api/auth/customer-",
+  "/api/auth/password-update",
+  "/api/customer/"
 ];
 
 const customerPagePrefixes = ["/customer", "/forgot-account", "/auth/callback"];
 const customerApiPrefixes = ["/api/customer/", "/api/auth/customer-"];
+const retiredRoutePrefixes = ["/staff/invitation"];
 
 function attachCsrfCookie(response: NextResponse, request: NextRequest) {
   if (!request.cookies.get("csrf_token")) {
@@ -53,8 +67,12 @@ function contentSecurityPolicy(nonce: string) {
     imageSources.push(supabaseOrigin);
   }
 
-  const scriptSources = ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'"];
-  if (process.env.NODE_ENV !== "production") scriptSources.push("'unsafe-eval'");
+  const scriptSources = ["'self'", `'nonce-${nonce}'`];
+  if (process.env.NODE_ENV === "production") {
+    scriptSources.push("'strict-dynamic'");
+  } else {
+    scriptSources.push("'unsafe-eval'", "https://va.vercel-scripts.com");
+  }
 
   return [
     "default-src 'self'",
@@ -78,7 +96,7 @@ function secureResponse(response: NextResponse, request: NextRequest, requestId:
   response.headers.set("X-Request-ID", requestId);
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  response.headers.set("Permissions-Policy", `${request.nextUrl.pathname.startsWith("/register/") ? "camera=(self)" : "camera=()"}, microphone=(), geolocation=(self), payment=(), usb=()`);
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Cross-Origin-Resource-Policy", "same-site");
   if (process.env.NODE_ENV === "production") {
@@ -92,6 +110,7 @@ function secureResponse(response: NextResponse, request: NextRequest, requestId:
     pathname.startsWith("/manager/") ||
     pathname.startsWith("/staff/") ||
     pathname.startsWith("/customer") ||
+    pathname.startsWith("/register") ||
     pathname.startsWith("/auth/") ||
     pathname === "/login" ||
     pathname === "/forgot-password" ||
@@ -107,6 +126,7 @@ function secureResponse(response: NextResponse, request: NextRequest, requestId:
     );
     response.headers.set("Vary", Array.from(vary).join(", "));
   }
+  if (pathname.startsWith("/register") || pathname.startsWith("/api/registration/")) response.headers.set("Referrer-Policy", "no-referrer");
   return attachCsrfCookie(response, request);
 }
 
@@ -117,15 +137,64 @@ function loginRedirect(request: NextRequest, requestId: string, nonce: string, e
   return secureResponse(NextResponse.redirect(url), request, requestId, nonce);
 }
 
-async function protectedDashboardResponse(request: NextRequest, requestId: string, nonce: string) {
-  const { pathname } = request.nextUrl;
-  if (!pathname.startsWith("/dashboard/manager") && !pathname.startsWith("/dashboard/receptionist")) return null;
-  const hasSupabaseSession = request.cookies.getAll().some(({ name }) => name.startsWith("sb-") && name.includes("auth-token"));
-  if (!hasSupabaseSession) return loginRedirect(request, requestId, nonce);
+function unavailableResponse(request: NextRequest, requestId: string, nonce: string) {
+  return secureResponse(
+    new NextResponse("Authentication is temporarily unavailable. Please try again.", {
+      status: 503,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Retry-After": "5"
+      }
+    }),
+    request,
+    requestId,
+    nonce
+  );
+}
 
-  const headers = requestHeadersWithSecurityContext(request, requestId, nonce);
-  const response = NextResponse.next({ request: { headers } });
-  return secureResponse(response, request, requestId, nonce);
+function copyResponseCookies(source: NextResponse, target: NextResponse) {
+  for (const cookie of source.cookies.getAll()) target.cookies.set(cookie);
+  return target;
+}
+
+function isProtectedWorkstationPath(pathname: string) {
+  return pathname.startsWith("/dashboard") || pathname.startsWith("/manager/") || pathname.startsWith("/staff/");
+}
+
+function shouldRefreshSupabaseSession(pathname: string) {
+  return supabaseSessionPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
+}
+
+function createNextResponse(request: NextRequest, requestId: string, nonce: string) {
+  return NextResponse.next({
+    request: { headers: requestHeadersWithSecurityContext(request, requestId, nonce) }
+  });
+}
+
+async function protectedWorkstationResponse(request: NextRequest, requestId: string, nonce: string) {
+  const refreshed = await refreshSupabaseSession(request, () => createNextResponse(request, requestId, nonce));
+  if (refreshed.status === "unavailable") {
+    return copyResponseCookies(refreshed.response, unavailableResponse(request, requestId, nonce));
+  }
+  if (!refreshed.authenticated) {
+    const error = refreshed.reason === "invalid_session" ? "session-expired" : undefined;
+    return copyResponseCookies(refreshed.response, loginRedirect(request, requestId, nonce, error));
+  }
+  return secureResponse(refreshed.response, request, requestId, nonce);
+}
+
+async function nextResponseWithSession(request: NextRequest, requestId: string, nonce: string) {
+  const createResponse = () => createNextResponse(request, requestId, nonce);
+  if (!shouldRefreshSupabaseSession(request.nextUrl.pathname)) return createResponse();
+  return (await refreshSupabaseSession(request, createResponse)).response;
+}
+
+function isCustomerPage(pathname: string) {
+  return customerPagePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function isCustomerApi(pathname: string) {
+  return customerApiPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(prefix));
 }
 
 export async function proxy(request: NextRequest) {
@@ -134,28 +203,34 @@ export async function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const isLegacyRoute = pathname === "/" || legacyRoutePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
+  if (retiredRoutePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    return secureResponse(new NextResponse("Not found.", { status: 404 }), request, requestId, nonce);
+  }
+
   if (!isCustomerExperienceEnabled()) {
-    const customerApi = customerApiPrefixes.some((prefix) => pathname.startsWith(prefix));
-    if (customerApi) {
-      return secureResponse(NextResponse.json({ error: "Not found." }, { status: 404 }), request, requestId, nonce);
+    if (isCustomerApi(pathname)) {
+      return secureResponse(
+        NextResponse.json({ error: "Not found." }, { status: 404 }),
+        request,
+        requestId,
+        nonce
+      );
     }
-    const customerPage = customerPagePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-    if (customerPage) return loginRedirect(request, requestId, nonce);
+    if (isCustomerPage(pathname)) return loginRedirect(request, requestId, nonce);
   }
 
   if (isLegacyRoute) {
     return loginRedirect(request, requestId, nonce);
   }
 
-  const dashboardResponse = await protectedDashboardResponse(request, requestId, nonce);
-  if (dashboardResponse) return dashboardResponse;
+  if (isProtectedWorkstationPath(pathname)) {
+    return protectedWorkstationResponse(request, requestId, nonce);
+  }
 
-  const response = NextResponse.next({
-    request: { headers: requestHeadersWithSecurityContext(request, requestId, nonce) }
-  });
+  const response = await nextResponseWithSession(request, requestId, nonce);
   return secureResponse(response, request, requestId, nonce);
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|images/|placeholder-images/|backgrounds/|legal/|.*\\.(?:png|jpg|jpeg|webp|svg|gif|ico|pdf|css|js|map|txt)$).*)"]
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|images/|placeholder-images/|backgrounds/|.*\\.(?:png|jpg|jpeg|webp|svg|gif|ico|pdf|css|js|map|txt)$).*)"]
 };

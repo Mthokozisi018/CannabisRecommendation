@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { configuredApplicationUrl } from "@/lib/app-url";
-import { verifyOrigin } from "@/lib/security";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { RequestOriginError, verifyOrigin } from "@/lib/security";
+import { createSupabaseRecoveryClient } from "@/lib/supabase/recovery";
 
 const schema = z.object({ email: z.string().trim().toLowerCase().email().max(320) }).strict();
 const neutralMessage = "If an account exists for this email, a password reset link has been sent.";
@@ -16,13 +16,14 @@ export async function POST(request: Request) {
     await verifyOrigin();
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ message: neutralMessage }, { headers: privateHeaders });
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseRecoveryClient();
     if (supabase) {
       await supabase.auth.resetPasswordForEmail(parsed.data.email, {
         redirectTo: `${configuredApplicationUrl()}/update-password?flow=recovery`
       });
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestOriginError) return NextResponse.json({ error: "Invalid request origin." }, { status: 403, headers: privateHeaders });
     // Password recovery remains deliberately account-enumeration neutral.
   }
   return NextResponse.json({ message: neutralMessage }, { headers: privateHeaders });

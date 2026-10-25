@@ -2,7 +2,10 @@ import "server-only";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { hasManualManagerMarker } from "@/lib/manual-manager-marker";
 
-export async function bootstrapManualManagerProfile(supabase: SupabaseClient, user: User) {
+export async function bootstrapManualManagerProfile(
+  supabase: SupabaseClient,
+  user: Pick<User, "app_metadata">
+) {
   if (!hasManualManagerMarker(user.app_metadata)) return false;
 
   // The marker check above is only a fast preflight. The database function is

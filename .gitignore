@@ -6,11 +6,14 @@
 node_modules/
 .vercel/
 .next/
+.next-stale-*/
 dist/
 build/
 coverage/
 playwright-report/
 test-results/
+tmp/
+.local/master-supply-demo/
 tsconfig.tsbuildinfo
 supabase/.temp/
 

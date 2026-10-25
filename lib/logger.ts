@@ -33,7 +33,8 @@ function redactString(value: string) {
     process.env.UPSTASH_REDIS_REST_TOKEN,
     process.env.CSRF_SECRET,
     process.env.SESSION_SIGNING_SECRET,
-    process.env.GREENCHOICE_PASSWORD_FINGERPRINT_SECRET
+    process.env.GREENCHOICE_PASSWORD_FINGERPRINT_SECRET,
+    process.env.READINESS_DIAGNOSTIC_SECRET
   ].filter((item): item is string => Boolean(item && item.length >= 8));
   for (const secret of configuredSecrets) safe = safe.split(secret).join("[REDACTED]");
   return safe.slice(0, 500);

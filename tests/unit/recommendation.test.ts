@@ -23,5 +23,6 @@ describe("filter parsing", () => {
     expect(filters.thcMin).toBe(10);
     expect(filters.priceMax).toBe(300);
     expect(filters.inStockOnly).toBe(true);
+    expect(parseFilters({ thcMin: "", priceMax: "invalid" })).toEqual({ inStockOnly: false });
   });
 });

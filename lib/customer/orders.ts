@@ -151,7 +151,7 @@ function mapSummary(row: OrderRow): CustomerOrderSummary {
 }
 
 export function isCurrentOrder(status: string) {
-  return ["pending", "placed", "preparing", "ready_for_collection", "out_for_delivery"].includes(status);
+  return ["pending", "placed", "confirmed", "preparing", "ready_for_collection", "out_for_delivery"].includes(status);
 }
 
 export async function listCustomerOrders(): Promise<CustomerOrderSummary[]> {

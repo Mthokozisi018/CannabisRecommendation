@@ -9,7 +9,7 @@ export type StaffProfileRow = {
   full_name?: string | null;
   first_name?: string | null;
   surname?: string | null;
-  role: "admin" | "manager" | "receptionist";
+  role: "admin" | "manager" | "receptionist" | "franchise_admin";
   is_active?: boolean | null;
   account_status?: "active" | "restricted" | "deactivated" | "deleted" | null;
   account_setup_complete?: boolean | null;
@@ -39,12 +39,13 @@ export type CurrentStaffUser = {
   authUserId: string;
   email: string;
   fullName: string;
-  role: "admin" | "manager" | "receptionist";
+  role: "admin" | "manager" | "receptionist" | "franchise_admin";
   isActive: boolean;
 };
 
 export function profileRoleToStaffRole(role: StaffProfileRow["role"]): StaffRole {
   if (role === "admin") return "admin";
+  if (role === "franchise_admin") return "franchise_admin";
   return role === "manager" ? "manager" : "receptionist";
 }
 

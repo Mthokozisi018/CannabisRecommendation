@@ -7,7 +7,8 @@ const optionalNumber = z
     if (value === undefined || value === null || value === "") return undefined;
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
-  });
+  })
+  .optional();
 
 export const filtersSchema = z.object({
   query: z.string().trim().max(80).optional().catch(undefined),

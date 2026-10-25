@@ -1,8 +1,13 @@
 import "server-only";
 
 import { Redis } from "@upstash/redis";
+import { isTemporaryDependencyError, safeErrorName } from "@/lib/auth-errors";
+import { logServerEvent } from "@/lib/logger";
 
 let redisClient: Redis | null | undefined;
+let lastRedisUnavailableLogAt = 0;
+const REDIS_UNAVAILABLE_LOG_INTERVAL_MS = 30_000;
+const DEFAULT_CACHE_REDIS_TIMEOUT_MS = 750;
 
 export const GREENCHOICE_CACHE_TTLS_SECONDS = {
   managerDashboardSummary: 120,
@@ -19,6 +24,23 @@ function keyPart(value: string | null | undefined) {
   return encodeURIComponent(normalized.toLowerCase());
 }
 
+function cacheRedisTimeoutMs() {
+  const configured = Number(process.env.GREENCHOICE_CACHE_REDIS_TIMEOUT_MS ?? DEFAULT_CACHE_REDIS_TIMEOUT_MS);
+  if (!Number.isFinite(configured)) return DEFAULT_CACHE_REDIS_TIMEOUT_MS;
+  return Math.min(2_000, Math.max(100, Math.round(configured)));
+}
+
+async function logRedisUnavailable(operation: string, error: unknown) {
+  const now = Date.now();
+  if (now - lastRedisUnavailableLogAt < REDIS_UNAVAILABLE_LOG_INTERVAL_MS) return;
+  lastRedisUnavailableLogAt = now;
+  await logServerEvent("warn", "redis_unavailable", {
+    operation,
+    failureCategory: isTemporaryDependencyError(error) ? "temporary_service_failure" : "cache_error",
+    errorName: safeErrorName(error)
+  });
+}
+
 export function getRedisClient() {
   if (redisClient !== undefined) return redisClient;
 
@@ -30,8 +52,14 @@ export function getRedisClient() {
   }
 
   try {
-    redisClient = new Redis({ url, token });
-  } catch {
+    redisClient = new Redis({
+      url,
+      token,
+      retry: false,
+      signal: () => AbortSignal.timeout(cacheRedisTimeoutMs())
+    });
+  } catch (error) {
+    void logRedisUnavailable("client_initialization", error);
     redisClient = null;
   }
 
@@ -44,7 +72,8 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 
   try {
     return await redis.get<T>(key);
-  } catch {
+  } catch (error) {
+    await logRedisUnavailable("get", error);
     return null;
   }
 }
@@ -55,7 +84,8 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Pr
 
   try {
     await redis.set(key, value, { ex: ttlSeconds });
-  } catch {
+  } catch (error) {
+    await logRedisUnavailable("set", error);
     // Redis is only an accelerator. Supabase remains the source of truth.
   }
 }
@@ -66,7 +96,8 @@ export async function cacheDelete(key: string): Promise<void> {
 
   try {
     await redis.del(key);
-  } catch {
+  } catch (error) {
+    await logRedisUnavailable("delete", error);
     // Cache invalidation failures must not block committed Supabase writes.
   }
 }
@@ -78,13 +109,14 @@ export async function cacheDeleteMany(keys: string[]): Promise<void> {
 
   try {
     await redis.del(...uniqueKeys);
-  } catch {
+  } catch (error) {
+    await logRedisUnavailable("delete_many", error);
     // Cache invalidation failures must not block committed Supabase writes.
   }
 }
 
 export function managerDashboardSummaryCacheKey(storeId: string) {
-  return `manager-dashboard-summary:${keyPart(storeId)}`;
+  return `manager-dashboard-summary:net-v1:${keyPart(storeId)}`;
 }
 
 export function posProductsCacheKey(storeId: string, category?: string, subcategory?: string) {

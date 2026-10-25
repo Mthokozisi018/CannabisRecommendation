@@ -160,7 +160,6 @@ function SectionTitle({ icon, title, body }: { icon: ReactNode; title: string; b
 export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustChangePassword, accountEmail }: { legalDocuments: LegalDocumentsStatus; initialValues: ManagerAccountInitialValues; mustChangePassword: boolean; accountEmail: string }) {
   const [state, formAction, pending] = useActionState(completeManagerAccountSetupAction, initialState);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const values = state.accountValues ?? initialValues;
 
   return (
@@ -208,7 +207,6 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your new password"
                   icon={<LockKeyhole size={21} />}
-                  minLength={12}
                   autoComplete="new-password"
                   trailing={
                     <button type="button" onClick={() => setShowPassword((value) => !value)} className="grid size-9 place-items-center rounded-full text-lime-300 transition hover:bg-lime-400/10" aria-label={showPassword ? "Hide password" : "Show password"}>
@@ -216,30 +214,8 @@ export function ManagerAccountSetupForm({ legalDocuments, initialValues, mustCha
                     </button>
                   }
                 />
-                <Field
-                  solid
-                  label="Confirm New Password"
-                  name="confirmPermanentPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your new password"
-                  icon={<LockKeyhole size={21} />}
-                  minLength={12}
-                  autoComplete="new-password"
-                  trailing={
-                    <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="grid size-9 place-items-center rounded-full text-lime-300 transition hover:bg-lime-400/10" aria-label={showConfirmPassword ? "Hide password" : "Show password"}>
-                      {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  }
-                />
               </div>
-              <div className="mt-3 rounded-lg border border-[#466757] bg-[#091812] p-3">
-                <p className="text-sm font-semibold text-white">Password must contain:</p>
-                <div className="mt-2 grid gap-2 text-xs text-white/74 sm:grid-cols-2 lg:grid-cols-3">
-                  {["At least 12 characters", "At least 1 uppercase letter", "At least 1 lowercase letter", "At least 1 number", "At least 1 special character", "Passwords match"].map((item) => (
-                    <span key={item} className="flex items-center gap-2"><CheckCircle2 size={16} className="text-lime-400" />{item}</span>
-                  ))}
-                </div>
-              </div>
+              <p className="mt-3 text-sm text-white/68">Use at least 12 characters with uppercase, lowercase, a number and a symbol.</p>
             </section>
           ) : null}
 
@@ -288,27 +264,7 @@ export function StoreRegistrationForm({ initialValues }: { initialValues: StoreR
       <Progress current={2} />
       <form action={formAction} onInput={updateValidity} onChange={updateValidity} className="mx-auto mt-10 max-w-6xl rounded-[22px] border border-lime-400/55 bg-[linear-gradient(145deg,rgba(6,13,11,.9),rgba(0,0,0,.88))] p-6 shadow-[0_30px_120px_rgba(0,0,0,.52)] sm:p-9">
         <SectionTitle icon={<Store size={34} />} title="Store Information" body="Fill in your store details below." />
-        <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <Field label="Store Name" name="storeName" defaultValue={initialValues.storeName} placeholder="Enter store name" icon={<Store size={21} />} minLength={2} maxLength={100} />
-          <PhoneField label="Store Phone Number (Owner)" name="storePhoneNumber" defaultValue={initialValues.storePhoneNumber} />
-        </div>
-        <div className="mt-6">
-          <Field label="Store Physical Address" name="physicalStoreAddress" defaultValue={initialValues.physicalStoreAddress} placeholder="Enter store street address" icon={<MapPin size={21} />} minLength={5} />
-        </div>
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
-          <Field label="City / Town" name="city" defaultValue={initialValues.city} placeholder="Enter city or town" icon={<Building2 size={21} />} minLength={2} />
-          <ProvinceField defaultValue={initialValues.province} />
-        </div>
-        <div className="mt-6 max-w-md">
-          <Field label="Postal Code" name="postalCode" defaultValue={initialValues.postalCode} placeholder="e.g. 0001" icon={<Mail size={21} />} pattern="[0-9]{4}" inputMode="numeric" />
-        </div>
-        <label className="mt-8 flex items-start gap-4 rounded-lg border border-lime-400/20 bg-lime-400/10 p-5 text-white">
-          <input name="informationAccurate" type="checkbox" required className="mt-1 size-5 accent-lime-500" />
-          <span>
-            <span className="block font-semibold">I confirm that all the information provided is accurate and correct.</span>
-            <span className="mt-2 block text-white/62">This information will be used to set up your store in the system.</span>
-          </span>
-        </label>
+        <StoreRegistrationFields initialValues={initialValues} />
         {state.message ? <p className="mt-6 rounded-lg border border-red-300/25 bg-red-500/10 px-4 py-3 text-red-100">{state.message}</p> : null}
         <button disabled={pending || !formValid} className="mt-8 inline-flex min-h-16 w-full items-center justify-center gap-4 rounded-lg bg-[linear-gradient(135deg,#c8ff15,#76d719)] px-6 text-xl font-black text-black shadow-[0_18px_50px_rgba(157,255,24,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
           {pending ? "Completing..." : "Complete Store Registration"}
@@ -364,4 +320,30 @@ export function ManagerOnboardingCompleteScreen() {
       </section>
     </Shell>
   );
+}
+
+function StoreRegistrationFields({ initialValues, informationAccurate = false }: { initialValues: StoreRegistrationInitialValues; informationAccurate?: boolean }) {
+  return <>
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          <Field label="Store Name" name="storeName" defaultValue={initialValues.storeName} placeholder="Enter store name" icon={<Store size={21} />} minLength={2} maxLength={100} />
+          <PhoneField label="Store Phone Number (Owner)" name="storePhoneNumber" defaultValue={initialValues.storePhoneNumber} />
+        </div>
+        <div className="mt-6">
+          <Field label="Store Physical Address" name="physicalStoreAddress" defaultValue={initialValues.physicalStoreAddress} placeholder="Enter store street address" icon={<MapPin size={21} />} minLength={5} />
+        </div>
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <Field label="City / Town" name="city" defaultValue={initialValues.city} placeholder="Enter city or town" icon={<Building2 size={21} />} minLength={2} />
+          <ProvinceField defaultValue={initialValues.province} />
+        </div>
+        <div className="mt-6 max-w-md">
+          <Field label="Postal Code" name="postalCode" defaultValue={initialValues.postalCode} placeholder="e.g. 0001" icon={<Mail size={21} />} pattern="[0-9]{4}" inputMode="numeric" />
+        </div>
+        <label className="mt-8 flex items-start gap-4 rounded-lg border border-lime-400/20 bg-lime-400/10 p-5 text-white">
+          <input name="informationAccurate" type="checkbox" required defaultChecked={informationAccurate} className="mt-1 size-5 accent-lime-500" />
+          <span>
+            <span className="block font-semibold">I confirm that all the information provided is accurate and correct.</span>
+            <span className="mt-2 block text-white/62">This information will be used to set up your store in the system.</span>
+          </span>
+        </label>
+  </>;
 }

@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { getFlowerCultivationPlaceholder, getPreRollCultivationCardImage, getProductImage } from "@/lib/product-images";
+import { getCategoryPlaceholder, getFlowerCultivationPlaceholder, getPreRollCultivationCardImage, getProductImage } from "@/lib/product-images";
 
 describe("product image placeholders", () => {
+  it("maps inventory categories to stable images and unknown categories to GreenChoice branding", () => {
+    expect(["Flower", "Pre-Rolls", "Edibles", "Vape Cartridges", "Concentrates", "Accessories"].map(getCategoryPlaceholder)).toEqual([
+      "/images/placeholders/flower.png",
+      "/images/placeholders/pre-rolls.png",
+      "/images/placeholders/edibles.png",
+      "/images/placeholders/vape-cartridges.png",
+      "/images/placeholders/concentrates.png",
+      "/images/placeholders/accessories.png"
+    ]);
+    expect(getCategoryPlaceholder("Other")).toBe("/branding/greenchoice-logo.png");
+  });
   it("maps Flower cultivation types to dedicated placeholders", () => {
     expect(getFlowerCultivationPlaceholder("Indoor")).toBe("/images/flower-placeholders/indoor.png");
     expect(getFlowerCultivationPlaceholder(" greenhouse ")).toBe("/images/flower-placeholders/greenhouse.png");
@@ -46,5 +57,8 @@ describe("product image placeholders", () => {
     expect(getProductImage({ category: "Pre-Rolls", cultivationType: "Indoor" })).toBe("/placeholder-images/PreRolls.png");
     expect(getProductImage({ category: "Vape Cartridges", cultivationType: "Outdoor" })).toBe("/placeholder-images/Vape Cartige .png");
     expect(getProductImage({ category: "Edibles", subcategory: "Gummies" })).toBe("/placeholder-images/gummies.png");
+    expect(getProductImage({ category: "Edibles", subcategory: "Cookies" })).toBe("/placeholder-images/backed Goods.png");
+    expect(getProductImage({ category: "Accessories", subcategory: "Storage Containers" })).toBe("/placeholder-images/Storage Tin.png");
+    expect(getProductImage({ category: "Accessories", subcategory: "Trays" })).toBe("/placeholder-images/tray.png");
   });
 });

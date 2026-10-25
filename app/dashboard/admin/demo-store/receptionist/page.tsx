@@ -19,7 +19,6 @@ export default async function AdminDemoReceptionistDashboardPage() {
         unavailableReason={catalog.unavailableReason}
         profileLabel="Admin Demo"
         storeName={demoStore.name}
-        backToDashboardHref="/dashboard/admin/demo-store/manager"
         isDemo
         checkoutAction={checkoutAdminDemoSaleAction}
       />
