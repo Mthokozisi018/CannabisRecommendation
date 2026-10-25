@@ -203,7 +203,8 @@ describe("critical repository security contracts", () => {
     expect(source("lib/environment.ts")).toContain("UPSTASH_REDIS_REST_URL");
     expect(source("lib/environment.ts")).toContain('process.env.VERCEL_ENV === "preview"');
     expect(source("lib/environment.ts")).toContain('return "staging"');
-    expect(source("lib/rate-limit.ts")).toContain("if (process.env.NODE_ENV === \"production\") throw new RateLimitUnavailableError()");
+    expect(source("lib/rate-limit.ts")).toContain('admin.rpc("consume_request_rate_limit"');
+    expect(source("lib/rate-limit.ts")).toContain("throw new RateLimitUnavailableError()");
   });
 
   it("grants only the server role the customer cart write privileges required by the API", () => {

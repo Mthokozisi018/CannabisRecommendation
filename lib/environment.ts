@@ -12,7 +12,10 @@ export function greenChoiceEnvironment(): GreenChoiceEnvironment {
       throw new Error("A Vercel preview must use the staging environment identity.");
     }
     if (process.env.VERCEL_ENV === "production" && value !== "production") {
-      throw new Error("A Vercel production deployment must use the production environment identity.");
+      const stagingProjectId = process.env.STAGING_VERCEL_PROJECT_ID?.trim();
+      if (value !== "staging" || !stagingProjectId || process.env.VERCEL_PROJECT_ID !== stagingProjectId) {
+        throw new Error("A Vercel production deployment must use the production environment identity or the designated staging project.");
+      }
     }
     return value;
   }

@@ -1,5 +1,7 @@
 import "server-only";
 import crypto from "node:crypto";
+import { logServerEvent } from "@/lib/logger";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 type RateLimitInput = {
   namespace: string;
@@ -19,6 +21,9 @@ export type RateLimitResult = {
 
 type LocalWindow = { count: number; resetAt: number };
 type RedisRestCredentials = { endpoint: string; token: string };
+class RedisProviderError extends Error {
+  constructor(readonly category: string) { super("Redis rate-limit request failed."); }
+}
 const localWindows = new Map<string, LocalWindow>();
 
 export class RateLimitExceededError extends Error {
@@ -107,7 +112,11 @@ async function runDistributedRateLimit(key: string, input: RateLimitInput, crede
     cache: "no-store",
     signal: AbortSignal.timeout(1_500)
   });
-  if (!response.ok) throw new RateLimitUnavailableError();
+  if (!response.ok) {
+    throw new RedisProviderError(response.status === 401 || response.status === 403
+      ? "authentication"
+      : response.status >= 500 ? "service_error" : "http_error");
+  }
 
   const payload = await response.json() as Array<{ result?: number | null; error?: string }>;
   if (!Array.isArray(payload) || payload.some((item) => item?.error)) {
@@ -129,23 +138,69 @@ async function runDistributedRateLimit(key: string, input: RateLimitInput, crede
   };
 }
 
+function redisFailureCategory(error: unknown) {
+  if (error instanceof RedisProviderError) return error.category;
+  if (error instanceof Error && error.name === "TimeoutError") return "timeout";
+  if (error instanceof TypeError) return "network";
+  return "invalid_response";
+}
+
+async function runSupabaseRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) throw new RateLimitUnavailableError();
+  const { data, error } = await admin.rpc("consume_request_rate_limit", {
+    p_key_hash: key,
+    p_limit: input.limit,
+    p_window_ms: input.windowMs
+  });
+  if (error || !Array.isArray(data) || data.length !== 1) throw new RateLimitUnavailableError();
+  const count = Number(data[0]?.request_count);
+  const resetAt = Date.parse(data[0]?.reset_at);
+  if (!Number.isInteger(count) || count < 1 || !Number.isFinite(resetAt) || resetAt <= Date.now()) {
+    throw new RateLimitUnavailableError();
+  }
+  const allowed = count <= input.limit;
+  return {
+    allowed,
+    limit: input.limit,
+    remaining: Math.max(0, input.limit - count),
+    retryAfterSeconds: allowed ? 0 : Math.max(1, Math.ceil((resetAt - Date.now()) / 1000)),
+    resetAt
+  };
+}
+
 async function distributedRateLimit(key: string, input: RateLimitInput): Promise<RateLimitResult> {
   const candidates = redisCredentialCandidates();
-  if (candidates.length === 0) {
-    if (process.env.NODE_ENV === "production") throw new RateLimitUnavailableError();
-    return localRateLimit(key, input);
+  if (candidates.length === 0 && process.env.NODE_ENV === "production") {
+    await logServerEvent("warn", "rate_limit_provider_failed", { service: "upstash_redis", category: "missing_configuration", namespace: input.namespace });
   }
-
-  for (const credentials of candidates) {
+  for (const [index, credentials] of candidates.entries()) {
     try {
       return await runDistributedRateLimit(key, input, credentials);
-    } catch {
-      // Try the shared Upstash cache credentials before failing closed.
+    } catch (error) {
+      await logServerEvent("warn", "rate_limit_provider_failed", {
+        service: "upstash_redis",
+        provider: index === 0 ? "primary" : "secondary",
+        category: redisFailureCategory(error),
+        namespace: input.namespace
+      });
     }
   }
-  if (input.localFallbackWhenConfiguredProviderFails) {
-    return localRateLimit(key, input);
+  if (process.env.NODE_ENV === "production") {
+    try {
+      const result = await runSupabaseRateLimit(key, input);
+      await logServerEvent("warn", "rate_limit_fallback_used", { service: "supabase_rpc", namespace: input.namespace });
+      return result;
+    } catch {
+      await logServerEvent("error", "rate_limit_provider_failed", {
+        service: "supabase_rpc",
+        category: "unavailable_or_invalid_response",
+        namespace: input.namespace
+      });
+      throw new RateLimitUnavailableError();
+    }
   }
+  if (candidates.length === 0 || input.localFallbackWhenConfiguredProviderFails) return localRateLimit(key, input);
   throw new RateLimitUnavailableError();
 }
 
