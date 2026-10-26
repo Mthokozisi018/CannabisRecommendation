@@ -7,6 +7,7 @@ const uploadSentrySourceMaps = isCi && process.env.SENTRY_UPLOAD_SOURCE_MAPS ===
 const nextConfig: NextConfig = {
   typedRoutes: true,
   output: "standalone",
+  serverExternalPackages: ["tesseract.js", "tesseract.js-core", "@tesseract.js-data/eng"],
   outputFileTracingIncludes: {
     "/api/registration/[token]": [
       "./node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz",
