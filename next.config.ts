@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["tesseract.js", "tesseract.js-core", "@tesseract.js-data/eng"],
   outputFileTracingIncludes: {
-    "/api/registration/[token]": [
+    "/api/registration/*": [
       "./node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz",
       "./node_modules/tesseract.js/src/**/*",
       "./node_modules/tesseract.js/package.json",
