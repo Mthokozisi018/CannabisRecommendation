@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ArrowRight, ChevronsUpDown, MapPin, UserRound } from "lucide-react";
 import { periodStoreTotals, type DailySnapshot, type OverviewPeriod } from "@/lib/franchise/overview-periods";
 import type { FranchiseStore } from "@/lib/franchise/types";
-import { dateLabel, Empty, money, Status, StoreImage } from "./UI";
+import { Empty, money, Status, StoreImage } from "./UI";
 import styles from "./Franchise.module.css";
 
 export type StoreRow = {
@@ -48,25 +48,24 @@ export function StorePerformanceTable({ stores, period, snapshot, header, search
     {header}
     <div className={styles.tableWrap} role="region" aria-label="Store performance results" tabIndex={0}>
       <table className={`${styles.table} ${styles.performanceTable}`}>
-        <colgroup>{[17, 19, 17, 14, 9, 11, 13].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
+        <colgroup>{[18, 20, 18, 14, 10, 20].map((width, index) => <col key={index} style={{ width: `${width}%` }} />)}</colgroup>
         <thead><tr>
           {sortableHeader("Store")}{sortableHeader("Store Manager")}{sortableHeader("Location")}
           <th scope="col"><div className={styles.performanceRevenueHeader}>Revenue
             {revenueControl}
           </div></th>
-          {sortableHeader("Status")}<th scope="col">Date Registered</th><th scope="col">Actions</th>
+          {sortableHeader("Status")}<th scope="col">View Stores</th>
         </tr></thead>
         <tbody>{rows.map(({ store, managers }) => <tr key={store.id}>
-          <td><div className={styles.performanceIdentity}><StoreImage store={store} /><div><strong>{store.name}</strong>{store.slug ? <span className={styles.performanceSecondary}>{store.slug}</span> : null}</div></div></td>
-          <td><div className={styles.performanceManagers}>{managers.length ? managers.map((manager) => <div key={manager.id} className={styles.performanceIdentity}>
+          <td data-label="Store"><div className={styles.performanceIdentity}><StoreImage store={store} /><div><strong>{store.name}</strong>{store.slug ? <span className={styles.performanceSecondary}>{store.slug}</span> : null}</div></div></td>
+          <td data-label="Store Manager"><div className={styles.performanceManagers}>{managers.length ? managers.map((manager) => <div key={manager.id} className={styles.performanceIdentity}>
             <span className={styles.performanceAvatar} aria-hidden="true">{manager.full_name?.trim() ? manager.full_name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() : <UserRound size={19} />}</span>
             <div><span>{managerName(manager)}</span><span className={styles.performanceSecondary}>{manager.email}</span></div>
           </div>) : <div className={styles.performanceIdentity}><span className={`${styles.performanceAvatar} ${styles.performanceUnassigned}`} aria-hidden="true"><UserRound size={19} /></span><span>Not assigned</span></div>}</div></td>
-          <td><div className={styles.performanceLocation}><MapPin size={20} aria-hidden="true" /><div><span>{location(store) || "Location not recorded"}</span><span className={styles.performanceSecondary}>{[store.physical_store_address, store.postal_code].filter(Boolean).join(", ") || "Address not recorded"}</span></div></div></td>
-          <td className={styles.performanceRevenue}>{money(totals.get(store.id)?.revenue || 0)}</td>
-          <td><Status active={store.is_active && store.store_access_status === "active"} /></td>
-          <td>{dateLabel(store.created_at)}</td>
-          <td><Link className={styles.performanceView} href={`/dashboard/franchise/sales/${store.id}?from=${period.from}&to=${period.to}` as never} aria-label={`View Store ${store.name}`}>View Store <ArrowRight size={18} aria-hidden="true" /></Link></td>
+          <td data-label="Location"><div className={styles.performanceLocation}><MapPin size={20} aria-hidden="true" /><div><span>{location(store) || "Location not recorded"}</span><span className={styles.performanceSecondary}>{[store.physical_store_address, store.postal_code].filter(Boolean).join(", ") || "Address not recorded"}</span></div></div></td>
+          <td data-label="Revenue" className={styles.performanceRevenue}>{money(totals.get(store.id)?.revenue || 0)}</td>
+          <td data-label="Status"><Status active={store.is_active && store.store_access_status === "active"} /></td>
+          <td data-label="View Stores"><Link className={styles.performanceView} href={`/dashboard/franchise/sales/${store.id}?from=${period.from}&to=${period.to}` as never} aria-label={`View Store ${store.name}`}>View Store <ArrowRight size={18} aria-hidden="true" /></Link></td>
         </tr>)}</tbody>
       </table>
     </div>

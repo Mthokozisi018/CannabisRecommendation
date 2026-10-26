@@ -1254,3 +1254,63 @@
   background:rgba(var(--nav-rgb),.18);
   box-shadow:0 0 28px rgba(var(--nav-rgb),.22);
 }
+
+/* The franchise overview keeps its four summary cards together on phones. */
+.salesOverview .kpisCompact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 700px) {
+  .salesOverview .kpisCompact { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+  .salesOverview .kpisCompact .kpi {
+    min-width: 0;
+    min-height: 100px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 7px 5px;
+    border-width: 1px;
+  }
+  .salesOverview .kpisCompact .kpiIcon { width: 22px; height: 22px; }
+  .salesOverview .kpisCompact .kpiIcon svg { width: 15px; height: 15px; }
+  .salesOverview .kpisCompact .muted { font-size: 10px; line-height: 1.12; overflow-wrap: anywhere; }
+  .salesOverview .kpisCompact .kpi strong { font-size: clamp(12px, 3.3vw, 17px); line-height: 1.1; overflow-wrap: anywhere; }
+}
+
+/* The store action replaces the registration-date column, including on tablets. */
+@media (max-width: 1200px) {
+  .performanceTable { width: 100%; min-width: 0; }
+  .performanceTable th, .performanceTable td { padding: 7px 5px; font-size: 11px; overflow-wrap: anywhere; }
+  .performanceIdentity, .performanceLocation { gap: 5px; }
+  .performanceIdentity > img { width: 32px; height: 32px; flex-basis: 32px; }
+  .performanceAvatar { flex-basis: 25px; height: 25px; font-size: 10px; }
+  .performanceLocation > svg { width: 15px; flex-basis: 15px; }
+  .performanceSecondary { font-size: 10px; }
+  .performanceRevenueHeader { flex-wrap: wrap; }
+  .performanceRevenueHeader select { width: 100%; min-width: 0; }
+  .performanceTable a.performanceView { width: 100%; min-width: 0; height: 38px; gap: 4px; font-size: 11px; }
+  .performanceTable a.performanceView svg { width: 14px; flex: none; }
+}
+
+@media (max-width: 700px) {
+  .performanceTable, .performanceTable tbody { display: block; width: 100%; }
+  .performanceTable colgroup { display: none; }
+  .performanceTable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .performanceTable tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #295744;
+    border-radius: 10px;
+  }
+  .performanceTable td { display: block; min-width: 0; padding: 0; border: 0; }
+  .performanceTable td:first-child, .performanceTable td:last-child { grid-column: 1 / -1; }
+  .performanceTable td::before { content: attr(data-label); display: block; margin-bottom: 4px; color: #aabfb5; font-size: 10px; font-weight: 700; }
+  .performanceTable a.performanceView { width: 100%; height: 40px; font-size: 13px; }
+}

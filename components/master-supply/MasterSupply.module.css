@@ -366,3 +366,24 @@
 @media(max-width:1180px) { .distributionLayout { grid-template-columns:minmax(0,1fr); }.distributionSummary { width:100%; }.distributionStep { padding:9px; gap:9px; }.distributionStepText small { font-size:11px; } }
 @media(max-width:720px) { .distributionSteps { grid-template-columns:repeat(2,minmax(0,1fr)); }.distributionStep:nth-child(2) .distributionStepArrow { display:none; }.distributionSetup { grid-template-columns:1fr; }.distributionFilters { margin-left:0; margin-right:0; }.distributionFilters select,.distributionSearch { flex-basis:calc(50% - 5px); }.distributionPanel { padding:13px; } }
 @media(max-width:480px) { .distributionStep { min-height:62px; }.distributionStepNumber { width:32px; height:32px; font-size:16px; }.distributionStepText strong { font-size:12px; }.distributionStepText small { font-size:10px; }.distributionStepArrow { width:15px; }.distributionFilters select,.distributionSearch,.distributionClearFilters { flex:1 1 100%; }.distributionPagination nav { margin-left:0; }.distributionSelectedItem { flex-wrap:wrap; }.distributionReviewDetails { grid-template-columns:1fr; } }
+
+/* Keep the four overview controls visible together on iPad-sized screens. */
+@media (min-width: 681px) and (max-width: 1180px) {
+  .overviewKpis, .overviewNav { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+  .overviewKpi { height: auto; min-height: 108px; padding: 10px 8px; gap: 7px; }
+  .kpiIcon { width: 34px; height: 34px; border-radius: 8px; }
+  .kpiIcon svg { width: 21px; height: 21px; }
+  .kpiLabel { min-height: 0; font-size: 11px; line-height: 1.18; overflow-wrap: anywhere; }
+  .kpiBody strong { font-size: clamp(19px, 2.3vw, 25px); margin: 5px 0 2px; }
+  .kpiUnit, .kpiChange, .kpiContext { font-size: 10px; }
+  .kpiFoot { margin-top: 5px; min-height: 0; }
+  .kpiChange { flex-wrap: wrap; white-space: normal; }
+  .kpiChange span { margin-left: 0; font-size: 10px; }
+  .overviewNavCard { height: auto; min-height: 76px; padding: 8px; gap: 6px; }
+  .navIcon { width: 34px; height: 34px; border-radius: 8px; }
+  .navIcon svg { width: 21px; height: 21px; }
+  .navCopy strong { font-size: 11px; line-height: 1.17; overflow-wrap: anywhere; }
+  .navCopy small { margin-top: 4px; font-size: 10px; line-height: 1.15; }
+  .navArrow { width: 14px; height: 14px; }
+  .requestCount { min-width: 19px; height: 19px; font-size: 10px; }
+}

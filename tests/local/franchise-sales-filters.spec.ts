@@ -233,13 +233,13 @@ test("expanded revenue labels every recorded point, stays readable and restores 
 });
 
 
-test("store performance matches the seven-column design, synchronizes periods and remains accessible at every width", async ({ page }) => {
+test("store performance keeps the store action visible, synchronizes periods and remains accessible at every width", async ({ page }) => {
   await page.goto("/dashboard/franchise/sales");
   const table = region(page, "Store Performance");
   const results = table.getByRole("table");
-  await expect(results.getByRole("columnheader")).toHaveCount(7);
+  await expect(results.getByRole("columnheader")).toHaveCount(6);
   const headers = await results.getByRole("columnheader").allTextContents();
-  expect(headers.map(text => text.trim())).toEqual(["Store", "Store Manager", "Location", "RevenueDailyWeeklyMonthlyYearly", "Status", "Date Registered", "Actions"]);
+  expect(headers.map(text => text.trim())).toEqual(["Store", "Store Manager", "Location", "RevenueDailyWeeklyMonthlyYearly", "Status", "View Stores"]);
   const alpha = results.getByRole("row").filter({ hasText: "Alpha Store" });
   const beta = results.getByRole("row").filter({ hasText: "Beta Store" });
   await expect(alpha).toContainText("Alexandra Example");
@@ -272,15 +272,18 @@ test("store performance matches the seven-column design, synchronizes periods an
   await table.getByRole("button", { name: "Store", exact: true }).click();
   await table.getByRole("button", { name: "Store", exact: true }).click();
   await expect(results.getByRole("row").nth(1)).toContainText("Beta Store");
-  for (const width of [1440, 1024, 768, 390, 320]) {
+  for (const width of [1440, 1024, 820, 768, 430, 390, 375]) {
     await page.setViewportSize({ width, height: 1000 });
     const scroller = table.getByRole("region", { name: "Store performance results" });
     await scroller.scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await scroller.evaluate(el => { el.scrollLeft = el.scrollWidth; });
     const link = beta.getByRole("link");
     await expect(link).toBeInViewport();
-    expect((await link.boundingBox())?.height).toBe(44);
+    const box = await link.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    expect((await scroller.evaluate(el => el.scrollWidth - el.clientWidth))).toBeLessThanOrEqual(1);
+    expect(box!.height).toBe(width > 1200 ? 44 : width > 700 ? 38 : 40);
     if (width === 1440 || width === 390) await table.screenshot({ path: `tmp/store-performance-${width}.png` });
   }
 });
