@@ -8,7 +8,17 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   output: "standalone",
   outputFileTracingIncludes: {
-    "/api/registration/[token]": ["./node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz"],
+    "/api/registration/[token]": [
+      "./node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz",
+      "./node_modules/tesseract.js/src/**/*",
+      "./node_modules/tesseract.js/package.json",
+      "./node_modules/tesseract.js-core/**/*",
+      "./node_modules/wasm-feature-detect/**/*",
+      "./node_modules/regenerator-runtime/**/*",
+      "./node_modules/is-url/**/*",
+      "./node_modules/bmp-js/**/*",
+      "./node_modules/node-fetch/**/*"
+    ],
     "/api/dashboard/manager/registration-qr": ["./public/branding/greenchoice-registration-template.png"],
     "/api/dashboard/registration-qr": ["./public/branding/greenchoice-registration-template.png"]
   },
