@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { ageAt, validDate } from "./validation";
+import { internalDocumentProvider } from "./internal-document-reader";
 
 export type VerificationCode = "unavailable" | "unreadable" | "mismatch" | "age_unconfirmed" | "under_age" | "manual_review";
 export const verificationMessages: Record<VerificationCode, string> = {
@@ -29,6 +30,9 @@ export interface DocumentProvider {
 export function configuredDocumentProvider(): DocumentProvider {
   const endpoint = process.env.QR_VERIFICATION_URL;
   const key = process.env.QR_VERIFICATION_API_KEY;
+  // The bundled server-side reader performs the same number and age checks
+  // without sending customer images to a third-party gateway.
+  if (!endpoint && !key && !process.env.QR_VERIFICATION_APPROVED) return internalDocumentProvider;
   if (process.env.QR_VERIFICATION_APPROVED !== "true" || !endpoint || !key) throw new VerificationError("unavailable");
   const url = new URL(endpoint);
   if (url.protocol !== "https:" || url.username || url.password) throw new VerificationError("unavailable");

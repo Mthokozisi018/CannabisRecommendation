@@ -10,6 +10,7 @@ import { logServerEvent } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 const headers = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
   try {

@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   output: "standalone",
   outputFileTracingIncludes: {
+    "/api/registration/[token]": ["./node_modules/@tesseract.js-data/eng/4.0.0/eng.traineddata.gz"],
     "/api/dashboard/manager/registration-qr": ["./public/branding/greenchoice-registration-template.png"],
     "/api/dashboard/registration-qr": ["./public/branding/greenchoice-registration-template.png"]
   },

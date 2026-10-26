@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { normalizePOSCustomerPhone } from "@/lib/pos-customer-format";
 import { registrationSchema, REGISTRATION_NOTICE_VERSION, type RegistrationInput } from "./validation";
 import { configuredDocumentProvider, confirmDocument, VerificationError, type DocumentProvider } from "./provider";
+import { internalDocumentProvider } from "./internal-document-reader";
 import { prepareDocumentImage } from "./image";
 import { resolveRegistrationStore } from "./store";
 import { encryptRegistrationDocument } from "./document-encryption";
@@ -13,7 +14,7 @@ export class RegistrationError extends Error {
 }
 export class RegistrationServiceError extends VerificationError {
   constructor(public stage: "legal_approval" | "server_credentials" | "registration_lookup" | "provider_configuration" |
-    "document_encryption" | "cleanup_queue" | "registration_audit" | "private_storage" | "verification_gateway" | "database_commit") {
+    "document_encryption" | "cleanup_queue" | "registration_audit" | "private_storage" | "document_reader" | "verification_gateway" | "database_commit") {
     super("unavailable");
   }
 }
@@ -60,7 +61,7 @@ export async function submitQRRegistration(token: string, input: RegistrationInp
     try { result = await reader.read(image, parsed.documentType, parsed.submissionId); }
     catch (error) {
       if (error instanceof VerificationError && error.code !== "unavailable") throw error;
-      throw new RegistrationServiceError("verification_gateway");
+      throw new RegistrationServiceError(reader === internalDocumentProvider ? "document_reader" : "verification_gateway");
     }
     const checks = confirmDocument(result, parsed.documentType, parsed.documentNumber);
     const saved = await admin.rpc("complete_qr_customer_registration", {

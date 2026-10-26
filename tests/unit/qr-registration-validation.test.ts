@@ -39,7 +39,14 @@ describe("store QR registration validation", () => {
     [{ status: "read", documentType: "sa_id", documentNumber: id }, "confirm your age"],
     [{ status: "read", documentType: "sa_id", documentNumber: id, dateOfBirth: "1989-01-01" }, "confirm your age"]
   ] as const)("blocks inconclusive checks %#", (result, message) => { expect(() => confirmDocument(result, "sa_id", id)).toThrow(message); });
-  it("requires a real approved provider", () => {
+  it("uses the bundled server-side reader when no gateway is configured", () => {
+    vi.stubEnv("QR_VERIFICATION_APPROVED", "");
+    vi.stubEnv("QR_VERIFICATION_URL", "");
+    vi.stubEnv("QR_VERIFICATION_API_KEY", "");
+    expect(configuredDocumentProvider().read).toBeTypeOf("function");
+    vi.unstubAllEnvs();
+  });
+  it("rejects partially configured or unapproved external gateways", () => {
     vi.stubEnv("QR_VERIFICATION_APPROVED", "false");
     expect(configuredDocumentProvider).toThrow("temporarily unavailable");
     vi.unstubAllEnvs();

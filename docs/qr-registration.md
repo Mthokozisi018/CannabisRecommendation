@@ -40,19 +40,18 @@ RPCs resolve active staff/store and enforce customer membership.
 Existing Supabase server credentials, application URL, approved origin and shared
 rate-limit configuration remain required. Add server-only values:
 
-- `QR_VERIFICATION_URL`: HTTPS endpoint of the approved document-provider gateway.
-- `QR_VERIFICATION_API_KEY`: gateway bearer credential.
-- `QR_VERIFICATION_APPROVED=true`: set only after provider approval/integration validation.
+- The bundled server-side document reader is used when all `QR_VERIFICATION_*` values are absent. It reads the document number and full birth date locally. Unreadable or inconclusive images fail closed. The image is never sent to a third-party OCR service in this mode.
+- An optional approved external gateway can be selected with `QR_VERIFICATION_URL` (HTTPS), `QR_VERIFICATION_API_KEY` (server-only), and `QR_VERIFICATION_APPROVED=true` after integration validation. A partially configured gateway fails closed.
 - `CUSTOMER_ID_HMAC_SECRET`: at least 32 random characters; protects document fingerprints and request hashes.
 - `CUSTOMER_DOCUMENT_ENCRYPTION_KEY`: an independent 32-byte random key encoded as canonical base64, held in server-only secret management. Never reuse the HMAC secret or expose this key to the browser.
 - `SESSION_SIGNING_SECRET`: at least 32 random characters; signs short-lived success cookies.
 - `QR_REGISTRATION_LEGAL_APPROVED=2026-10-07`: only after the registration notices have been reviewed and approved, including the responsible-party contact, processor details and customer-record retention schedule.
 
 There is no production success mock or browser-supplied verification switch.
-Missing provider/legal/secrets configuration fails closed. Email is required,
+Missing legal/secrets configuration fails closed. Email is required,
 matching the existing customer-registration rule. Minimum age remains 18.
 
-## Approved provider gateway contract
+## Optional approved provider gateway contract
 
 POST multipart fields `documentType` (`sa_id` or `passport`) and `image` (sanitised
 JPEG). The server sends `Authorization: Bearer ...` and `Idempotency-Key` with
@@ -75,7 +74,7 @@ agree with YYMMDD, resolving the century without assuming adulthood. Age is
 evaluated on the Johannesburg calendar date. Passport numbers are strings of
 5–20 alphanumeric characters and do not use the SA ID checksum. This adapter
 reports number match and age confirmation, not document authenticity or rightful
-ownership verification. Integrate an approved provider and test its accuracy,
+ownership verification. If selecting an external provider, test its accuracy,
 availability, processor agreement and data retention before enabling it.
 
 ## Images, privacy and cleanup
@@ -91,7 +90,7 @@ The private `registration-documents` bucket has no browser access and a
 restrictive policy preventing broad existing storage policies from granting it.
 New uploads are AES-256-GCM ciphertext with a random 96-bit nonce, 128-bit tag and
 store/submission/path associated data. The application encrypts before uploading;
-the approved provider reads the server's transient processed image buffer. The
+the bundled reader uses the server's transient processed image buffer. The
 bucket's binary-object migration must be applied before enabling this code.
 Older temporary JPEG objects are still accepted by the bucket during cleanup and
 must be drained before the JPEG MIME type can be removed. No document URL or signed URL is sent to the browser or provider; bytes are sent
