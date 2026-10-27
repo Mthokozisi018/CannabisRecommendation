@@ -227,7 +227,7 @@ test("AUD-E2E direct-navigation diagnostic; original click failure retained", as
     expect(own.error).toBeNull();
     expect(own.data!.franchise_id).toBe(franchises[0]);
     stores.push(own.data!.id);
-    await page.getByRole("link", { name: "Manage Store", exact: true }).click();
+    await page.getByRole("link", { name: "Manage Stores", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: `Test Store ${marker}`, exact: true }),
     ).toBeVisible();

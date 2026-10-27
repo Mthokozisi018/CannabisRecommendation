@@ -227,7 +227,7 @@ test("franchise onboarding, isolation, management, analytics and concurrent staf
     expect(own.error).toBeNull();
     expect(own.data!.franchise_id).toBe(franchises[0]);
     stores.push(own.data!.id);
-    await page.getByRole("link", { name: "Manage Store", exact: true }).click();
+    await page.getByRole("link", { name: "Manage Stores", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: `Test Store ${marker}`, exact: true }),
     ).toBeVisible();

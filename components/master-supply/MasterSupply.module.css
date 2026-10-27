@@ -122,14 +122,14 @@
 .overview { padding:0 0 8px; color:#f7fbf9; }
 .page:has(.overviewHeader) { padding-top:0; }
 .overviewBack { grid-column:1; justify-self:start; margin-left:4px; }
-.overviewHeader { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,760px) minmax(0,1fr); align-items:center; gap:12px; margin:0 4px 14px; }
+.overviewHeader { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,760px) minmax(0,1fr); align-items:start; gap:8px 12px; margin:0 4px 10px; }
 .overviewTitle { grid-column:2; min-width:0; text-align:center; }
 .overviewTitle h1 { margin:0; line-height:0; }
 .overviewTitleArt { display:block; width:100%; height:auto; }
-.overviewHeader p { margin:2px 0 0; font-size:17px; color:#fff; line-height:1.4; }
+.overviewHeader p { margin:0; font-size:17px; color:#fff; line-height:1.4; }
 .overviewHeader .periodSelect { grid-column:3; justify-self:end; }
 .supplySubpageHero .overviewTitle { max-width:650px; justify-self:center; }
-@media(max-width:950px) { .supplySubpageHero .overviewTitle { grid-column:1/-1; grid-row:1; }.supplySubpageHero .overviewBack { grid-column:1/-1; grid-row:2; } }
+@media(max-width:950px) { .supplySubpageHero .overviewTitle { grid-column:1/-1; grid-row:2; }.supplySubpageHero .overviewBack { grid-column:1/-1; grid-row:1; } }
 .periodSelect { flex:0 0 238px; height:47px; display:flex; align-items:center; gap:14px; padding:0 14px; border:1px solid #61736a; border-radius:8px; background:#03100dc9; color:#fff; }
 .periodSelect select,.overviewFilter select { width:100%; appearance:none; border:0; outline:none; background:transparent; color:#fff; font:inherit; cursor:pointer; }
 .periodSelect select option,.overviewFilter select option { background:#06251b; }

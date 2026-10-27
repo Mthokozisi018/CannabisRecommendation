@@ -36,7 +36,7 @@ const cards: ManagerCard[] = [
   },
   {
     key: "suppliers",
-    title: "Supplier Information",
+    title: "Supplier Management",
     href: "/dashboard/manager/suppliers",
     icon: Truck,
     tone: "teal"

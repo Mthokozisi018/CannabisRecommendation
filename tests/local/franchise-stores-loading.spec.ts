@@ -5,7 +5,7 @@ const advance = async (page: import("@playwright/test").Page, stage: string) => 
 test("Manage Stores spinner starts synchronously on click and stays until store data renders", async ({ page }) => {
   await page.clock.install();
   await page.goto("/dashboard/franchise?stores-navigation-test");
-  const link = page.getByRole("link", { name: "Manage Store", exact: true });
+  const link = page.getByRole("link", { name: "Manage Stores", exact: true });
   await link.click({ modifiers: ["Control"] });
   await expect(page.getByRole("status")).toHaveCount(0);
   await link.focus(); await link.press("Enter");
@@ -49,7 +49,7 @@ test("Manage Stores refresh loading uses the same single spinner on desktop tabl
 test("Manage Stores failures and stalled loads replace spinner with retry and recover", async ({ page }) => {
   await page.clock.install();
   await page.goto("/dashboard/franchise?stores-navigation-test");
-  await page.getByRole("link", { name: "Manage Store", exact: true }).click();
+  await page.getByRole("link", { name: "Manage Stores", exact: true }).click();
   await page.clock.fastForward(120000);
   await expect(page.getByRole("status")).toHaveCount(0);
   await expect(page.getByRole("alert")).toContainText("Manage Stores is taking longer than expected");

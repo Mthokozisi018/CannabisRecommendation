@@ -27,7 +27,7 @@ it("reuses Manager action cards for four ordered FA destinations and retains loa
   const links = within(navigation).getAllByRole("link");
   expect(links.map((link) => [link.getAttribute("aria-label"), link.getAttribute("href")])).toEqual([
     ["Add Store", "/dashboard/franchise/stores/new"],
-    ["Manage Store", "/dashboard/franchise/stores"],
+    ["Manage Stores", "/dashboard/franchise/stores"],
     ["Master Supply Management", "/dashboard/franchise/supply"],
     ["Sales and Performance", "/dashboard/franchise/sales"]
   ]);

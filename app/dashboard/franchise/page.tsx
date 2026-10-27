@@ -62,7 +62,7 @@ export default function FranchiseHomePage() {
       color: styles.navEmerald,
     },
     {
-      title: "Manage Store",
+      title: "Manage Stores",
       href: "/dashboard/franchise/stores",
       icon: Users,
       tone: "blue" as CardTone,
