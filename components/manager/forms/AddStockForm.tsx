@@ -57,15 +57,15 @@ export function AddStockForm({ products, suppliers, backHref, storeName, manager
   const selectedSubtype = showCreate || requiresSubtypeSelection ? subcategory : selectedProduct?.subcategory ?? "";
   const supplierCategory = selectedProduct?.category === "Disposable Vapes" ? "Disposable Vapes" : category;
   const supplierSubtype = classification ? cultivationType : selectedSubtype;
-  const availableSuppliers = localSuppliers.filter((supplier) => supplier.categories.some((mapping) => mapping.category === supplierCategory && mapping.subcategory === supplierSubtype));
+  const availableSuppliers = localSuppliers;
   const selectedSupplier = availableSuppliers.find((supplier) => supplier.id === supplierId);
   const pending = createPending || stockPending;
   const currentStock = showCreate ? 0 : selectedProduct?.inventory_stock?.current_quantity ?? null;
   const validQuantity = /^\d+$/.test(quantity) && Number.isSafeInteger(Number(quantity)) && Number(quantity) > 0;
-  const total = currentStock !== null && validQuantity ? Number(currentStock) + Number(quantity) : null;
+  const total = showCreate ? 0 : currentStock !== null && validQuantity ? Number(currentStock) + Number(quantity) : null;
   const productSelectionReady = classification ? Boolean(subcategory && cultivationType) : !requiresSubtypeSelection || Boolean(subcategory);
   const createReady = productName.trim().length > 0 && money(price) && Number(price) > 0 && selectedSubtype && (category !== "Edibles" || (nonNegativeDecimal(thcPerUnitMg) && nonNegativeDecimal(thcPerPacketMg)));
-  const canSubmit = Boolean(category && productSelectionReady && validQuantity && selectedSupplier && money(supplierUnitCost) && !imageError && !pending && (showCreate ? createReady : selectedProduct));
+  const canSubmit = Boolean(category && productSelectionReady && !imageError && !pending && (showCreate ? createReady : validQuantity && selectedSupplier && money(supplierUnitCost) && selectedProduct));
   const filteredProducts = useMemo(() => localProducts.filter((product) => {
     if (category === "Vape Cartridges" && product.category === "Disposable Vapes") return true;
     if (product.category !== category) return false;
@@ -122,8 +122,8 @@ export function AddStockForm({ products, suppliers, backHref, storeName, manager
   const previewImage = getProductImage({ image_url: imagePreview || savedImage, category, subcategory: selectedSubtype, cultivation_type: classification ? cultivationType : null });
   const actions = <div className={styles.actions}>
     <form id="manager-add-stock" action={showCreate ? createFormAction : stockFormAction}>
-      {Object.entries({ workflow: "add-stock", category: selectedProduct?.category ?? category, subcategory: selectedSubtype, cultivationType: classification ? cultivationType : "", productId, quantityToAdd: quantity, productName, price, productStatus: "active", initialStockQuantity: quantity, packageCount: "", thcPerUnitMg: category === "Edibles" ? thcPerUnitMg : "", thcPerPacketMg: category === "Edibles" ? thcPerPacketMg : "", supplierId: selectedSupplier?.id ?? "", supplierUnitCost, removeProductImage: removeImage ? "1" : "" }).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
-      <button className={styles.submit} disabled={!canSubmit} aria-busy={pending}>{pending ? <PendingSpinner /> : <PackagePlus />}{pending ? "Adding stock..." : "Add Stock"}</button>
+      {Object.entries({ workflow: "add-stock", category: selectedProduct?.category ?? category, subcategory: selectedSubtype, cultivationType: classification ? cultivationType : "", productId, quantityToAdd: showCreate ? "" : quantity, productName, price, productStatus: "active", initialStockQuantity: showCreate ? "0" : quantity, packageCount: "", thcPerUnitMg: category === "Edibles" ? thcPerUnitMg : "", thcPerPacketMg: category === "Edibles" ? thcPerPacketMg : "", supplierId: showCreate ? "" : selectedSupplier?.id ?? "", supplierUnitCost: showCreate ? "" : supplierUnitCost, removeProductImage: removeImage ? "1" : "" }).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
+      <button className={styles.submit} disabled={!canSubmit} aria-busy={pending}>{pending ? <PendingSpinner /> : <PackagePlus />}{pending ? (showCreate ? "Saving product..." : "Adding stock...") : (showCreate ? "Save Product" : "Add Stock")}</button>
     </form>
     <button type="button" className={styles.reset} onClick={reset}><RefreshCcw />Reset Form</button>
   </div>;
@@ -137,7 +137,7 @@ export function AddStockForm({ products, suppliers, backHref, storeName, manager
     </header>
     <div className={styles.layout}>
       <div className={styles.heading}><h1>Add Stock</h1><p>Add stock to an existing product or create a new product, all in one place.</p></div>
-      <aside className={`${styles.section} ${styles.help}`}><Info /><div><h2>How it works</h2><p>Select category, product, quantity, then save.</p></div></aside>
+      <aside className={`${styles.section} ${styles.help}`}><Info /><div><h2>How it works</h2><p>Create a product with zero stock, or select an existing product and enter the quantity received.</p></div></aside>
       <fieldset className={styles.workflow} disabled={pending}>
         <section className={`${styles.section} ${styles.categories}`}><h2><span className={styles.step}>1</span>Select Category</h2><div className={styles.categoryGrid}>{categories.map((item) => { const Icon = icons[item]; return <button type="button" key={item} aria-pressed={category === item} onClick={() => changeCategory(item)} className={styles.category}><Icon /><span>{item}</span></button>; })}</div></section>
         <section className={`${styles.section} ${styles.details}`}><h2><span className={styles.step}>2</span>Product &amp; Details</h2>
@@ -148,7 +148,7 @@ export function AddStockForm({ products, suppliers, backHref, storeName, manager
           {category === "Accessories" && <div className={styles.subcategorySelection}>
             <label>Accessory Type <span aria-hidden="true">*</span><select value={subcategory} onChange={(event) => { setSubcategory(event.target.value); clearProduct(); }} required><option value="">Select accessory type</option>{PRODUCT_SUBCATEGORIES.Accessories.map((item) => <option key={item}>{item}</option>)}</select></label>
           </div>}
-          <div className={styles.selectionRow}><label>Product <span aria-hidden="true">*</span><select value={productId} disabled={!category || !productSelectionReady || showCreate} onChange={(event) => { clearProduct(); setProductId(event.target.value); }}><option value="">{showCreate ? "Creating new product" : "Select product"}</option>{filteredProducts.map((product) => <option key={product.id} value={product.id}>{product.product_name}</option>)}</select></label><button type="button" className={styles.secondary} disabled={!category || !productSelectionReady} onClick={() => { clearProduct(); setShowCreate(true); if (!requiresSubtypeSelection) setSubcategory(PRODUCT_SUBCATEGORIES[category as ProductCategory][0]); }}><Plus />New Product</button></div>
+          <div className={styles.selectionRow}><label>Product <span aria-hidden="true">*</span><select value={productId} disabled={!category || !productSelectionReady || showCreate} onChange={(event) => { clearProduct(); setProductId(event.target.value); }}><option value="">{showCreate ? "Creating new product" : "Select product"}</option>{filteredProducts.map((product) => <option key={product.id} value={product.id}>{product.product_name}</option>)}</select></label><button type="button" className={styles.secondary} disabled={!category || !productSelectionReady} onClick={() => { clearProduct(); setQuantity(""); setSupplierUnitCost(""); setShowCreate(true); if (!requiresSubtypeSelection) setSubcategory(PRODUCT_SUBCATEGORIES[category as ProductCategory][0]); }}><Plus />New Product</button></div>
           {category && productSelectionReady && !filteredProducts.length && !showCreate && <p className={styles.muted}>No products match this selection.</p>}
           {showCreate && <div className={styles.creation}>
             <div className={styles.creationTitle}><h3>New Product</h3><button type="button" onClick={clearProduct} aria-label="Cancel new product" title="Cancel new product"><X /></button></div>
@@ -159,37 +159,37 @@ export function AddStockForm({ products, suppliers, backHref, storeName, manager
               {category === "Edibles" && <><label>THC per Unit (mg) <span aria-hidden="true">*</span><ManualNumberInput mode="decimal" value={thcPerUnitMg} onChange={(event) => setThcPerUnitMg(event.target.value)} /></label><label>THC per Pack (mg) <span aria-hidden="true">*</span><ManualNumberInput mode="decimal" value={thcPerPacketMg} onChange={(event) => setThcPerPacketMg(event.target.value)} /></label></>}
             </div>
           </div>}
-          <div className={styles.supplierGroup}>
-            <div className={styles.selectionRow}><label>Supplier <span aria-hidden="true">*</span><select value={selectedSupplier?.id ?? ""} disabled={!supplierSubtype} onChange={(event) => setSupplierId(event.target.value)}><option value="">Select supplier</option>{availableSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label><button type="button" className={styles.secondary} disabled={!supplierSubtype} onClick={() => setSupplierDialog(true)}><Plus />New Supplier</button></div>
+          {!showCreate && <div className={styles.supplierGroup}>
+            <div className={styles.selectionRow}><label>Supplier <span aria-hidden="true">*</span><select value={selectedSupplier?.id ?? ""} disabled={!category || !productSelectionReady} onChange={(event) => setSupplierId(event.target.value)}><option value="">Select supplier</option>{availableSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label><button type="button" className={styles.secondary} disabled={!supplierSubtype} onClick={() => setSupplierDialog(true)}><Plus />New Supplier</button></div>
             <div className={styles.supplierMeta}>
-              {supplierSubtype && !availableSuppliers.length && <p className={styles.muted}>No active suppliers for this product type.</p>}
+              {supplierSubtype && !availableSuppliers.length && <p className={styles.muted}>No active suppliers for this store.</p>}
               <label className={styles.unitCost}>Supplier Unit Cost (ZAR) <span aria-hidden="true">*</span><ManualNumberInput mode="decimal" value={supplierUnitCost} onChange={(event) => setSupplierUnitCost(event.target.value)} placeholder="Enter unit cost" /></label>
             </div>
-          </div>
+          </div>}
         </section>
-        <section className={`${styles.section} ${styles.quantity}`}><h2><span className={styles.step}>3</span>Add Stock Quantity</h2><div className={styles.quantityRow}>
+        {!showCreate && <section className={`${styles.section} ${styles.quantity}`}><h2><span className={styles.step}>3</span>Add Stock Quantity</h2><div className={styles.quantityRow}>
           <label>Quantity to Add <span aria-hidden="true">*</span><span className={styles.inputShell}><ManualNumberInput mode="integer" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Enter quantity" aria-describedby="stock-quantity-help" /><span>{category === "Flower" ? "g" : "units"}</span></span><small id="stock-quantity-help">Amount of stock to add.</small>{quantity && !validQuantity && <small className={styles.error}>Enter a positive whole number.</small>}</label>
           <div className={styles.total} aria-live="polite"><strong>New Total Stock</strong><p><span>{formatStockQuantity(currentStock, category)}</span><ArrowRight /><span>{total !== null ? formatStockQuantity(total, category) : "--"}</span></p><small>Current + Quantity</small></div>
-        </div></section>
+        </div></section>}
         <div className={`${styles.section} ${styles.quality}`}><ShieldCheck /><div><h3>Quality &amp; Accuracy</h3><p>All stock updates are recorded.</p></div></div>
         <div className={`${styles.section} ${styles.picture}`}><ImagePlus /><div><h3>Add Product Picture <span>(optional)</span></h3><p>Save without a picture to use the default product image.</p>
           <input ref={imageInput} form="manager-add-stock" name="productImage" type="file" accept="image/png,image/jpeg,image/webp" className={styles.file} onChange={(event) => chooseImage(event.target.files?.[0])} />
-          <div className={styles.pictureActions}><button type="button" disabled={showCreate && classification} onClick={() => imageInput.current?.click()}><Upload />{imagePreview || savedImage ? "Change Picture" : "Add Product Picture"}</button>{(imagePreview || savedImage) && <button type="button" title="Remove picture" aria-label="Remove picture" onClick={() => clearPicture(!imagePreview && Boolean(savedImage))}><Trash2 /></button>}</div>
-          {showCreate && classification && <p>New Flower and Pre-Rolls products use the default category image.</p>}
+          <div className={styles.pictureActions}><button type="button" disabled={showCreate && category === "Flower"} onClick={() => imageInput.current?.click()}><Upload />{imagePreview || savedImage ? "Change Picture" : "Add Product Picture"}</button>{(imagePreview || savedImage) && <button type="button" title="Remove picture" aria-label="Remove picture" onClick={() => clearPicture(!imagePreview && Boolean(savedImage))}><Trash2 /></button>}</div>
+          {showCreate && category === "Flower" && <p>New Flower products use the default category image.</p>}
           {imageError && <p role="alert" className={styles.error}>{imageError}</p>}
         </div></div>
         <div className={styles.previewColumn}>
           <section className={`${styles.section} ${styles.preview}`} aria-labelledby="stock-preview-heading"><h2 id="stock-preview-heading">Product Preview</h2>
             {category ? <div className={styles.previewContent}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={previewImage} alt={previewAlt} className={styles.productImage} />
+              <img src={previewImage} alt={previewAlt} className={styles.productImage} onError={(event) => { const fallback = getProductImage({ category, subcategory: selectedSubtype, cultivation_type: classification ? cultivationType : null }); if (event.currentTarget.src !== new URL(fallback, window.location.href).href) event.currentTarget.src = fallback; }} />
               <div className={styles.previewDetails}><span className={styles.badge}>{category}</span><h3>{previewName}</h3><dl>
                 {classification && cultivationType && <div><dt>Cultivation Type</dt><dd>{cultivationType}</dd></div>}
                 {classification && subcategory && <div><dt>Strain Type</dt><dd>{subcategory}</dd></div>}
                 {!classification && selectedSubtype && <div><dt>Product Type</dt><dd>{selectedSubtype}</dd></div>}
-                <div><dt>Supplier</dt><dd>{selectedSupplier?.name || "Not selected"}</dd></div><div><dt>Current Stock</dt><dd>{formatStockQuantity(currentStock, category)}</dd></div>
-                {validQuantity && <div><dt>Quantity to Add</dt><dd>{formatStockQuantity(Number(quantity), category)}</dd></div>}
-                {money(supplierUnitCost) && <div><dt>Unit Cost</dt><dd>R {Number(supplierUnitCost).toFixed(2)}</dd></div>}
+                <div><dt>Supplier</dt><dd>{showCreate ? "Add stock later" : selectedSupplier?.name || "Not selected"}</dd></div><div><dt>Current Stock</dt><dd>{formatStockQuantity(currentStock, category)}</dd></div>
+                {!showCreate && validQuantity && <div><dt>Quantity to Add</dt><dd>{formatStockQuantity(Number(quantity), category)}</dd></div>}
+                {!showCreate && money(supplierUnitCost) && <div><dt>Unit Cost</dt><dd>R {Number(supplierUnitCost).toFixed(2)}</dd></div>}
                 {total !== null && <div><dt>New Total Stock</dt><dd>{formatStockQuantity(total, category)}</dd></div>}
               </dl></div>
             </div> : <div className={styles.empty}><PackagePlus size={44} /><strong>No category selected</strong><p>Select a category to see preview</p></div>}

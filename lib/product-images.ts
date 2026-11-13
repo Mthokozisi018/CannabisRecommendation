@@ -96,6 +96,7 @@ export function getFlowerCultivationPlaceholder(cultivationType?: string | null)
 export function getPreRollCultivationCardImage(product: ProductImageInput) {
   const category = product.category ?? product.categoryName ?? product.categorySlug;
   if (slugify(category) !== "pre-rolls") return null;
+  if (isUsableProductImageUrl(product.image_url ?? product.imageUrl)) return null;
 
   const cultivationType = product.cultivation_type ?? product.cultivationType ?? product.growType;
   const normalized = cultivationType?.trim().toLowerCase();

@@ -29,11 +29,14 @@ export const addStockReceiptSchema = inventoryAddBaseSchema.extend(supplierField
   const legacyVape = value.category === "Vape Cartridges" && ["Sativa", "Indica", "Hybrid"].includes(value.subcategory);
   classification(legacyVape ? { ...value, subcategory: "Vape Cartridge" } : value, ctx);
 });
-export const addStockProductSchema = productFormBaseSchema.extend(supplierFields).superRefine((value, ctx) => {
+function validateAddStockProduct(value: z.infer<typeof productFormBaseSchema>, ctx: z.RefinementCtx) {
   if (!isProductCategory(value.category)) return;
   classification(value, ctx);
   // Reuse the existing non-classification product rules, including edible THC requirements.
   const legacyInput = value.category === "Vape Cartridges" ? { ...value, cultivationType: "Hybrid" } : value;
   const legacy = productFormSchema.safeParse(legacyInput);
   if (!legacy.success) for (const issue of legacy.error.issues) ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
-});
+}
+
+export const addStockProductWithoutStockSchema = productFormBaseSchema.superRefine(validateAddStockProduct);
+export const addStockProductSchema = productFormBaseSchema.extend(supplierFields).superRefine(validateAddStockProduct);

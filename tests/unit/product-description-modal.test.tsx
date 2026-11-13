@@ -79,6 +79,7 @@ describe("ProductDescriptionModal", () => {
           subcategory: "Indica",
           strainType: "Indica",
           cultivationType: "Greenhouse",
+          imageUrl: null,
           name: "Moon Mint Pre-Roll",
           description: "Selected pre-roll description."
         }}
@@ -97,6 +98,12 @@ describe("ProductDescriptionModal", () => {
     expect(markup).not.toContain("Selected pre-roll description.");
   });
 
+  it("shows a saved Pre-Rolls image in the product information modal", () => {
+    const markup = renderToStaticMarkup(<ProductDescriptionModal product={{ ...baseProduct, categoryName: "Pre-Rolls", categorySlug: "pre-rolls", imageUrl: "/images/products/apollo.png" }} onClose={() => undefined} />);
+    expect(markup).toContain('src="/images/products/apollo.png" alt="Apollo product image"');
+    expect(markup).not.toContain("/products/prerolls/modulars/preroll-indoor-modular.png");
+  });
+
   it.each([
     [" Indoor ", "preroll-indoor-modular.png"],
     ["GREENHOUSE", "preroll-greenhouse-modular.png"],
@@ -108,7 +115,8 @@ describe("ProductDescriptionModal", () => {
           ...baseProduct,
           categoryName: "Pre-Rolls",
           categorySlug: "pre-rolls",
-          cultivationType
+          cultivationType,
+          imageUrl: null
         }}
         onClose={() => undefined}
       />
@@ -127,13 +135,14 @@ describe("ProductDescriptionModal", () => {
           ...baseProduct,
           categoryName: "Pre-Rolls",
           categorySlug: "pre-rolls",
-          cultivationType: "Hydro"
+          cultivationType: "Hydro",
+          imageUrl: null
         }}
         onClose={() => undefined}
       />
     );
 
-    expect(markup).not.toContain('alt="Apollo product image"');
+    expect(markup).toContain("/placeholder-images/PreRolls.png");
     expect(markup).not.toContain("/products/prerolls/modulars/preroll-");
   });
 

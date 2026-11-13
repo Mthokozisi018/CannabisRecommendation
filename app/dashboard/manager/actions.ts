@@ -12,7 +12,7 @@ import { normalizeProductImage, productImageObjectPath, type NormalizedProductIm
 import { assertRateLimit, verifyOrigin } from "@/lib/security";
 import { requireAssignedStoreId } from "@/lib/store-scope";
 import { sendStaffPasswordResetLink } from "@/lib/staff-password-reset";
-import { addStockProductSchema, addStockReceiptSchema, hasAddStockClassification } from "@/lib/manager/add-stock-validation";
+import { addStockProductSchema, addStockProductWithoutStockSchema, addStockReceiptSchema, hasAddStockClassification } from "@/lib/manager/add-stock-validation";
 
 export type ManagerActionState = { ok: boolean; message: string; createdProduct?: ManagerInventoryProduct; updatedStock?: number; productId?: string; isVisibleOnPos?: boolean; imageBucket?: string | null; imagePath?: string | null; imageUrl?: string | null };
 
@@ -212,7 +212,7 @@ export async function createProductAction(_prev: ManagerActionState, formData: F
     await assertRateLimit(`manager:product-create:${user.id}`, 20, 60 * 60_000);
     const addStockWorkflow = text(formData, "workflow") === "add-stock";
     const hasInitialStock = Number(text(formData, "initialStockQuantity")) > 0;
-    const parsed = (addStockWorkflow || hasInitialStock ? addStockProductSchema : productFormSchema).parse({
+    const parsed = (hasInitialStock ? addStockProductSchema : addStockWorkflow ? addStockProductWithoutStockSchema : productFormSchema).parse({
       productName: text(formData, "productName"),
       category: text(formData, "category"),
       subcategory: text(formData, "subcategory"),

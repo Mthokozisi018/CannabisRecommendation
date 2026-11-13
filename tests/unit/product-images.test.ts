@@ -41,6 +41,12 @@ describe("product image placeholders", () => {
     expect(getPreRollCultivationCardImage({ categorySlug: "pre-rolls", growType: "outdoor" })).toBe("/images/product-placeholders/pre-rolls/preroll-outdoor.png");
   });
 
+  it("lets a saved Pre-Rolls image override cultivation artwork", () => {
+    const product = { category: "Pre-Rolls", cultivationType: "Indoor", image_url: "https://example.com/pre-roll.webp" };
+    expect(getPreRollCultivationCardImage(product)).toBeNull();
+    expect(getProductImage(product)).toBe(product.image_url);
+  });
+
   it("keeps the existing card fallback for invalid Pre-Rolls cultivation types", () => {
     expect(getPreRollCultivationCardImage({ category: "Pre-Rolls", cultivationType: null })).toBeNull();
     expect(getPreRollCultivationCardImage({ category: "Pre-Rolls", cultivationType: "Hydro" })).toBeNull();

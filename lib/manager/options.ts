@@ -60,7 +60,7 @@ export const PRODUCT_CATEGORY_PARAMETERS = {
   "Pre-Rolls": {
     usesStrainType: true,
     usesCultivationType: true,
-    allowProductImageOnCreate: false,
+    allowProductImageOnCreate: true,
     allowProductImageOnEdit: false,
     stockUnit: "units",
     stockDisplaySuffix: "units",

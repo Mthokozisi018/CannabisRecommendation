@@ -52,4 +52,10 @@ describe("POS product display details", () => {
     expect(getPOSProductImage(item)).toBe("/images/product-placeholders/pre-rolls/preroll-indoor.png");
     expect(getPOSProductCartDetails(item).imageSrc).toBe("/images/product-placeholders/pre-rolls/preroll-indoor.png");
   });
+
+  it("uses saved Pre-Rolls images in POS and cart details", () => {
+    const item = product({ categoryName: "Pre-Rolls", categorySlug: "pre-rolls", cultivationType: "Indoor", imageUrl: "https://example.invalid/pre-roll.webp" });
+    expect(getPOSProductImage(item)).toBe("https://example.invalid/pre-roll.webp");
+    expect(getPOSProductCartDetails(item).imageSrc).toBe("https://example.invalid/pre-roll.webp");
+  });
 });

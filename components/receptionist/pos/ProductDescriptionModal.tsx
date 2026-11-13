@@ -130,7 +130,7 @@ function modalProductImage(product: ReceptionistProduct) {
   }
 
   if (isPreRollProduct(product)) {
-    return preRollCultivationImages[normalizedKey(product.cultivationType)] ?? "";
+    return isUsableProductImageUrl(product.imageUrl) ? product.imageUrl!.trim() : preRollCultivationImages[normalizedKey(product.cultivationType)] ?? getProductImage(product);
   }
 
   if (normalizedKey(product.categorySlug || product.categoryName) === "edibles") {
@@ -194,7 +194,10 @@ export function ProductDescriptionModal({ product, onClose }: { product: Recepti
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const staticProfile = product ? getStaticStrainProfileForProduct(product) : null;
   const modularKind = product ? resolveProductModularKind(product) : "generic";
-  const productImage = product ? modalProductImage(product) : "";
+  const requestedProductImage = product ? modalProductImage(product) : "";
+  const productImage = product && failedImageUrl === requestedProductImage && isPreRollProduct(product)
+    ? preRollCultivationImages[normalizedKey(product.cultivationType)] ?? getProductImage({ category: "Pre-Rolls" })
+    : requestedProductImage;
   const hasProductImage = isUsableProductImageUrl(productImage);
   const imageVisible = hasProductImage && failedImageUrl !== productImage;
   const edibleProductImage = product ? edibleUploadedImage(product) : "";

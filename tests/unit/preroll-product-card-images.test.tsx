@@ -15,7 +15,7 @@ const baseProduct: CardProduct = {
   subcategory: "Hybrid",
   cultivationType: "Indoor",
   description: "",
-  imageUrl: "/old-pre-roll-image.png",
+  imageUrl: null,
   imagePath: null,
   sizeLabel: "1 unit",
   strainType: "Hybrid",
@@ -47,8 +47,14 @@ describe("Pre-Rolls product card artwork", () => {
   it("preserves the current fallback for an unexpected cultivation type", () => {
     const markup = renderCard({ ...baseProduct, cultivationType: "Hydro" });
 
-    expect(markup).toContain("/old-pre-roll-image.png");
+    expect(markup).toContain("/placeholder-images/PreRolls.png");
     expect(markup).toContain("object-contain p-2");
+  });
+
+  it("prefers a saved pre-roll image over category artwork", () => {
+    const markup = renderCard({ ...baseProduct, imageUrl: "/old-pre-roll-image.png" });
+    expect(markup).toContain("/old-pre-roll-image.png");
+    expect(markup).not.toContain("/images/product-placeholders/pre-rolls/preroll-indoor.png");
   });
 
   it("leaves Flower and every other product category on the existing image path", () => {

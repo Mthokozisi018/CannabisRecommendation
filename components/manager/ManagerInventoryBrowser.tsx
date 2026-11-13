@@ -221,7 +221,7 @@ function ManagerInventoryCard({
       <button type="button" onClick={() => onEdit(product.id)} className="relative mb-2 grid aspect-[16/9] place-items-center overflow-hidden rounded-lg bg-black/20 text-left" aria-label={`Edit ${product.name}`}>
         {/* Product images can be Supabase URLs or local placeholders. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={productImage} alt={`${product.name} product image`} className={`absolute inset-0 size-full drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105 ${preRollCultivationImage ? "object-cover" : "object-contain p-2"}`} />
+        <img src={productImage} alt={`${product.name} product image`} className={`absolute inset-0 size-full drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)] transition group-hover:scale-105 ${preRollCultivationImage ? "object-cover" : "object-contain p-2"}`} onError={(event) => { const fallback = getProductImage({ category: product.categoryName, subcategory: product.subcategory }); if (event.currentTarget.src !== new URL(fallback, window.location.href).href) event.currentTarget.src = fallback; }} />
         <span className="absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-white/80 bg-black/35 text-white">
           <SquarePen size={15} />
         </span>

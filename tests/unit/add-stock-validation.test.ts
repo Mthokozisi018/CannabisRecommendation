@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { addStockProductSchema, addStockReceiptSchema } from "@/lib/manager/add-stock-validation";
+import { addStockProductSchema, addStockProductWithoutStockSchema, addStockReceiptSchema } from "@/lib/manager/add-stock-validation";
 
 const receipt = { category: "Accessories", subcategory: "Lighters", productId: "10000000-0000-4000-8000-000000000001", quantityToAdd: "2", supplierId: "20000000-0000-4000-8000-000000000001", supplierUnitCost: "12.50", cultivationType: "" };
 describe("Add Stock workflow validation", () => {
+  it.each([[
+    "Flower", "Sativa", "Indoor"
+  ], ["Pre-Rolls", "Hybrid", "Outdoor"], ["Edibles", "Gummies", ""], ["Vape Cartridges", "Vape Cartridge", ""], ["Concentrates", "Dab", ""], ["Accessories", "Lighters", ""]])("allows a zero-stock %s product without a supplier", (category, subcategory, cultivationType) => {
+    const parsed = addStockProductWithoutStockSchema.safeParse({ productName: "New product", category, subcategory, cultivationType, price: "20", productStatus: "active", initialStockQuantity: "0", lowStockThreshold: 5, ...(category === "Edibles" ? { thcPerUnitMg: "5", thcPerPacketMg: "10" } : {}) });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.initialStockQuantity).toBe(0);
+  });
   it.each(["Flower", "Pre-Rolls"])("requires applicable classification for %s", (category) => {
     expect(addStockReceiptSchema.safeParse({ ...receipt, category, subcategory: "Sativa", cultivationType: "Indoor" }).success).toBe(true);
     expect(addStockReceiptSchema.safeParse({ ...receipt, category, subcategory: "Sativa" }).success).toBe(false);
