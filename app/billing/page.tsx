@@ -52,6 +52,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   if (!billingEnabled()) redirect("/dashboard" as never);
   const session = await getDashboardSession();
   if (!session) redirect("/login");
+  if (session.demoMode) redirect((session.demoMode === "manager" ? "/dashboard/manager" : "/dashboard/franchise") as never);
   const account = await billingAccountForSession(session, true);
   if (!account) redirect("/denied" as never);
   const isBillingOwner = account.owner_profile_id === session.staffProfileId;
