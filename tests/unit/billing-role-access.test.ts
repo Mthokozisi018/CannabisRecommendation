@@ -83,3 +83,16 @@ it("uses the parent franchise bill for franchise-store managers and receptionist
   expect(await billingAccessForSession(receptionist)).toBe("staff_restricted");
   expect(state.inserts).toBe(0);
 });
+
+it("exempts only designated demo sessions without creating a billing account", async () => {
+  state.status = "restricted";
+  for (const demoMode of ["manager", "franchise_admin"] as const) {
+    const session = { ...manager, demoMode, normalizedRole: demoMode,
+      profile: { role: demoMode, franchise_id: demoMode === "franchise_admin" ? "demo-franchise" : null } } as DashboardSession;
+    expect(await billingAccountForSession(session, true)).toBeNull();
+    expect(await billingAccessForSession(session)).toBe("allowed");
+  }
+  expect(state.accountQueries).toEqual([]);
+  expect(state.inserts).toBe(0);
+  expect(await billingAccessForSession(manager)).toBe("staff_restricted");
+});
