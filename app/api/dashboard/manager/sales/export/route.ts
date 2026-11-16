@@ -15,7 +15,7 @@ const privateHeaders = {
 
 export async function POST(request: Request) {
   try {
-    await verifyOrigin();
+    await verifyOrigin({ allowDemoRead: true });
     const session = await requireCompletedManagerDashboardSession();
     if (!session.isManager || !session.assignedStoreId) return NextResponse.json({ error: "Manager access required." }, { status: 403, headers: privateHeaders });
     await assertRateLimit(`manager:sales-export:${session.authUserId}`, 8, 60_000);

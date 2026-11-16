@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const schema=z.object({search:z.string().max(100),storeId:z.union([z.string().uuid(),z.literal("")]),status:z.string().max(30),from:z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/),to:z.string().regex(/^$|^\d{4}-\d{2}-\d{2}$/)}).strict();
 export async function POST(request:Request) {
   try {
-    await verifyOrigin();
+    await verifyOrigin({ allowDemoRead: true });
     const { session }=await requireFranchiseAdmin();
     await assertRateLimit(`master-supply-pdf:${session.authUserId}`,8,60_000);
     const filters=schema.parse(await request.json());

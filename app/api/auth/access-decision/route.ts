@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
   let context = "";
   try {
-    await verifyOrigin();
+    await verifyOrigin({ allowDemoRead: true });
     const body = await request.json() as { context?: string };
     context = body.context ?? "";
   } catch {

@@ -8,7 +8,7 @@ describe("Manager Sales Overview security contracts", () => {
   it("protects refresh and export with origin, manager session, and rate limits", () => {
     for (const path of ["app/dashboard/manager/sales/actions.ts", "app/api/dashboard/manager/sales/export/route.ts"]) {
       const contents = source(path);
-      expect(contents).toContain("verifyOrigin()");
+      expect(contents).toContain("verifyOrigin({ allowDemoRead: true })");
       expect(contents).toContain("requireCompletedManagerDashboardSession()");
       expect(contents).toContain("assertRateLimit(");
       expect(contents).toContain("session.isManager");

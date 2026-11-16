@@ -6,12 +6,16 @@ import { requireStaff } from "@/lib/dal/auth";
 import { getStoreRegistrationUrl } from "@/lib/registration/url";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { StaffAuthenticationRequiredError } from "@/lib/auth-errors";
+import { getDashboardSession } from "@/lib/dashboard-session";
 export async function getStaffRegistrationQR(roles: StaffRole[] = ["manager", "receptionist"]) {
   const headers = { "Cache-Control": "private, no-store" };
   let stage = "staff-authentication";
   let storeId: string | undefined;
   let databaseCode: string | undefined;
   try {
+    if ((await getDashboardSession())?.demoMode) {
+      return NextResponse.json({ error: "Registration is unavailable in the demo." }, { status: 403, headers });
+    }
     const staff = await requireStaff(roles);
     storeId = staff.storeId;
     if (!storeId) return NextResponse.json({ error: "Your staff profile has no assigned store.", code: "store_unassigned" }, { status: 409, headers });

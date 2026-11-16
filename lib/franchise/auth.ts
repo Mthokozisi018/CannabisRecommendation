@@ -12,7 +12,7 @@ export const requireFranchiseAdmin = cache(async (setup = false) => {
     !session.profile.franchise_id
   )
     throw new Error("Franchise assignment required.");
-  if (!setup && !session.accountSetupComplete)
+  if (!setup && !session.accountSetupComplete && session.demoMode !== "franchise_admin")
     redirect("/franchise/setup" as never);
   const supabase = await createSupabaseServerClient();
   if (!supabase)

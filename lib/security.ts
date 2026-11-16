@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { headers } from "next/headers";
 import { requireRateLimit } from "@/lib/rate-limit";
+import { getDashboardSession } from "@/lib/dashboard-session";
 
 export async function assertRateLimit(key: string, limit = 20, windowMs = 60_000) {
   return requireRateLimit({
@@ -34,7 +35,7 @@ export class RequestOriginError extends Error {
   }
 }
 
-export async function verifyOrigin() {
+export async function verifyOrigin(options: { allowDemoRead?: boolean } = {}) {
   const headerStore = await headers();
   const origin = headerStore.get("origin");
   if (!origin) throw new RequestOriginError("Request origin is required.");
@@ -68,5 +69,8 @@ export async function verifyOrigin() {
     throw new RequestOriginError();
   }
   if (!new Set(configured).has(normalizedOrigin)) throw new RequestOriginError();
+  if (!options.allowDemoRead && (await getDashboardSession())?.demoMode) {
+    throw new Error("This demo account is view only. Changes are not permitted.");
+  }
   return true;
 }

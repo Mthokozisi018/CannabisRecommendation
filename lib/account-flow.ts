@@ -63,7 +63,9 @@ export function managerLoginDestination(session: {
   accountSetupComplete: boolean;
   storeSetupComplete: boolean;
   onboardingCompleteSeen: boolean;
+  demoMode?: "manager" | "franchise_admin" | null;
 }) {
+  if (session.demoMode === "manager") return "/dashboard/manager";
   if (!session.accountSetupComplete) return "/manager/setup/account";
   if (!session.storeSetupComplete) return "/manager/setup/store";
   if (!session.onboardingCompleteSeen) return "/manager/setup/complete";
@@ -74,6 +76,7 @@ export function receptionistLoginDestination(session: { accountSetupComplete: bo
   return session.accountSetupComplete ? "/dashboard/receptionist" : "/staff/setup/account";
 }
 
-export function franchiseLoginDestination(session: { accountSetupComplete: boolean }) {
+export function franchiseLoginDestination(session: { accountSetupComplete: boolean; demoMode?: "manager" | "franchise_admin" | null }) {
+  if (session.demoMode === "franchise_admin") return "/dashboard/franchise";
   return session.accountSetupComplete ? "/dashboard/franchise" : "/franchise/setup";
 }

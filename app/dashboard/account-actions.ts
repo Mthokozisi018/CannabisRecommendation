@@ -273,7 +273,7 @@ export async function updateManagerStoreImageAction(_prev: AccountActionState, f
 }
 
 export async function logoutOwnAccountAction() {
-  await verifyOrigin();
+  await verifyOrigin({ allowDemoRead: true });
   const supabase = await createSupabaseServerClient();
   const session = await getDashboardSession();
   if (session) {

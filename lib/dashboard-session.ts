@@ -12,6 +12,7 @@ import { getSessionState, updateSessionState } from "@/lib/session";
 import { clearSupabaseServerSessionCookies, createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { profileRoleToStaffRole } from "@/lib/staff-profile";
 import { billingAccessForSession } from "@/lib/billing/accounts";
+import { demoModeForSession, type DemoMode } from "@/lib/demo-access";
 import type { AccountRole, StaffDTO, StaffRole, StoreAccessStatus, StoreMembershipDTO } from "@/lib/types";
 
 const DASHBOARD_PROFILE_SELECT =
@@ -64,6 +65,7 @@ export type DashboardStaffProfile = {
 };
 
 export type DashboardSession = {
+  demoMode: DemoMode;
   user: DashboardAuthenticatedUser;
   authUserId: string;
   staffProfileId: string;
@@ -232,6 +234,13 @@ async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<ty
 
   if (!profile || profileAccountStatus(profile) === "deleted") return null;
 
+  const demoMode = await demoModeForSession(supabase);
+  if (demoMode && (profile.role !== demoMode ||
+      (demoMode === "manager" && !profile.store_id) ||
+      (demoMode === "franchise_admin" && !profile.franchise_id))) {
+    throw new Error("Demo account assignment is invalid.");
+  }
+
   const role = profileRoleToStaffRole(profile.role);
   const normalizedRole = normalizeRole(role);
   const store = profileStore(profile);
@@ -287,6 +296,7 @@ async function buildDashboardSession(supabase: NonNullable<Awaited<ReturnType<ty
   };
 
   return {
+    demoMode,
     user,
     authUserId: user.id,
     staffProfileId: profile.id,
@@ -384,6 +394,7 @@ export async function requireActiveManagerDashboardSession() {
 
 export async function requireCompletedManagerDashboardSession() {
   const session = await requireUnrestrictedDashboardSession("manager");
+  if (session.demoMode === "manager") return session;
   if (!session.accountSetupComplete) redirect("/manager/setup/account" as never);
   if (!session.storeSetupComplete) redirect("/manager/setup/store" as never);
   if (!session.onboardingCompleteSeen) redirect("/manager/setup/complete" as never);

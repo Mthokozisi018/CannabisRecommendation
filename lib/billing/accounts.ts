@@ -40,6 +40,7 @@ export async function currentMonthlyPrice(account: BillingAccount) {
 }
 
 export async function billingAccountForSession(session: DashboardSession, create = false): Promise<BillingAccount | null> {
+  if (session.demoMode) return null;
   if (!billingEnabled()) return null;
   const client = db();
   const franchiseId = session.normalizedRole === "franchise_admin" ? session.profile.franchise_id : null;
@@ -83,6 +84,7 @@ export async function requireBillingOwner(session: DashboardSession, create = fa
 export function billingDb() { return db(); }
 
 export async function billingAccessForSession(session: DashboardSession): Promise<"allowed" | "owner_due" | "staff_restricted"> {
+  if (session.demoMode) return "allowed";
   if (!billingEnabled() || session.profile.role === "admin") return "allowed";
   if (!session.accountSetupComplete) return "allowed";
   if (session.normalizedRole === "manager" && !session.storeSetupComplete) return "allowed";
